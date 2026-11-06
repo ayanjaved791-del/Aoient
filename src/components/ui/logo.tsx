@@ -1,22 +1,27 @@
 import { cn } from "@/lib/utils";
 
-/** Aoient wordmark: an "orbit" glyph representing connected modules, on the brand gradient. */
+/**
+ * Aoient monogram: the letters A and I drawn as fine lines with a crossing X,
+ * inside a circle. Black on light backgrounds, inverted in dark mode.
+ */
+export function LogoMark({ className, strokeWidth = 5 }: { className?: string; strokeWidth?: number }) {
+  return (
+    <svg viewBox="0 0 100 100" className={cn("size-7 shrink-0", className)} aria-hidden>
+      <circle cx="50" cy="50" r="50" className="fill-neutral-950 dark:fill-white" />
+      <g fill="none" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className="stroke-white dark:stroke-neutral-950">
+        <path d="M28 82 L50 16 L72 82" />
+        <path d="M50 10 V82" />
+        <path d="M31 30 L64 82 M69 30 L36 82" />
+        <path d="M31 66 H69" />
+      </g>
+    </svg>
+  );
+}
+
 export function Logo({ className, withWordmark = true }: { className?: string; withWordmark?: boolean }) {
   return (
     <span className={cn("inline-flex items-center gap-2 font-semibold tracking-tight text-foreground", className)}>
-      <svg viewBox="0 0 24 24" className="size-6 drop-shadow-[0_2px_6px_rgb(124_58_237/0.35)]" aria-hidden>
-        <defs>
-          <linearGradient id="aoient-logo-gradient" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stopColor="#635bff" />
-            <stop offset="0.55" stopColor="#c026d3" />
-            <stop offset="1" stopColor="#fb923c" />
-          </linearGradient>
-        </defs>
-        <rect width="24" height="24" rx="7" fill="url(#aoient-logo-gradient)" />
-        <rect width="24" height="12" rx="7" fill="white" opacity="0.12" />
-        <circle cx="12" cy="12" r="5.25" fill="none" stroke="white" strokeWidth="2" />
-        <circle cx="17.25" cy="8" r="1.75" fill="white" />
-      </svg>
+      <LogoMark />
       {withWordmark && <span className="text-[15px]">Aoient</span>}
     </span>
   );
