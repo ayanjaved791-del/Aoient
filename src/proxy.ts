@@ -23,7 +23,23 @@ function toSignIn(req: NextRequest) {
   return NextResponse.redirect(url);
 }
 
+/**
+ * When Supabase can't verify an email link (expired, already used, or the
+ * redirect URL isn't allow-listed) it sends the visitor to the Site URL root
+ * with `?error_code=…`. Send them somewhere they can request a new link.
+ */
+function linkErrorRedirect(req: NextRequest) {
+  const code = req.nextUrl.searchParams.get("error_code");
+  if (req.nextUrl.pathname !== "/" || !code) return null;
+  const url = req.nextUrl.clone();
+  url.pathname = "/verify-email";
+  url.search = `?error=${encodeURIComponent(code)}`;
+  return NextResponse.redirect(url);
+}
+
 export async function proxy(req: NextRequest) {
+  const linkError = linkErrorRedirect(req);
+  if (linkError) return linkError;
   if (!isSupabaseConfigured) return isPublic(req.nextUrl.pathname) ? NextResponse.next() : toSignIn(req);
 
   let res = NextResponse.next({ request: req });
