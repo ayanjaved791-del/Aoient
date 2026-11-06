@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "tsx scripts/deploy-db.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "tsx scripts/migrate.ts",
@@ -14,7 +14,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "doctor": "tsx scripts/doctor.ts",
-    "db:setup-sql": "tsx scripts/setup-sql.ts"
+    "db:setup-sql": "tsx scripts/setup-sql.ts",
+    "db:deploy": "tsx scripts/deploy-db.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",

@@ -11,7 +11,7 @@ cp .env.example .env
 npm install && npm run db:migrate && npm run db:seed && npm run doctor && npm run dev
 ```
 
-No terminal? Paste `supabase/setup.sql` into Supabase → SQL Editor instead of `db:migrate`/`db:seed` (see the README). After adding a migration or changing the permission catalogue, run `npm run db:setup-sql` — a unit test fails if the file is stale.
+On Vercel, production deploys apply new migrations and the permission sync automatically before building (`scripts/deploy-db.ts`; skipped for previews and local builds, or with `AOIENT_SKIP_DB_MIGRATIONS=1`). Migrations take a Postgres advisory lock, so overlapping deploys apply each file once. No terminal and no deploy? Paste `supabase/setup.sql` into Supabase → SQL Editor instead (see the README). After adding a migration or changing the permission catalogue, run `npm run db:setup-sql` — a unit test fails if the file is stale.
 
 ### Supabase dashboard settings
 
