@@ -1,4 +1,5 @@
 import { Hero } from "@/modules/marketing/hero";
+import { TechStack } from "@/modules/marketing/brand-logos";
 import { FeatureBento } from "@/modules/marketing/bento";
 import { LandingEffects } from "@/modules/marketing/landing-effects";
 import { PricingTeaser } from "@/modules/marketing/pricing-teaser";
@@ -23,6 +24,7 @@ export default function LandingPage() {
       <main>
         <Hero />
         <ModuleMarquee />
+        <TechStack />
 
         <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">
           <SectionHeading

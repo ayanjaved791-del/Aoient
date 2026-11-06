@@ -2,29 +2,20 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import {
   ArrowRight,
-  Boxes,
   Building2,
-  ChartNoAxesCombined,
   ChevronDown,
   CircleCheck,
-  Clock3,
   CreditCard,
   Database,
-  FileText,
-  FolderKanban,
-  Handshake,
   KeyRound,
-  LayoutGrid,
   Menu,
-  Plug,
-  Receipt,
   ScrollText,
   ShieldCheck,
   UserRoundPlus,
   Users,
-  Workflow,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { ModuleIcon, type ModuleKey } from "./module-icons";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -94,19 +85,19 @@ export function LandingHeader() {
   );
 }
 
-const MODULES = [
-  { icon: Building2, name: "Organization & access", body: "Workspaces, members, invitations, roles and the audit log.", live: true },
-  { icon: Users, name: "People", body: "Employee directory, departments, managers and time off." },
-  { icon: Handshake, name: "CRM", body: "Leads, contacts, companies and a deal pipeline." },
-  { icon: FolderKanban, name: "Projects", body: "Projects, tasks, milestones and boards — created straight from won deals." },
-  { icon: Clock3, name: "Time", body: "Timers, timesheets, approvals and billable hours." },
-  { icon: Receipt, name: "Finance", body: "Invoices and expenses built from the work you delivered." },
-  { icon: Workflow, name: "Flow", body: "Automations that move work between modules for you." },
-  { icon: ChartNoAxesCombined, name: "Analytics", body: "Dashboards calculated from your real records — never invented." },
-  { icon: FileText, name: "Documents", body: "Proposals, contracts and files attached to the work they belong to." },
-  { icon: Boxes, name: "Inventory", body: "Products, stock levels and movements." },
-  { icon: LayoutGrid, name: "Workspace", body: "Notes, wikis and shared team spaces." },
-  { icon: Plug, name: "Connect", body: "Integrations with the tools you already use." },
+const MODULES: { key: ModuleKey; name: string; body: string; live?: boolean }[] = [
+  { key: "organization", name: "Organization & access", body: "Workspaces, members, invitations, roles and the audit log.", live: true },
+  { key: "people", name: "People", body: "Employee directory, departments, managers and time off." },
+  { key: "crm", name: "CRM", body: "Leads, contacts, companies and a deal pipeline." },
+  { key: "projects", name: "Projects", body: "Projects, tasks, milestones and boards — created straight from won deals." },
+  { key: "time", name: "Time", body: "Timers, timesheets, approvals and billable hours." },
+  { key: "finance", name: "Finance", body: "Invoices and expenses built from the work you delivered." },
+  { key: "flow", name: "Flow", body: "Automations that move work between modules for you." },
+  { key: "analytics", name: "Analytics", body: "Dashboards calculated from your real records — never invented." },
+  { key: "documents", name: "Documents", body: "Proposals, contracts and files attached to the work they belong to." },
+  { key: "inventory", name: "Inventory", body: "Products, stock levels and movements." },
+  { key: "workspace", name: "Workspace", body: "Notes, wikis and shared team spaces." },
+  { key: "connect", name: "Connect", body: "Integrations with the tools you already use." },
 ];
 
 const LIVE_TODAY = ["Email sign-up", "Organizations", "Invitations", "Custom roles", "Audit log", "REST API"];
@@ -114,12 +105,12 @@ const LIVE_TODAY = ["Email sign-up", "Organizations", "Invitations", "Custom rol
 export function ModuleMarquee() {
   const row = (reverse: boolean) => (
     <div className="flex w-max gap-3 motion-safe:animate-marquee" style={reverse ? { animationDirection: "reverse" } : undefined}>
-      {[...MODULES, ...MODULES].map(({ icon: Icon, name }, i) => (
+      {[...MODULES, ...MODULES].map(({ key, name }, i) => (
         <span
           key={i}
-          className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-800 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200"
+          className="inline-flex items-center gap-2.5 whitespace-nowrap rounded-full border border-neutral-200 bg-white py-1.5 pl-1.5 pr-4 text-sm font-medium text-neutral-800 shadow-xs dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200"
         >
-          <Icon className="size-4" aria-hidden />
+          <ModuleIcon module={key} size="xs" className="rounded-full shadow-sm" />
           {name}
         </span>
       ))}
@@ -146,13 +137,13 @@ export function SectionHeading({ eyebrow, title, body, invert }: { eyebrow: stri
   );
 }
 
-const FLOW = [
-  { icon: Handshake, title: "Win the deal", body: "A lead becomes a customer and a deal in CRM." },
-  { icon: FolderKanban, title: "Start the project", body: "The won deal becomes a project — no re-typing." },
-  { icon: Users, title: "Staff the work", body: "Assign people and track their tasks." },
-  { icon: Clock3, title: "Capture time", body: "Billable hours roll up into project totals." },
-  { icon: Receipt, title: "Invoice it", body: "Finance invoices the work that was delivered." },
-  { icon: ChartNoAxesCombined, title: "See the business", body: "Analytics reads the same records. Nothing invented." },
+const FLOW: { key: ModuleKey; title: string; body: string }[] = [
+  { key: "crm", title: "Win the deal", body: "A lead becomes a customer and a deal in CRM." },
+  { key: "projects", title: "Start the project", body: "The won deal becomes a project — no re-typing." },
+  { key: "people", title: "Staff the work", body: "Assign people and track their tasks." },
+  { key: "time", title: "Capture time", body: "Billable hours roll up into project totals." },
+  { key: "finance", title: "Invoice it", body: "Finance invoices the work that was delivered." },
+  { key: "analytics", title: "See the business", body: "Analytics reads the same records. Nothing invented." },
 ];
 
 export function WorkflowSection() {
@@ -170,12 +161,12 @@ export function WorkflowSection() {
         />
         <span
           aria-hidden
-          className="absolute left-[8%] right-[8%] top-7 hidden h-px bg-[linear-gradient(90deg,transparent,rgb(var(--spot)/0.9),transparent)] bg-[length:50%_100%] bg-no-repeat motion-safe:animate-beam lg:block"
+          className="absolute left-[8%] right-[8%] top-7 hidden h-px bg-[linear-gradient(90deg,transparent,#a855f7,#f97316,transparent)] bg-[length:50%_100%] bg-no-repeat motion-safe:animate-beam lg:block"
         />
-        {FLOW.map(({ icon: Icon, title, body }, i) => (
+        {FLOW.map(({ key, title, body }, i) => (
           <li key={title} className="reveal group relative flex gap-4 lg:flex-col lg:items-center lg:text-center" style={delay(i * 90)}>
-            <span className="relative flex size-14 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-white transition-all duration-500 group-hover:-translate-y-1 group-hover:bg-black group-hover:text-white dark:border-neutral-800 dark:bg-neutral-950 dark:group-hover:bg-white dark:group-hover:text-black">
-              <Icon className="size-5" aria-hidden />
+            <span className="relative shrink-0 rounded-[20px] bg-white p-0 transition-transform duration-500 group-hover:-translate-y-1.5 group-hover:rotate-3 dark:bg-black">
+              <ModuleIcon module={key} size="lg" />
               <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-black text-[10px] font-semibold text-white dark:bg-white dark:text-black">
                 {i + 1}
               </span>
@@ -204,7 +195,7 @@ export function ModulesSection() {
           body="Turn on what you need today. Every module shares the same people, customers and projects."
         />
         <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {MODULES.map(({ icon: Icon, name, body, live }, i) => (
+          {MODULES.map(({ key, name, body, live }, i) => (
             <li
               key={name}
               className={cn("reveal", i === 0 && "sm:col-span-2 lg:row-span-2", i === MODULES.length - 1 && "sm:col-span-2")}
@@ -220,18 +211,14 @@ export function ModulesSection() {
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <span
-                    className={cn(
-                      "flex size-11 items-center justify-center rounded-xl border transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110",
-                      live ? "border-white/20 bg-white/10 dark:border-black/15 dark:bg-black/5" : "border-neutral-200 dark:border-neutral-800",
-                    )}
-                  >
-                    <Icon className="size-5" aria-hidden />
-                  </span>
+                  <ModuleIcon
+                    module={key}
+                    className={cn("transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110", live && "from-white/25 to-white/5 ring-white/30 dark:from-black/80 dark:to-black dark:text-white")}
+                  />
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      live ? "bg-white text-black dark:bg-black dark:text-white" : "border border-dashed border-neutral-300 text-neutral-500 dark:border-neutral-700",
+                      live ? "bg-emerald-400 text-emerald-950" : "border border-dashed border-neutral-300 text-neutral-500 dark:border-neutral-700",
                     )}
                   >
                     {live ? "Live" : "In development"}
@@ -259,37 +246,39 @@ export function ModulesSection() {
 }
 
 const SECURITY = [
-  { icon: ShieldCheck, title: "Isolated by default", body: "Every page and API call re-checks on the server that you belong to the organization. IDs sent by the browser are never trusted on their own.", span: "lg:col-span-2" },
-  { icon: Database, title: "Locked-down database", body: "Row-level security is on for every table, so the public browser key can't read or write anything directly.", span: "" },
-  { icon: CreditCard, title: "Honest payments", body: "Paid plans will only activate from Paddle's signed server confirmation — never from a browser redirect.", span: "" },
-  { icon: KeyRound, title: "Least privilege", body: "Custom roles can only bundle permissions their creator already holds.", span: "" },
-  { icon: ScrollText, title: "Every change on record", body: "Membership, role and settings changes are written to an audit log in the same transaction.", span: "lg:col-span-2" },
+  { icon: ShieldCheck, tone: "text-emerald-400 bg-emerald-400/10 ring-emerald-400/30", title: "Isolated by default", body: "Every page and API call re-checks on the server that you belong to the organization. IDs sent by the browser are never trusted on their own.", span: "lg:col-span-2" },
+  { icon: Database, tone: "text-sky-400 bg-sky-400/10 ring-sky-400/30", title: "Locked-down database", body: "Row-level security is on for every table, so the public browser key can't read or write anything directly.", span: "" },
+  { icon: CreditCard, tone: "text-amber-300 bg-amber-300/10 ring-amber-300/30", title: "Honest payments", body: "Paid plans will only activate from Paddle's signed server confirmation — never from a browser redirect.", span: "" },
+  { icon: KeyRound, tone: "text-fuchsia-400 bg-fuchsia-400/10 ring-fuchsia-400/30", title: "Least privilege", body: "Custom roles can only bundle permissions their creator already holds.", span: "" },
+  { icon: ScrollText, tone: "text-violet-400 bg-violet-400/10 ring-violet-400/30", title: "Every change on record", body: "Membership, role and settings changes are written to an audit log in the same transaction.", span: "lg:col-span-2" },
 ];
 
 export function SecuritySection() {
   return (
     <section id="security" className="scroll-mt-20 bg-black text-white dark:border-y dark:border-neutral-900 dark:bg-neutral-950">
       <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-24 sm:px-6 sm:py-32">
-        <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-80 w-[640px] -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-80 w-[640px] -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-600/25 via-fuchsia-500/20 to-orange-400/20 blur-3xl" />
         <SectionHeading invert eyebrow="Security" title="Your data stays yours" body="Multi-tenant from the first line of code, with tests that try to read other companies' data and must fail." />
         <ul className="relative mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <li className="reveal sm:col-span-2 lg:col-span-1 lg:row-span-2">
             <div className="relative flex h-full min-h-72 flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-8">
               <div className="relative flex size-36 items-center justify-center rounded-full border border-white/15">
                 <span className="absolute inset-3 rounded-full border border-dashed border-white/20 motion-safe:animate-orbit" style={{ animationDuration: "30s" }} />
-                <ShieldCheck className="size-14" strokeWidth={1.25} aria-hidden />
-                <span aria-hidden className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent motion-safe:animate-scan" />
+                <ShieldCheck className="size-14 text-emerald-400 drop-shadow-[0_0_18px_rgb(52_211_153/0.6)]" strokeWidth={1.25} aria-hidden />
+                <span aria-hidden className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent motion-safe:animate-scan" />
               </div>
               <p className="mt-8 text-center text-sm text-neutral-400">Cross-tenant access attempts are part of the automated test suite.</p>
             </div>
           </li>
-          {SECURITY.map(({ icon: Icon, title, body, span }, i) => (
+          {SECURITY.map(({ icon: Icon, tone, title, body, span }, i) => (
             <li key={title} className={cn("reveal", span)} style={delay((i % 3) * 90)}>
               <article
                 data-spotlight
                 className="h-full rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition-colors duration-500 [--spot:255_255_255] hover:border-white/25"
               >
-                <Icon className="size-5" aria-hidden />
+                <span className={cn("flex size-10 items-center justify-center rounded-xl ring-1 ring-inset", tone)}>
+                  <Icon className="size-5" aria-hidden />
+                </span>
                 <h3 className="mt-4 font-semibold">{title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-neutral-400">{body}</p>
               </article>
@@ -302,10 +291,10 @@ export function SecuritySection() {
 }
 
 const STEPS = [
-  { icon: UserRoundPlus, title: "Create your account", body: "Sign up and confirm your email address." },
-  { icon: Building2, title: "Set up your organization", body: "Pick a name and URL. You become its owner." },
-  { icon: Users, title: "Invite your team", body: "Send invitations with the right role for each person." },
-  { icon: CreditCard, title: "Choose a plan", body: "Monthly or yearly — switch whenever you need." },
+  { icon: UserRoundPlus, tone: "from-sky-400 to-blue-600 shadow-blue-500/40", title: "Create your account", body: "Sign up and confirm your email address." },
+  { icon: Building2, tone: "from-violet-400 to-purple-600 shadow-purple-500/40", title: "Set up your organization", body: "Pick a name and URL. You become its owner." },
+  { icon: Users, tone: "from-fuchsia-400 to-pink-600 shadow-pink-500/40", title: "Invite your team", body: "Send invitations with the right role for each person." },
+  { icon: CreditCard, tone: "from-emerald-400 to-green-600 shadow-emerald-500/40", title: "Choose a plan", body: "Monthly or yearly — switch whenever you need." },
 ];
 
 export function StepsSection() {
@@ -313,14 +302,16 @@ export function StepsSection() {
     <section className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
       <SectionHeading eyebrow="Get started" title="Up and running in minutes" body="No sales call, no setup project. These steps work today." />
       <ol className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {STEPS.map(({ icon: Icon, title, body }, i) => (
+        {STEPS.map(({ icon: Icon, tone, title, body }, i) => (
           <li key={title} className="reveal" style={delay(i * 100)}>
             <article data-spotlight className="group h-full rounded-3xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-950">
               <div className="flex items-center justify-between">
-                <span className="text-5xl font-semibold tracking-tighter text-neutral-200 transition-colors duration-500 group-hover:text-black dark:text-neutral-800 dark:group-hover:text-white">
+                <span className="text-5xl font-semibold tracking-tighter text-neutral-200 transition-colors duration-500 group-hover:text-transparent group-hover:bg-gradient-to-br group-hover:from-violet-600 group-hover:to-orange-400 group-hover:bg-clip-text dark:text-neutral-800">
                   0{i + 1}
                 </span>
-                <Icon className="size-5 text-black dark:text-white" aria-hidden />
+                <span className={cn("flex size-11 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ring-1 ring-inset ring-white/25 transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110", tone)}>
+                  <Icon className="size-5" strokeWidth={2.25} aria-hidden />
+                </span>
               </div>
               <h3 className="mt-6 font-semibold text-black dark:text-white">{title}</h3>
               <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-400">{body}</p>

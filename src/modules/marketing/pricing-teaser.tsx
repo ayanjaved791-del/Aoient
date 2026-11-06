@@ -14,7 +14,7 @@ export function PricingTeaser() {
           <span
             aria-hidden
             className={cn(
-              "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-black transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-white",
+              "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 shadow-md shadow-fuchsia-500/30 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
               interval === "yearly" && "translate-x-full",
             )}
           />
@@ -27,7 +27,7 @@ export function PricingTeaser() {
               onClick={() => setInterval_(value)}
               className={cn(
                 "relative z-10 rounded-full px-5 py-1.5 text-sm font-medium capitalize transition-colors duration-300",
-                interval === value ? "text-white dark:text-black" : "text-neutral-500 hover:text-black dark:hover:text-white",
+                interval === value ? "text-white" : "text-neutral-500 hover:text-black dark:hover:text-white",
               )}
             >
               {value}
