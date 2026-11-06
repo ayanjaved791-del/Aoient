@@ -1,90 +1,25 @@
 "use client";
 import Link from "next/link";
-import { useRef, useState } from "react";
-import { useTheme } from "next-themes";
-import { initializePaddle, type Paddle, type PaddleEventData } from "@paddle/paddle-js";
+import { useState } from "react";
 import { Building2, Check, Rocket, Sparkles } from "lucide-react";
 import {
-  PADDLE_CLIENT_TOKEN,
-  PADDLE_ENVIRONMENT,
   PLANS,
-  missingCheckoutConfig,
-  paddlePriceId,
   priceFor,
   yearlySavingPercent,
   ANNUAL_MONTHS_CHARGED,
   type BillingInterval,
-  type Plan,
 } from "@/lib/billing/plans";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const ICONS = { medisea: Sparkles, indiana: Rocket, pacfic_deepdive: Building2 } as const;
 
-type Notice =
-  | { kind: "not-configured"; plan: Plan; missing: string[] }
-  | { kind: "submitted"; plan: Plan }
-  | { kind: "error"; message: string };
-
 export function PricingPage({ user }: { user: { name: string; email: string } }) {
-  const { resolvedTheme } = useTheme();
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
-  const [busyPlan, setBusyPlan] = useState<string | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const paddleRef = useRef<Paddle | null>(null);
-  const checkoutPlanRef = useRef<Plan | null>(null);
   const saving = yearlySavingPercent();
   const freeMonths = 12 - ANNUAL_MONTHS_CHARGED;
-
-  function onPaddleEvent(event: PaddleEventData) {
-    // Paddle confirming the checkout in the browser is NOT proof of payment for
-    // granting access — only a verified server-side webhook may do that.
-    if (event.name === "checkout.completed" && checkoutPlanRef.current) {
-      paddleRef.current?.Checkout.close();
-      setNotice({ kind: "submitted", plan: checkoutPlanRef.current });
-    }
-  }
-
-  async function buy(plan: Plan) {
-    const missing = missingCheckoutConfig(plan.id, interval);
-    const priceId = paddlePriceId(plan.id, interval);
-    if (missing.length > 0 || !priceId || !PADDLE_CLIENT_TOKEN) {
-      setNotice({ kind: "not-configured", plan, missing });
-      return;
-    }
-    setBusyPlan(plan.id);
-    try {
-      paddleRef.current ??=
-        (await initializePaddle({ environment: PADDLE_ENVIRONMENT, token: PADDLE_CLIENT_TOKEN, eventCallback: onPaddleEvent })) ?? null;
-      if (!paddleRef.current) throw new Error("Paddle could not be loaded.");
-      checkoutPlanRef.current = plan;
-      paddleRef.current.Checkout.open({
-        items: [{ priceId, quantity: 1 }],
-        customer: { email: user.email },
-        customData: { aoientPlan: plan.id, interval },
-        settings: {
-          displayMode: "overlay",
-          // Everything on one screen instead of Paddle's two-step form.
-          variant: "one-page",
-          // Matches the site's light/dark theme.
-          theme: resolvedTheme === "dark" ? "dark" : "light",
-          // The email stays the signed-in account's, so the payment can be matched to it.
-          allowLogout: false,
-          // Businesses can add their VAT/tax number for a correct invoice.
-          showAddTaxId: true,
-          // No discount codes exist yet, so don't show an empty code field.
-          showAddDiscounts: false,
-        },
-      });
-    } catch {
-      setNotice({ kind: "error", message: "The checkout couldn't be opened. Check your connection and try again." });
-    } finally {
-      setBusyPlan(null);
-    }
-  }
 
   return (
     <div className="min-h-dvh bg-background">
@@ -205,12 +140,12 @@ export function PricingPage({ user }: { user: { name: string; email: string } })
                   </ul>
 
                   <Button
+                    asChild
                     className={cn("relative mt-8 w-full transition-transform active:scale-[0.98]", featured && "bg-white text-navy hover:bg-white/90 dark:bg-primary dark:text-white dark:hover:bg-primary-hover")}
-                    loading={busyPlan === plan.id}
-                    onClick={() => buy(plan)}
-                    aria-label={`Buy ${plan.name}, ${interval}`}
                   >
-                    Buy now
+                    <Link href={`/checkout/${plan.id}?interval=${interval}`} aria-label={`Buy ${plan.name}, ${interval}`}>
+                      Buy now
+                    </Link>
                   </Button>
                 </article>
               </li>
@@ -225,51 +160,6 @@ export function PricingPage({ user }: { user: { name: string; email: string } })
           Signed in as {user.email}. Prices and limits are provisional and may change before launch.
         </p>
       </main>
-
-      <Dialog open={notice !== null} onOpenChange={(open) => !open && setNotice(null)}>
-        <DialogContent>
-          {notice?.kind === "not-configured" && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Checkout isn&apos;t connected yet</DialogTitle>
-                <DialogDescription>
-                  Payments for the {notice.plan.name} plan go through Paddle, and this site doesn&apos;t have its Paddle settings yet. No
-                  checkout was opened and nothing was charged.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="text-sm">
-                <p className="font-medium">Missing settings</p>
-                <ul className="mt-2 grid gap-1">
-                  {notice.missing.map((m) => (
-                    <li key={m}><code className="rounded bg-surface-muted px-1.5 py-0.5 text-xs">{m}</code></li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          )}
-          {notice?.kind === "submitted" && (
-            <DialogHeader>
-              <DialogTitle>Payment submitted to Paddle</DialogTitle>
-              <DialogDescription>
-                Paddle will email your receipt for the {notice.plan.name} plan. Your plan becomes active in Aoient only after our server
-                receives Paddle&apos;s signed confirmation of the payment. That confirmation step isn&apos;t built yet, so no paid features
-                are unlocked for now.
-              </DialogDescription>
-            </DialogHeader>
-          )}
-          {notice?.kind === "error" && (
-            <DialogHeader>
-              <DialogTitle>Checkout unavailable</DialogTitle>
-              <DialogDescription>{notice.message}</DialogDescription>
-            </DialogHeader>
-          )}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="secondary">Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
