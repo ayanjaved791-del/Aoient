@@ -65,7 +65,19 @@ export function PricingPage({ user }: { user: { name: string; email: string } })
         items: [{ priceId, quantity: 1 }],
         customer: { email: user.email },
         customData: { aoientPlan: plan.id, interval },
-        settings: { displayMode: "overlay", theme: resolvedTheme === "dark" ? "dark" : "light" },
+        settings: {
+          displayMode: "overlay",
+          // Everything on one screen instead of Paddle's two-step form.
+          variant: "one-page",
+          // Matches the site's light/dark theme.
+          theme: resolvedTheme === "dark" ? "dark" : "light",
+          // The email stays the signed-in account's, so the payment can be matched to it.
+          allowLogout: false,
+          // Businesses can add their VAT/tax number for a correct invoice.
+          showAddTaxId: true,
+          // No discount codes exist yet, so don't show an empty code field.
+          showAddDiscounts: false,
+        },
       });
     } catch {
       setNotice({ kind: "error", message: "The checkout couldn't be opened. Check your connection and try again." });
