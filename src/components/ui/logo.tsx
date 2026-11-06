@@ -1,8 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Aoient monogram: the letters A and I drawn as fine lines with a crossing X,
- * inside a circle. Black on light backgrounds, inverted in dark mode.
+ * Aoient monogram: the letters A, I and O drawn as fine lines inside a circle. Black on light backgrounds, inverted in dark mode.
  */
 export function LogoMark({ className, strokeWidth = 5 }: { className?: string; strokeWidth?: number }) {
   return (
@@ -11,8 +10,8 @@ export function LogoMark({ className, strokeWidth = 5 }: { className?: string; s
       <g fill="none" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className="stroke-white dark:stroke-neutral-950">
         <path d="M28 82 L50 16 L72 82" />
         <path d="M50 10 V82" />
-        <path d="M31 30 L64 82 M69 30 L36 82" />
         <path d="M31 66 H69" />
+        <circle cx="50" cy="66" r="6.5" />
       </g>
     </svg>
   );
