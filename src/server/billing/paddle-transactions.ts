@@ -31,6 +31,17 @@ export interface PaidTransaction {
   email: string;
   invoiceNumber: string | null;
   billedAt: string | null;
+  /** Formatted subtotal before tax. */
+  subtotal: string;
+  currency: string;
+  customerName: string | null;
+  /** One line, e.g. "1 Main St, London, SW1A 1AA, GB". */
+  address: string | null;
+  business: { name: string; taxId: string | null } | null;
+  /** e.g. "Visa •••• 4242". */
+  paymentMethod: string | null;
+  period: { startsAt: string; endsAt: string } | null;
+  lineItems: { name: string; quantity: number; amount: string }[];
 }
 
 const TXN_ID = /^txn_[a-z0-9]{10,64}$/;
@@ -55,9 +66,16 @@ interface PaddleTransaction {
   custom_data?: { aoientPlan?: string; interval?: string } | null;
   invoice_number?: string | null;
   billed_at?: string | null;
-  details?: { totals?: { grand_total?: string; total?: string; tax?: string } };
+  details?: {
+    totals?: { grand_total?: string; total?: string; tax?: string; subtotal?: string };
+    line_items?: { quantity?: number; totals?: { total?: string }; product?: { name?: string } | null }[];
+  };
   items?: { price?: { name?: string | null } }[];
-  customer?: { email?: string } | null;
+  customer?: { email?: string; name?: string | null } | null;
+  address?: { first_line?: string | null; second_line?: string | null; city?: string | null; postal_code?: string | null; region?: string | null; country_code?: string | null } | null;
+  business?: { name?: string | null; tax_identifier?: string | null } | null;
+  payments?: { status?: string; captured_at?: string | null; method_details?: { type?: string; card?: { type?: string; last4?: string } | null } | null }[];
+  billing_period?: { starts_at?: string; ends_at?: string } | null;
 }
 
 export async function lookupTransaction(
@@ -73,7 +91,7 @@ export async function lookupTransaction(
 
   let res: Response;
   try {
-    res = await fetchImpl(`${paddleApiBase(env)}/transactions/${transactionId}?include=customer`, {
+    res = await fetchImpl(`${paddleApiBase(env)}/transactions/${transactionId}?include=customer,address,business`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       cache: "no-store",
     });
@@ -98,6 +116,21 @@ export async function lookupTransaction(
   const plan = PLANS.find((p) => p.id === txn.custom_data?.aoientPlan);
   const interval = txn.custom_data?.interval === "yearly" ? "yearly" : txn.custom_data?.interval === "monthly" ? "monthly" : null;
   const totals = txn.details?.totals;
+  const cur = txn.currency_code;
+  const a = txn.address;
+  const address = a ? [a.first_line, a.second_line, a.city, a.region, a.postal_code, a.country_code].filter(Boolean).join(", ") || null : null;
+  const payment = txn.payments?.find((p) => p.status === "captured") ?? txn.payments?.[0];
+  const card = payment?.method_details?.card;
+  const paymentMethod = card?.last4
+    ? `${titleCase(card.type ?? "Card")} •••• ${card.last4}`
+    : payment?.method_details?.type
+      ? titleCase(payment.method_details.type.replace(/_/g, " "))
+      : null;
+  const lineItems = (txn.details?.line_items ?? []).map((li) => ({
+    name: li.product?.name ?? plan?.name ?? "Aoient plan",
+    quantity: li.quantity ?? 1,
+    amount: formatMinor(li.totals?.total, cur),
+  }));
   return {
     kind: "paid",
     details: {
@@ -108,7 +141,19 @@ export async function lookupTransaction(
       tax: formatMinor(totals?.tax, txn.currency_code),
       email,
       invoiceNumber: txn.invoice_number ?? null,
-      billedAt: txn.billed_at ?? null,
+      billedAt: payment?.captured_at ?? txn.billed_at ?? null,
+      subtotal: formatMinor(totals?.subtotal, cur),
+      currency: cur,
+      customerName: txn.customer?.name ?? null,
+      address,
+      business: txn.business?.name ? { name: txn.business.name, taxId: txn.business.tax_identifier ?? null } : null,
+      paymentMethod,
+      period: txn.billing_period?.starts_at && txn.billing_period.ends_at ? { startsAt: txn.billing_period.starts_at, endsAt: txn.billing_period.ends_at } : null,
+      lineItems,
     },
   };
+}
+
+function titleCase(s: string) {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }

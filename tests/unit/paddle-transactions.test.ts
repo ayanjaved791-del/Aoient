@@ -29,7 +29,7 @@ describe("lookupTransaction", () => {
       details: { id: TXN, planName: "Indiana", interval: "monthly", total: "$79.00", tax: "$0.00", invoiceNumber: "325-10566" },
     });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe(`https://sandbox-api.paddle.com/transactions/${TXN}?include=customer`);
+    expect(url).toBe(`https://sandbox-api.paddle.com/transactions/${TXN}?include=customer,address,business`);
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer pdl_sdbx_apikey_test");
   });
 

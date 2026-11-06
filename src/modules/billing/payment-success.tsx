@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { ArrowRight, Clock, Hourglass, Mail, Receipt, SearchX, TriangleAlert } from "lucide-react";
+import { ArrowRight, Clock, Download, FileText, Hourglass, Receipt, SearchX, TriangleAlert } from "lucide-react";
 import type { PaidTransaction, TransactionLookup } from "@/server/billing/paddle-transactions";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ function Paid({ details, firstName }: { details: PaidTransaction; firstName: str
     ["Plan", <span key="plan">{details.planName}{details.interval && <span className="text-muted-foreground"> · {details.interval}</span>}</span>],
     ["Amount paid", <span key="amount" className="font-semibold">{details.total}</span>],
     ["Tax included", details.tax],
-    ["Receipt sent to", details.email],
+    ...(details.paymentMethod ? ([["Payment method", details.paymentMethod]] as [string, ReactNode][]) : []),
     ...(details.invoiceNumber ? ([["Invoice", details.invoiceNumber]] as [string, ReactNode][]) : []),
     ...(details.billedAt
       ? ([["Date", new Date(details.billedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })]] as [string, ReactNode][])
@@ -103,9 +103,19 @@ function Paid({ details, firstName }: { details: PaidTransaction; firstName: str
             </div>
           ))}
         </dl>
-        <p className="flex items-center gap-2 bg-surface-muted px-5 py-3 text-xs text-muted-foreground sm:px-6">
-          <Mail className="size-3.5 shrink-0" aria-hidden /> Paddle emails your receipt and invoice. Paddle is the merchant of record for this purchase.
-        </p>
+        <div className="flex flex-wrap items-center gap-3 bg-surface-muted px-5 py-4 sm:px-6">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary"><FileText className="size-5" aria-hidden /></span>
+          <div className="min-w-[12rem] flex-1">
+            <p className="text-sm font-medium">PDF receipt</p>
+            <p className="text-xs text-muted-foreground">All payment details in one document. Paddle, our merchant of record, issues the tax invoice.</p>
+          </div>
+          <Button asChild className="group w-full sm:w-auto">
+            {/* A plain link: the browser downloads the file the server generates after re-checking with Paddle. */}
+            <a href={`/checkout/success/receipt?txn=${encodeURIComponent(details.id)}`} download>
+              <Download className="size-4 transition-transform group-hover:translate-y-0.5" aria-hidden />Download PDF
+            </a>
+          </Button>
+        </div>
       </section>
 
       <section className="animate-fade-up mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6" style={{ animationDelay: "800ms" }}>
