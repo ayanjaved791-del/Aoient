@@ -97,6 +97,30 @@
   --shadow-lg: 0 12px 24px -4px rgb(var(--shadow-color) / 0.10), 0 4px 8px -2px rgb(var(--shadow-color) / 0.05);
 
   --animate-in: fade-in 140ms ease-out;
+
+  /* Landing page motion (always applied through motion-safe:) */
+  --animate-marquee: marquee 45s linear infinite;
+  --animate-marquee-y: marquee-y 20s linear infinite;
+  --animate-orbit: orbit 60s linear infinite;
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-word-cycle: word-cycle 12.5s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+  --animate-bar-grow: bar-grow 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-card-move: card-move 7s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-toggle-knob: toggle-knob 5s ease-in-out infinite;
+  --animate-toggle-track: toggle-track 5s ease-in-out infinite;
+  --animate-probe: probe 4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-probe-flag: probe-flag 4s ease-out infinite;
+  --animate-invite: invite 6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  --animate-invite-badge: invite-badge 6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  --animate-line-cycle: line-cycle 7s ease-out infinite;
+  --animate-blink: blink 1s steps(2, start) infinite;
+  --animate-beam: beam 3.5s linear infinite;
+  --animate-spin-border: spin-border 5s linear infinite;
+  --animate-blob: blob 18s ease-in-out infinite;
+  --animate-scan: scan 3.5s ease-in-out infinite;
+  --animate-knob-slide: knob-slide 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-swap-out: swap-out 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-swap-in: swap-in 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
 @keyframes fade-in {
@@ -126,6 +150,122 @@
 .animate-price-pop { animation: price-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-fade-up { animation: fade-up 400ms ease-out both; }
 .animate-glow-pulse { animation: glow-pulse 4s ease-in-out infinite; }
+
+/* ───────── Landing page ───────── */
+@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+
+@keyframes marquee { to { transform: translateX(-50%); } }
+@keyframes marquee-y { to { transform: translateY(-50%); } }
+@keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes word-cycle {
+  0%, 15% { transform: translateY(0); }
+  20%, 35% { transform: translateY(-1.2em); }
+  40%, 55% { transform: translateY(-2.4em); }
+  60%, 75% { transform: translateY(-3.6em); }
+  80%, 95% { transform: translateY(-4.8em); }
+  100% { transform: translateY(-6em); }
+}
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes card-move {
+  0%, 18% { transform: translateX(0); opacity: 1; }
+  30%, 50% { transform: translateX(calc(100% + 8px)); opacity: 1; }
+  62%, 86% { transform: translateX(calc(200% + 16px)); opacity: 1; }
+  94% { transform: translateX(calc(200% + 16px)); opacity: 0; }
+  95% { transform: translateX(0); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@keyframes toggle-knob { 0%, 35% { transform: translateX(0); } 45%, 85% { transform: translateX(14px); } 95%, 100% { transform: translateX(0); } }
+@keyframes toggle-track {
+  0%, 35% { background-color: var(--track-off); }
+  45%, 85% { background-color: var(--track-on); }
+  95%, 100% { background-color: var(--track-off); }
+}
+@keyframes probe { 0%, 10% { transform: translateX(0); } 40%, 55% { transform: translateX(-56px); } 85%, 100% { transform: translateX(0); } }
+@keyframes probe-flag {
+  0%, 36% { opacity: 0; transform: translateY(4px) scale(0.85); }
+  42%, 62% { opacity: 1; transform: translateY(0) scale(1); }
+  72%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); }
+}
+@keyframes invite {
+  0% { opacity: 0; transform: translateY(18px) scale(0.96); }
+  10%, 82% { opacity: 1; transform: translateY(0) scale(1); }
+  92%, 100% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+}
+@keyframes invite-badge {
+  0%, 38% { opacity: 0; transform: scale(0.6); }
+  46%, 82% { opacity: 1; transform: scale(1); }
+  92%, 100% { opacity: 0; transform: scale(0.9); }
+}
+@keyframes line-cycle {
+  0% { opacity: 0; transform: translateY(4px); }
+  6%, 86% { opacity: 1; transform: translateY(0); }
+  94%, 100% { opacity: 0; transform: translateY(0); }
+}
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes beam { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes spin-border { to { --angle: 360deg; } }
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(48px, -32px) scale(1.12); }
+  66% { transform: translate(-36px, 24px) scale(0.94); }
+}
+@keyframes scan { 0%, 100% { top: 8%; } 50% { top: 88%; } }
+@keyframes knob-slide { 0%, 40% { transform: translateX(0); } 50%, 90% { transform: translateX(100%); } 100% { transform: translateX(0); } }
+@keyframes swap-out {
+  0%, 40% { opacity: 1; transform: translateY(0); }
+  48%, 92% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes swap-in {
+  0%, 42% { opacity: 0; transform: translateY(10px); }
+  50%, 90% { opacity: 1; transform: translateY(0); }
+  98%, 100% { opacity: 0; transform: translateY(10px); }
+}
+
+.landing {
+  --spot: 0 0 0;
+  --track-off: #d4d4d4;
+  --track-on: #0a0a0a;
+}
+.dark .landing {
+  --spot: 255 255 255;
+  --track-off: #404040;
+  --track-on: #fafafa;
+}
+
+/* Scroll reveal: only hides content once JavaScript is running, so the page is
+   fully readable without it. */
+.reveal-ready .reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1), transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal-ready .reveal.is-visible { opacity: 1; transform: none; }
+
+/* Pointer spotlight on cards */
+[data-spotlight] { position: relative; isolation: isolate; }
+[data-spotlight]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  background: radial-gradient(360px circle at var(--x, 50%) var(--y, 0%), rgb(var(--spot) / 0.07), transparent 60%);
+}
+[data-spotlight]:hover::before { opacity: 1; }
+
+/* Rotating gradient border */
+.spin-border {
+  background:
+    linear-gradient(var(--card-bg, #fff), var(--card-bg, #fff)) padding-box,
+    conic-gradient(from var(--angle), transparent 0%, rgb(var(--spot) / 0.9) 12%, transparent 28%, transparent 100%) border-box;
+  border: 1px solid transparent;
+}
 
 @layer base {
   * { @apply border-border; }
