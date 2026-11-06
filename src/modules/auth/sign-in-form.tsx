@@ -29,7 +29,7 @@ export function SignInForm() {
     if (isLocalAuth) {
       try {
         await localSignIn(values);
-        router.replace("/home");
+        router.replace("/pricing");
       } catch (e) {
         setError({ message: e instanceof LocalAuthError ? e.message : "We couldn't sign you in." });
       }

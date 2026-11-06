@@ -27,4 +27,4 @@ Milestones from spec §27. A milestone is complete only when its exit criteria p
 
 ## Current mode
 
-Accounts run in **browser-only mode** (`NEXT_PUBLIC_AUTH_MODE=local`, the default): sign-up and sign-in save to `localStorage` and open `/home`. Connecting the database means setting `NEXT_PUBLIC_AUTH_MODE=server`, which re-enables the M1 features above. File storage has been removed from the system and from planned pricing.
+Accounts run in **browser-only mode** (`NEXT_PUBLIC_AUTH_MODE=local`, the default): sign-up and sign-in save to `localStorage` and open `/pricing` (Starter $29 / Growth $79 / Business $169 per month; yearly = 10 months, spec §28). "Buy now" opens Paddle's overlay checkout when the `NEXT_PUBLIC_PADDLE_*` settings are present, and otherwise explains which settings are missing. A completed browser checkout never unlocks anything: activation waits for a verified server webhook, which needs the database (M8). Connecting the database means setting `NEXT_PUBLIC_AUTH_MODE=server`, which re-enables the M1 features above. File storage has been removed from the system and from planned pricing.

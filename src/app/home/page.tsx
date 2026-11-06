@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { LocalHome } from "@/modules/auth/local-home";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Home" };
-
+/** Kept so existing links keep working; signed-in users now start on pricing. */
 export default function HomePage() {
-  return <LocalHome />;
+  redirect("/pricing");
 }

@@ -9,7 +9,7 @@ const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/verify-email", "/forgot-passw
 
 // Browser-only accounts live in localStorage, which the server can't see, so the
 // /home page guards itself on the client while that mode is active.
-const LOCAL_MODE_PUBLIC = process.env.NEXT_PUBLIC_AUTH_MODE === "server" ? [] : ["/home"];
+const LOCAL_MODE_PUBLIC = process.env.NEXT_PUBLIC_AUTH_MODE === "server" ? [] : ["/home", "/pricing"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

@@ -31,7 +31,7 @@ export function SignUpForm() {
     if (isLocalAuth) {
       try {
         await localSignUp(values);
-        router.replace("/home");
+        router.replace("/pricing");
       } catch (e) {
         setServerError(e instanceof LocalAuthError ? e.message : "We couldn't create your account in this browser.");
       }
