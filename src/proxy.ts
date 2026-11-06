@@ -24,22 +24,25 @@ function toSignIn(req: NextRequest) {
 }
 
 /**
- * When Supabase can't verify an email link (expired, already used, or the
- * redirect URL isn't allow-listed) it sends the visitor to the Site URL root
- * with `?error_code=…`. Send them somewhere they can request a new link.
+ * When Supabase can't use the requested redirect (not allow-listed) it sends the
+ * visitor to the Site URL root instead:
+ *  - `?code=…` (link verified): finish sign-in on /auth/confirm.
+ *  - `?error_code=…` (expired, already used): go where a new link can be requested.
  */
-function linkErrorRedirect(req: NextRequest) {
-  const code = req.nextUrl.searchParams.get("error_code");
-  if (req.nextUrl.pathname !== "/" || !code) return null;
+function emailLinkFallback(req: NextRequest) {
+  if (req.nextUrl.pathname !== "/") return null;
+  const code = req.nextUrl.searchParams.get("code");
+  const error = req.nextUrl.searchParams.get("error_code");
+  if (!code && !error) return null;
   const url = req.nextUrl.clone();
-  url.pathname = "/verify-email";
-  url.search = `?error=${encodeURIComponent(code)}`;
+  url.pathname = code ? "/auth/confirm" : "/verify-email";
+  url.search = code ? `?code=${encodeURIComponent(code)}` : `?error=${encodeURIComponent(error!)}`;
   return NextResponse.redirect(url);
 }
 
 export async function proxy(req: NextRequest) {
-  const linkError = linkErrorRedirect(req);
-  if (linkError) return linkError;
+  const fallback = emailLinkFallback(req);
+  if (fallback) return fallback;
   if (!isSupabaseConfigured) return isPublic(req.nextUrl.pathname) ? NextResponse.next() : toSignIn(req);
 
   let res = NextResponse.next({ request: req });
