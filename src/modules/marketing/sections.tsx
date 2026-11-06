@@ -388,6 +388,20 @@ export function CtaSection() {
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)] dark:bg-[radial-gradient(rgb(0_0_0/0.12)_1px,transparent_1px)]"
         />
+        <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span
+            className="absolute size-[520px] rounded-full border-[3px] border-dotted border-white/30 motion-safe:animate-orbit sm:size-[640px] dark:border-black/25"
+            style={{ animationDuration: "8s" }}
+          >
+            <span className="absolute left-1/2 top-0 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-[0_0_16px_4px_rgb(217_70_239/0.6)]" />
+          </span>
+          <span
+            className="absolute size-[380px] rounded-full border-2 border-dotted border-white/20 motion-safe:animate-orbit sm:size-[460px] dark:border-black/15"
+            style={{ animationDuration: "6s", animationDirection: "reverse" }}
+          >
+            <span className="absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-1/2 rounded-full bg-orange-400 shadow-[0_0_12px_3px_rgb(251_146_60/0.6)]" />
+          </span>
+        </div>
         <div className="relative px-6 py-20 text-center text-white sm:py-24 dark:text-black">
           <h2 className="mx-auto max-w-2xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl">Bring your whole business into one place.</h2>
           <p className="mx-auto mt-5 max-w-xl text-white/65 dark:text-black/60">Create a workspace, invite your team and grow into each module as it ships.</p>
