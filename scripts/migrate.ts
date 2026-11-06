@@ -6,8 +6,9 @@
  */
 import "dotenv/config";
 import { applyMigrations } from "./migrations-lib";
+import { resolveDatabaseUrl } from "../src/lib/database-url";
 
-const url = process.argv[2] ?? process.env.DATABASE_URL;
+const url = process.argv[2] ?? resolveDatabaseUrl();
 if (!url) {
   console.error("DATABASE_URL is not set. See .env.example.");
   process.exit(1);

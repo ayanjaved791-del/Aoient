@@ -27,6 +27,15 @@ npm run doctor                # checks settings, connection, migrations, seed
 npm run dev
 ```
 
+### Setting up from the browser (Vercel + Supabase, no terminal)
+
+1. **Vercel → your project → Settings → Environment Variables.** If you connected Supabase through Vercel's Supabase integration, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `POSTGRES_URL` are already there, and Aoient uses them as they are. Otherwise add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `DATABASE_URL` (transaction pooler, port 6543) by hand. Optionally set `APP_URL` to your site address; without it, the Vercel production domain is used.
+2. **Supabase → SQL Editor** (the project those variables point to): paste the whole of [`supabase/setup.sql`](supabase/setup.sql) and click **Run**. It creates the tables, permissions and system roles. Run it again after pulling updates; already-applied parts are skipped.
+3. **Supabase → Authentication → URL Configuration:** Site URL = your site address; add `<site>/auth/confirm` to Redirect URLs.
+4. Redeploy on Vercel.
+
+If you have more than one Supabase project, steps 2 and 3 must be done in the one whose URL is in Vercel's `NEXT_PUBLIC_SUPABASE_URL`.
+
 Sign-up verification and password-reset emails are sent by Supabase. Invitation emails are printed to the server log until an email provider is configured. Details: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ## Scripts
@@ -37,6 +46,7 @@ Sign-up verification and password-reset emails are sent by Supabase. Invitation 
 | `npm run lint` · `npm run typecheck` | ESLint · TypeScript |
 | `npm test` | Unit + integration tests (needs a local Postgres in `TEST_DATABASE_URL`) |
 | `npm run db:migrate` · `db:seed` | Apply `supabase/migrations/*.sql` · sync permissions and system roles |
+| `npm run db:setup-sql` | Regenerate `supabase/setup.sql` (migrations + seed in one file for the Supabase SQL Editor) |
 | `npm run doctor` | Checks `.env`, Supabase settings, database connection, migrations and seed; prints the fix for anything missing |
 
 ## Documentation

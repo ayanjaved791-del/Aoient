@@ -4,11 +4,12 @@
  */
 import "dotenv/config";
 import postgres from "postgres";
+import { resolveDatabaseUrl } from "../src/lib/database-url";
 import { syncPermissionCatalog } from "../src/server/permissions/sync";
 
 async function main() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set. See .env.example.");
+  const url = resolveDatabaseUrl();
+  if (!url) throw new Error("DATABASE_URL (or POSTGRES_URL) is not set. See .env.example.");
   const sql = postgres(url, { max: 1, onnotice: () => {} });
   try {
     await syncPermissionCatalog(sql);

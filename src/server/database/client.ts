@@ -1,8 +1,10 @@
 import "server-only";
 import postgres from "postgres";
+import { resolveDatabaseUrl } from "@/lib/database-url";
 
 /**
- * Server-side connection to the Supabase Postgres database (DATABASE_URL).
+ * Server-side connection to the Supabase Postgres database (DATABASE_URL, or
+ * POSTGRES_URL from the Vercel Supabase integration).
  *
  * Created lazily on first query, so importing this module never needs the
  * database (the app builds without DATABASE_URL). One pool per process; cached
@@ -18,8 +20,8 @@ export type Db = postgres.Sql | postgres.TransactionSql;
 const globalForDb = globalThis as unknown as { __aoientSql?: Sql };
 
 function createClient(): Sql {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set. See .env.example.");
+  const url = resolveDatabaseUrl();
+  if (!url) throw new Error("DATABASE_URL (or POSTGRES_URL) is not set. See .env.example.");
   return postgres(url, {
     max: Number(process.env.DATABASE_POOL_MAX ?? 5),
     prepare: false,

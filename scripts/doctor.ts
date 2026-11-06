@@ -3,6 +3,7 @@
  * Prints variable NAMES only, never values.
  */
 import "dotenv/config";
+import { resolveDatabaseUrl } from "../src/lib/database-url";
 import postgres from "postgres";
 
 type Result = { ok: boolean; label: string; fix?: string };
@@ -19,6 +20,7 @@ function validUrl(v: string | undefined) {
 
 async function main() {
   const env = process.env;
+  const databaseUrl = resolveDatabaseUrl(env);
 
   check(validUrl(env.APP_URL), "APP_URL is a full URL", "Set APP_URL in .env, e.g. http://localhost:3000 — the exact address you open in the browser.");
   check(
@@ -32,13 +34,13 @@ async function main() {
     "Copy the publishable (or legacy anon) key from Supabase → Project Settings → API Keys.",
   );
   check(
-    Boolean(env.DATABASE_URL),
-    "DATABASE_URL is set",
+    Boolean(databaseUrl),
+    "DATABASE_URL (or POSTGRES_URL from Vercel) is set",
     "Copy a connection string from Supabase → Connect (use the transaction pooler URL on Vercel).",
   );
 
-  if (env.DATABASE_URL) {
-    const sql = postgres(env.DATABASE_URL, { max: 1, connect_timeout: 5, onnotice: () => {} });
+  if (databaseUrl) {
+    const sql = postgres(databaseUrl, { max: 1, connect_timeout: 5, onnotice: () => {} });
     try {
       await sql`select 1`;
       check(true, "Database is reachable");

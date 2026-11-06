@@ -13,12 +13,11 @@ import { parseInput } from "@/lib/validation/parse";
 import { createInvitationSchema } from "@/lib/validation/organization";
 import { generateToken, hashToken } from "@/lib/tokens";
 import { loadAssignableRole } from "./roles";
+import { resolveAppUrl } from "@/lib/app-url";
 
 export const INVITATION_TTL_DAYS = 7;
 
-function appUrl(): string {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
-}
+const appUrl = () => resolveAppUrl();
 
 export interface InvitationRow {
   id: string;

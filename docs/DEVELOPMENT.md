@@ -11,6 +11,8 @@ cp .env.example .env
 npm install && npm run db:migrate && npm run db:seed && npm run doctor && npm run dev
 ```
 
+No terminal? Paste `supabase/setup.sql` into Supabase → SQL Editor instead of `db:migrate`/`db:seed` (see the README). After adding a migration or changing the permission catalogue, run `npm run db:setup-sql` — a unit test fails if the file is stale.
+
 ### Supabase dashboard settings
 
 - **Authentication → URL Configuration:** Site URL = your `APP_URL`; add `<APP_URL>/auth/confirm` to Redirect URLs (and `http://localhost:3000/auth/confirm` for local dev).

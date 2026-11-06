@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "doctor": "tsx scripts/doctor.ts"
+    "doctor": "tsx scripts/doctor.ts",
+    "db:setup-sql": "tsx scripts/setup-sql.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",
