@@ -9,6 +9,7 @@ export type ErrorCode =
   | "VALIDATION_ERROR"
   | "CONFLICT"
   | "RATE_LIMITED"
+  | "PLAN_LIMIT"
   | "INTERNAL_ERROR";
 
 export class AppError extends Error {
@@ -61,6 +62,13 @@ export class RateLimitedError extends AppError {
   constructor(retryAfterSeconds: number, message = "Too many requests. Please try again later.") {
     super("RATE_LIMITED", message, 429);
     this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+/** The organization's license doesn't allow this (limit reached, feature not in plan, or expired). */
+export class PlanLimitError extends AppError {
+  constructor(message: string) {
+    super("PLAN_LIMIT", message, 403);
   }
 }
 

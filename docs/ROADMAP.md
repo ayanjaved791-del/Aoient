@@ -12,7 +12,7 @@ Milestones from spec §27. A milestone is complete only when its exit criteria p
 | M5 Operations add-ons | Flow, Analytics expansion, Documents | Auditable automation | |
 | M6 Commercial modules | Finance, Inventory | Calculations verified | |
 | M7 Ecosystem | Workspace, Connect (API keys, webhooks) | Provider lifecycle tested | |
-| M8 Billing | Paddle Sandbox, subscription mapping, entitlements (no storage quotas in plans) | Billing test matrix passes | |
+| M8 Billing | Paddle Sandbox, subscription mapping, entitlements (no storage quotas in plans) | Billing test matrix passes | ✅ Licenses: 14-day trial, plan limits (users, admin seats, custom roles) enforced on the server, verified webhooks, billing page. Project/automation limits wait for those modules. |
 | M9 Launch readiness | Security review, backups, privacy/legal docs, monitoring | Go/no-go signed off | |
 
 ## M1 delivered

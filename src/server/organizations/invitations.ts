@@ -14,6 +14,7 @@ import { createInvitationSchema } from "@/lib/validation/organization";
 import { generateToken, hashToken } from "@/lib/tokens";
 import { loadAssignableRole } from "./roles";
 import { resolveAppUrl } from "@/lib/app-url";
+import { assertAdminSeat, assertMemberSeat, assertWritable, occupiesAdminSeat } from "@/server/billing/license";
 
 export const INVITATION_TTL_DAYS = 7;
 
@@ -66,6 +67,9 @@ export async function createInvitation(ctx: OrgContext, input: unknown): Promise
   const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
 
   const { invitation, role, inviterName } = await transaction(async (tx) => {
+    // Serialise seat checks per organization so two invites can't both take the last seat.
+    await tx`select 1 from organization where id = ${ctx.organizationId} for update`;
+    const license = await assertWritable(tx, ctx.organizationId);
     const role = await loadAssignableRole(tx, ctx.organizationId, data.roleId);
     const grant = canGrantRole(ctx, role);
     if (!grant.allowed) throw new ForbiddenError(grant.reason);
@@ -78,6 +82,9 @@ export async function createInvitation(ctx: OrgContext, input: unknown): Promise
     await tx`
       update invitation set status = 'revoked', updated_at = now()
       where organization_id = ${ctx.organizationId} and lower(email) = lower(${data.email}) and status = 'pending'`;
+
+    await assertMemberSeat(tx, ctx.organizationId, license);
+    if (occupiesAdminSeat(role)) await assertAdminSeat(tx, ctx.organizationId, license);
 
     const [invitation] = await tx<{ id: string }[]>`
       insert into invitation (organization_id, email, role_id, token_hash, expires_at, invited_by_id)
@@ -169,6 +176,13 @@ export async function acceptInvitation(
       update invitation set status = 'accepted', accepted_at = now(), updated_at = now()
       where id = ${inv.id} and status = 'pending' and expires_at > now()`;
     if (claimed.count === 0) throw new NotFoundError("This invitation is invalid or has expired.");
+
+    // Plan limits at the moment of joining (the plan may have changed since the invite).
+    await tx`select 1 from organization where id = ${inv.organization_id} for update`;
+    const license = await assertWritable(tx, inv.organization_id);
+    await assertMemberSeat(tx, inv.organization_id, license);
+    const role = await loadAssignableRole(tx, inv.organization_id, inv.role_id);
+    if (occupiesAdminSeat(role)) await assertAdminSeat(tx, inv.organization_id, license);
 
     const [existing] = await tx`select 1 from organization_member where organization_id = ${inv.organization_id} and user_id = ${user.id}`;
     if (existing) throw new ConflictError("You are already a member of this organization.");

@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCustomRoles, assertWritable } from "@/server/billing/license";
 import { getDb, transaction, type Db } from "@/server/database/client";
 import { recordAudit } from "@/server/audit/audit";
 import { assertPermission, type OrgContext } from "@/server/tenancy/context";
@@ -113,6 +114,7 @@ export async function createCustomRole(ctx: OrgContext, input: unknown): Promise
   const baseKey = `custom-${slugify(data.name) || "role"}`;
 
   return transaction(async (tx) => {
+    assertCustomRoles(await assertWritable(tx, ctx.organizationId));
     let key = baseKey;
     for (let i = 2; (await tx`select 1 from role where organization_id = ${ctx.organizationId} and key = ${key}`).length; i++) {
       key = `${baseKey}-${i}`;
@@ -146,6 +148,7 @@ export async function updateCustomRole(ctx: OrgContext, roleId: string, input: u
   const keys = validatePermissionKeys(ctx, data.permissions);
 
   await transaction(async (tx) => {
+    assertCustomRoles(await assertWritable(tx, ctx.organizationId));
     const role = await loadCustomRole(tx, ctx, roleId);
     if (role.id === ctx.roleId) throw new ForbiddenError("You cannot edit the role you are using.");
     // Editing a role must not let you act on members more privileged than you.

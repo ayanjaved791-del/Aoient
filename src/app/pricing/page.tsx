@@ -6,12 +6,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = { title: "Pricing" };
 
-async function SignedInPricing() {
-  const user = await requireUserOrRedirect("/pricing");
-  return <PricingPage user={{ name: user.name, email: user.email }} />;
+async function SignedInPricing({ searchParams }: { searchParams: Promise<{ org?: string }> }) {
+  const { org } = await searchParams;
+  const slug = org && /^[a-z0-9-]{1,64}$/.test(org) ? org : undefined;
+  const user = await requireUserOrRedirect(slug ? `/pricing?org=${slug}` : "/pricing");
+  return <PricingPage user={{ name: user.name, email: user.email }} orgSlug={slug} />;
 }
 
-export default function Pricing() {
+export default function Pricing(props: { searchParams: Promise<{ org?: string }> }) {
   return (
     <Suspense
       fallback={
@@ -21,7 +23,7 @@ export default function Pricing() {
         </div>
       }
     >
-      <SignedInPricing />
+      <SignedInPricing {...props} />
     </Suspense>
   );
 }

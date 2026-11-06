@@ -7,6 +7,9 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
 import { listUserOrganizations } from "@/server/organizations/organizations";
+import { getLicenseOverview } from "@/server/billing/license";
+import { can } from "@/server/tenancy/context";
+import { LicenseBanner } from "@/modules/billing/license-view";
 
 /**
  * Interim workspace frame for M1 (organization administration). The full
@@ -16,7 +19,7 @@ import { listUserOrganizations } from "@/server/organizations/organizations";
 async function WorkspaceFrame({ params, children }: { params: Promise<{ organizationSlug: string }>; children: React.ReactNode }) {
   const { organizationSlug } = await params;
   const { user, ctx } = await getPageOrgContext(organizationSlug);
-  const orgs = await listUserOrganizations(user.id);
+  const [orgs, { license }] = await Promise.all([listUserOrganizations(user.id), getLicenseOverview(ctx.organizationId)]);
   const base = `/${ctx.organization.slug}`;
   return (
     <div className="min-h-dvh">
@@ -31,6 +34,7 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
           <WorkspaceNav items={[{ href: base, label: "Overview", exact: true }, { href: `${base}/settings`, label: "Settings" }]} />
         </div>
       </header>
+      <LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} />
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">{children}</main>
     </div>
   );

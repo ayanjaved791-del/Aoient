@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, ShieldCheck, Users } from "lucide-react";
+import { Building2, CreditCard, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function SettingsNav({ base }: { base: string }) {
@@ -10,6 +10,7 @@ export function SettingsNav({ base }: { base: string }) {
     { href: `${base}/general`, label: "General", icon: Building2 },
     { href: `${base}/members`, label: "Members", icon: Users },
     { href: `${base}/roles`, label: "Roles & permissions", icon: ShieldCheck },
+    { href: `${base}/billing`, label: "Billing & plan", icon: CreditCard },
   ];
   return (
     <nav aria-label="Settings" className="flex gap-1 overflow-x-auto md:flex-col">

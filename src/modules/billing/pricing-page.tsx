@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const ICONS = { medisea: Sparkles, indiana: Rocket, pacfic_deepdive: Building2 } as const;
 
-export function PricingPage({ user }: { user: { name: string; email: string } }) {
+export function PricingPage({ user, orgSlug }: { user: { name: string; email: string }; orgSlug?: string }) {
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
   const saving = yearlySavingPercent();
   const freeMonths = 12 - ANNUAL_MONTHS_CHARGED;
@@ -143,7 +143,7 @@ export function PricingPage({ user }: { user: { name: string; email: string } })
                     asChild
                     className={cn("relative mt-8 w-full transition-transform active:scale-[0.98]", featured && "bg-white text-navy hover:bg-white/90 dark:bg-primary dark:text-white dark:hover:bg-primary-hover")}
                   >
-                    <Link href={`/checkout/${plan.id}?interval=${interval}`} aria-label={`Buy ${plan.name}, ${interval}`}>
+                    <Link href={`/checkout/${plan.id}?interval=${interval}${orgSlug ? `&org=${orgSlug}` : ""}`} aria-label={`Buy ${plan.name}, ${interval}`}>
                       Buy now
                     </Link>
                   </Button>

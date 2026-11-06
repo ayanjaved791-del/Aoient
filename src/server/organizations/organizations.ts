@@ -11,6 +11,7 @@ import { isUuid } from "@/lib/ids";
 import { parseInput } from "@/lib/validation/parse";
 import { createOrganizationSchema, updateOrganizationSchema, updateMemberSchema } from "@/lib/validation/organization";
 import { loadAssignableRole } from "./roles";
+import { assertAdminSeat, assertMemberSeat, assertWritable, occupiesAdminSeat, startTrial } from "@/server/billing/license";
 
 export interface OrganizationSummary {
   id: string;
@@ -51,6 +52,7 @@ export async function createOrganization(user: { id: string; emailVerified: bool
         values (${data.name}, ${data.slug}, ${data.timezone}, ${data.currency}, ${user.id})
         returning id, name, slug`;
       await tx`insert into organization_member (organization_id, user_id, role_id) values (${org.id}, ${user.id}, ${ownerRole.id})`;
+      await startTrial(tx, org.id);
       await recordAudit(tx, {
         organizationId: org.id, actorUserId: user.id, action: "organization.created",
         targetType: "organization", targetId: org.id, metadata: { name: org.name, slug: org.slug },
@@ -94,6 +96,7 @@ export async function updateOrganization(ctx: OrgContext, input: unknown) {
     return await transaction(async (tx) => {
       const before = await selectOrganization(tx, ctx.organizationId, true);
       if (!before) throw new NotFoundError();
+      await assertWritable(tx, ctx.organizationId);
       const [org] = await tx<{ id: string; name: string; slug: string; timezone: string; currency: string }[]>`
         update organization set
           name = ${data.name ?? before.name},
@@ -195,6 +198,11 @@ export async function updateMember(ctx: OrgContext, memberId: string, input: unk
       const newRole = await loadAssignableRole(tx, ctx.organizationId, data.roleId);
       const grant = canGrantRole(ctx, newRole);
       if (!grant.allowed) throw new ForbiddenError(grant.reason);
+      const license = await assertWritable(tx, ctx.organizationId);
+      const takesSeat = (data.status ?? target.status) === "active";
+      if (takesSeat && occupiesAdminSeat(newRole) && !occupiesAdminSeat(target.role)) {
+        await assertAdminSeat(tx, ctx.organizationId, license);
+      }
       if (targetIsOwner && target.status === "active" && (await countActiveOwners(tx, ctx.organizationId)) <= 1) {
         throw new ConflictError("An organization must keep at least one active owner.");
       }
@@ -207,6 +215,16 @@ export async function updateMember(ctx: OrgContext, memberId: string, input: unk
     }
 
     if (data.status && data.status !== target.status) {
+      if (data.status === "active") {
+        // Reactivating takes a seat again (and an admin seat for Owner/Admin roles).
+        const license = await assertWritable(tx, ctx.organizationId);
+        await assertMemberSeat(tx, ctx.organizationId, license);
+        const [current] = await tx<{ key: string; is_system: boolean }[]>`
+          select r.key, r.is_system from organization_member m join role r on r.id = m.role_id where m.id = ${target.id}`;
+        if (current && occupiesAdminSeat({ key: current.key, isSystem: current.is_system })) {
+          await assertAdminSeat(tx, ctx.organizationId, license);
+        }
+      }
       if (data.status === "suspended" && targetIsOwner && (await countActiveOwners(tx, ctx.organizationId)) <= 1) {
         throw new ConflictError("An organization must keep at least one active owner.");
       }

@@ -22,7 +22,8 @@ Status of the controls in spec §22. "✅" means implemented **and** covered by 
 | Security headers | ✅ | `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`; `X-Powered-By` removed. |
 | Data API lock-down | ✅ | RLS enabled on every `public` table with no policies; tests prove `anon`/`authenticated` read 0 rows and cannot write. |
 | Secrets | ✅ | `.env` is git-ignored; `.env.example` lists names only; secrets read only in `server-only` modules. |
-| Files, Paddle webhooks, API keys | ⏳ | Milestones M5, M8, M7. |
+| Paddle webhooks & licenses | ✅ | Paid plans change only through webhooks verified with HMAC-SHA256 (`Paddle-Signature`, 5-minute window); each event ID applied once; stale events ignored; plan taken from the Paddle price ID. The organization comes from a known subscription or a server-signed checkout token (only members with `billing.manage` can get one), so a browser can't point a payment at another tenant or overwrite a live subscription. Limits are checked inside the same transaction as the change, with the organization row locked. |
+| Files, API keys | ⏳ | Milestones M5, M7. |
 | MFA | ❌ | Not implemented — not claimed. |
 | Backups, monitoring | ❌ | Launch tasks (M9). |
 

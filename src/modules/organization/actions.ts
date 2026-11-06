@@ -11,6 +11,7 @@ import { runAction } from "@/server/actions/run";
 import { createOrganization, leaveOrganization, removeMember, updateMember, updateOrganization } from "@/server/organizations/organizations";
 import { acceptInvitation, createInvitation, revokeInvitation } from "@/server/organizations/invitations";
 import { createCustomRole, deleteCustomRole, updateCustomRole } from "@/server/organizations/roles";
+import { createBillingPortalUrl } from "@/server/billing/paddle-portal";
 
 async function ctxFor(slug: string) {
   const user = await requireUser();
@@ -95,4 +96,8 @@ export async function acceptInvitationAction(token: string) {
     const user = await requireUser();
     return acceptInvitation(user, String(token));
   });
+}
+
+export async function openBillingPortalAction(slug: string) {
+  return runAction(async () => ({ url: await createBillingPortalUrl(await ctxFor(slug)) }));
 }

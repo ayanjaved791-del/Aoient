@@ -40,3 +40,12 @@ Supabase (managed PostgreSQL). Schema changes are plain SQL files in `supabase/m
 ## Tests
 
 The integration suite runs on a **plain local Postgres** database (`TEST_DATABASE_URL`), never on the Supabase project. `tests/support/auth-stub.sql` provides a minimal stand-in for Supabase's `auth.users` table and API roles so the real migration and its RLS can be exercised.
+
+## Licenses (M8)
+
+| Table | Notes |
+| --- | --- |
+| `organization_license` | One row per organization: plan, interval, status (`trialing`/`active`/`past_due`/`paused`/`canceled`), source (`trial` or `paddle`), trial and period end dates, Paddle subscription/customer IDs and the time of the last applied Paddle event. Written only by the server: a 14-day Medisea trial when the organization is created, then verified webhooks. |
+| `paddle_webhook_event` | Every Paddle event ID once (idempotency) with its outcome. |
+
+What a state allows lives in `src/lib/billing/entitlements.ts`: trial/active/past-due/canceling = full access within the plan's limits; expired = read-only (data stays visible; removing members and revoking invitations still work).

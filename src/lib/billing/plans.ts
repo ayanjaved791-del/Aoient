@@ -117,3 +117,14 @@ export function missingCheckoutConfig(plan: PlanId, interval: BillingInterval): 
   }
   return missing;
 }
+
+/** Which plan and interval a Paddle price ID belongs to (undefined for unknown prices). */
+export function planForPriceId(priceId: string | undefined): { plan: PlanId; interval: BillingInterval } | undefined {
+  if (!priceId) return undefined;
+  for (const plan of Object.keys(PRICE_IDS) as PlanId[]) {
+    for (const interval of ["monthly", "yearly"] as const) {
+      if (PRICE_IDS[plan][interval] === priceId) return { plan, interval };
+    }
+  }
+  return undefined;
+}

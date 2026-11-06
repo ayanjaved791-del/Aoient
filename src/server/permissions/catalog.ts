@@ -28,7 +28,7 @@ export type ModuleKey =
 
 export const MODULES: Record<ModuleKey, { label: string; released: boolean }> = {
   organization: { label: "Organization & access", released: true },
-  billing: { label: "Billing & subscription", released: false },
+  billing: { label: "Billing & subscription", released: true },
   people: { label: "People", released: false },
   crm: { label: "CRM", released: false },
   projects: { label: "Projects", released: false },

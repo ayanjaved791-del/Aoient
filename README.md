@@ -36,6 +36,13 @@ npm run dev
 
 If you have more than one Supabase project, steps 2 and 3 must be done in the one whose URL is in Vercel's `NEXT_PUBLIC_SUPABASE_URL`.
 
+### Paddle (plans and licenses)
+
+Every new workspace gets a 14-day Medisea trial. Paid plans are activated only by Paddle webhooks:
+
+1. Vercel: `PADDLE_API_KEY` (Secret), `NEXT_PUBLIC_PADDLE_ENVIRONMENT`, `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` and the six `NEXT_PUBLIC_PADDLE_PRICE_*` IDs (Config).
+2. Paddle → Developer tools → Notifications → **New destination**: URL `https://<your site>/api/webhooks/paddle`, events `subscription.*`. Copy its secret key into Vercel as `PADDLE_WEBHOOK_SECRET` (Secret) and redeploy.
+
 Sign-up verification and password-reset emails are sent by Supabase. Invitation emails are printed to the server log until an email provider is configured. Details: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ## Scripts

@@ -43,14 +43,24 @@ function money(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
 }
 
+/** Decided on the server: which workspace this checkout pays for, or why it can't start. */
+export type CheckoutTarget =
+  | { kind: "ready"; organization: { id: string; name: string; slug: string }; checkoutToken: string }
+  | { kind: "choose"; organizations: { id: string; name: string; slug: string }[] }
+  | { kind: "no-organization" }
+  | { kind: "already-subscribed"; organization: { name: string; slug: string } }
+  | { kind: "not-configured"; organization: { name: string; slug: string } };
+
 export function CheckoutPage({
   planId,
   initialInterval,
   user,
+  target,
 }: {
   planId: PlanId;
   initialInterval: BillingInterval;
   user: { name: string; email: string };
+  target: CheckoutTarget;
 }) {
   const plan = PLANS.find((p) => p.id === planId)!;
   const router = useRouter();
@@ -62,6 +72,8 @@ export function CheckoutPage({
   const openedRef = useRef(false);
 
   const missing = missingCheckoutConfig(plan.id, interval);
+  const ready = target.kind === "ready" && missing.length === 0;
+  const orgParam = target.kind === "ready" ? `&org=${encodeURIComponent(target.organization.slug)}` : "";
   const priceId = paddlePriceId(plan.id, interval);
   const listPrice = priceFor(plan, interval);
   const Icon = ICONS[plan.id];
@@ -93,7 +105,7 @@ export function CheckoutPage({
 
   // Open the inline checkout once (and again if the site theme changes).
   useEffect(() => {
-    if (!resolvedTheme || !priceId || !PADDLE_CLIENT_TOKEN) return;
+    if (!resolvedTheme || !priceId || !PADDLE_CLIENT_TOKEN || target.kind !== "ready") return;
     let cancelled = false;
     getPaddle()
       .then((paddle) => {
@@ -104,7 +116,8 @@ export function CheckoutPage({
         paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],
           customer: { email: user.email },
-          customData: { aoientPlan: plan.id, interval },
+          // The webhook trusts organizationId only together with the server-signed token.
+          customData: { aoientPlan: plan.id, interval, organizationId: target.organization.id, checkoutToken: target.checkoutToken },
           settings: {
             displayMode: "inline",
             variant: "one-page",
@@ -131,7 +144,7 @@ export function CheckoutPage({
   function changeInterval(next: BillingInterval) {
     if (next === interval || status === "completed") return;
     setBillingInterval(next);
-    router.replace(`/checkout/${plan.id}?interval=${next}`, { scroll: false });
+    router.replace(`/checkout/${plan.id}?interval=${next}${orgParam}`, { scroll: false });
     const nextPrice = paddlePriceId(plan.id, next);
     if (openedRef.current && nextPrice) paddleRef.current?.Checkout.updateItems([{ priceId: nextPrice, quantity: 1 }]);
   }
@@ -243,9 +256,13 @@ export function CheckoutPage({
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Paying as {user.email}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {target.kind === "ready" ? <>For <span className="font-medium text-foreground">{target.organization.name}</span> · paying as {user.email}</> : <>Paying as {user.email}</>}
+            </p>
 
-            {missing.length > 0 ? (
+            {target.kind !== "ready" ? (
+              <TargetNotice target={target} planId={plan.id} interval={interval} />
+            ) : missing.length > 0 ? (
               <div className="mt-6 rounded-xl border border-border bg-surface-muted p-4 text-sm">
                 <p className="flex items-center gap-2 font-medium"><TriangleAlert className="size-4 text-amber-500" aria-hidden />Checkout isn&apos;t connected yet</p>
                 <p className="mt-1 text-muted-foreground">This site is missing these Paddle settings, so no checkout was opened and nothing was charged:</p>
@@ -271,7 +288,7 @@ export function CheckoutPage({
               </div>
             ) : null}
 
-            {missing.length === 0 && (
+            {ready && (
               <div className={cn("relative mt-4", (status === "completed" || status === "error") && "hidden")}>
                 {status === "loading" && (
                   <div className="absolute inset-0 grid content-start gap-3" aria-busy="true" aria-label="Loading checkout">
@@ -295,4 +312,58 @@ export function CheckoutPage({
       </main>
     </div>
   );
+}
+
+function TargetNotice({ target, planId, interval }: { target: Exclude<CheckoutTarget, { kind: "ready" }>; planId: PlanId; interval: BillingInterval }) {
+  const box = "mt-6 rounded-xl border border-border bg-surface-muted p-4 text-sm";
+  switch (target.kind) {
+    case "choose":
+      return (
+        <div className={box}>
+          <p className="font-medium">Which workspace is this plan for?</p>
+          <p className="mt-1 text-muted-foreground">You manage billing for more than one workspace. Each one has its own plan.</p>
+          <ul className="mt-3 grid gap-2">
+            {target.organizations.map((o) => (
+              <li key={o.id}>
+                <Link
+                  href={`/checkout/${planId}?interval=${interval}&org=${encodeURIComponent(o.slug)}`}
+                  className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2.5 font-medium transition-colors hover:border-primary"
+                >
+                  {o.name}
+                  <span className="text-xs text-muted-foreground">/{o.slug}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    case "no-organization":
+      return (
+        <div className={box}>
+          <p className="font-medium">Create a workspace first</p>
+          <p className="mt-1 text-muted-foreground">
+            A plan belongs to a workspace. Create one (it starts with a free 14-day trial), or ask a workspace owner to buy the plan.
+          </p>
+          <Button asChild className="mt-3"><Link href="/organizations/new">Create a workspace</Link></Button>
+        </div>
+      );
+    case "already-subscribed":
+      return (
+        <div className={box}>
+          <p className="font-medium">{target.organization.name} already has a subscription</p>
+          <p className="mt-1 text-muted-foreground">To change plan, payment method or cancel, use the billing page so you aren&apos;t charged twice.</p>
+          <Button asChild className="mt-3"><Link href={`/${target.organization.slug}/settings/billing`}>Open billing</Link></Button>
+        </div>
+      );
+    case "not-configured":
+      return (
+        <div className={box}>
+          <p className="flex items-center gap-2 font-medium"><TriangleAlert className="size-4 text-amber-500" aria-hidden />Plan activation isn&apos;t connected yet</p>
+          <p className="mt-1 text-muted-foreground">
+            This site is missing <code className="rounded bg-background px-1.5 py-0.5 text-xs">PADDLE_WEBHOOK_SECRET</code>, so a payment couldn&apos;t be
+            applied to {target.organization.name}. No checkout was opened and nothing was charged.
+          </p>
+        </div>
+      );
+  }
 }

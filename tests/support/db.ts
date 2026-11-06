@@ -35,12 +35,30 @@ export async function createUser(opts: { email?: string; name?: string; verified
   return { id: u.id, email, name, emailVerified: verified };
 }
 
-/** Creates an org with `owner` as Owner and returns the owner's verified context. */
-export async function createOrgWithOwner(slug: string, owner?: TestUser) {
+/**
+ * Creates an org with `owner` as Owner and returns the owner's verified context.
+ * New orgs start on the trial; most tests aren't about plan limits, so this
+ * puts the org on the largest plan unless `license: "trial"` is asked for.
+ */
+export async function createOrgWithOwner(slug: string, owner?: TestUser, opts: { license?: "trial" | "pacfic_deepdive" } = {}) {
   const user = owner ?? (await createUser());
   const org = await createOrganization(user, { name: `Org ${slug}`, slug });
+  if (opts.license !== "trial") await setLicense(org.id, { plan: "pacfic_deepdive", status: "active" });
   const ctx = await resolveOrgContext(user.id, { id: org.id });
   return { org, user, ctx };
+}
+
+/** Test-only: put an organization on a given license state. */
+export async function setLicense(
+  organizationId: string,
+  l: { plan: "medisea" | "indiana" | "pacfic_deepdive"; status: "trialing" | "active" | "past_due" | "paused" | "canceled"; trialEndsAt?: Date | null; periodEndsAt?: Date | null },
+) {
+  await getDb()`
+    update organization_license set plan = ${l.plan}, status = ${l.status},
+      source = ${l.status === "trialing" && l.trialEndsAt !== null ? "trial" : "paddle"},
+      trial_ends_at = ${l.trialEndsAt === undefined ? null : l.trialEndsAt},
+      current_period_ends_at = ${l.periodEndsAt ?? null}, updated_at = now()
+    where organization_id = ${organizationId}`;
 }
 
 export async function systemRoleId(key: string): Promise<string> {

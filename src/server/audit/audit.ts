@@ -16,7 +16,8 @@ export type AuditAction =
   | "member.left"
   | "role.created"
   | "role.updated"
-  | "role.deleted";
+  | "role.deleted"
+  | "billing.license_updated";
 
 export interface AuditEvent {
   organizationId: string | null;
