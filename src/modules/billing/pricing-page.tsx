@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-const ICONS = { starter: Sparkles, growth: Rocket, business: Building2 } as const;
+const ICONS = { medisea: Sparkles, indiana: Rocket, pacfic_deepdive: Building2 } as const;
 
 type Notice =
   | { kind: "not-configured"; plan: Plan; missing: string[] }

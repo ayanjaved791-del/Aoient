@@ -1,5 +1,7 @@
 /**
- * Plan catalogue from spec §28 (prices and limits are provisional hypotheses).
+ * Plan catalogue. Prices and limits follow spec §28 (Starter/Growth/Business tiers,
+ * renamed by the product owner to Medisea/Indiana/Pacfic-DeepDive); provisional.
+ * Every plan is offered both monthly and yearly.
  * Storage quotas are intentionally excluded (ADR-11).
  *
  * Annual price = 10 monthly payments for 12 months (spec §28 "Pricing assumptions").
@@ -7,7 +9,7 @@
  * NEXT_PUBLIC_* variables. They are referenced literally so Next can inline them.
  */
 
-export type PlanId = "starter" | "growth" | "business";
+export type PlanId = "medisea" | "indiana" | "pacfic_deepdive";
 export type BillingInterval = "monthly" | "yearly";
 
 export interface Plan {
@@ -23,8 +25,8 @@ export const ANNUAL_MONTHS_CHARGED = 10;
 
 export const PLANS: readonly Plan[] = [
   {
-    id: "starter",
-    name: "Starter",
+    id: "medisea",
+    name: "Medisea",
     tagline: "For small teams getting organised.",
     monthlyUsd: 29,
     features: [
@@ -38,8 +40,8 @@ export const PLANS: readonly Plan[] = [
     ],
   },
   {
-    id: "growth",
-    name: "Growth",
+    id: "indiana",
+    name: "Indiana",
     tagline: "For growing agencies and studios.",
     monthlyUsd: 79,
     featured: true,
@@ -55,8 +57,8 @@ export const PLANS: readonly Plan[] = [
     ],
   },
   {
-    id: "business",
-    name: "Business",
+    id: "pacfic_deepdive",
+    name: "Pacfic-DeepDive",
     tagline: "For established teams that need control.",
     monthlyUsd: 169,
     features: [
@@ -84,17 +86,17 @@ export function yearlySavingPercent(): number {
 }
 
 const PRICE_IDS: Record<PlanId, Record<BillingInterval, string | undefined>> = {
-  starter: {
-    monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY,
-    yearly: process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_ANNUAL,
+  medisea: {
+    monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_MEDISEA_MONTHLY,
+    yearly: process.env.NEXT_PUBLIC_PADDLE_PRICE_MEDISEA_ANNUAL,
   },
-  growth: {
-    monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_GROWTH_MONTHLY,
-    yearly: process.env.NEXT_PUBLIC_PADDLE_PRICE_GROWTH_ANNUAL,
+  indiana: {
+    monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_INDIANA_MONTHLY,
+    yearly: process.env.NEXT_PUBLIC_PADDLE_PRICE_INDIANA_ANNUAL,
   },
-  business: {
-    monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY,
-    yearly: process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_ANNUAL,
+  pacfic_deepdive: {
+    monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_PACFIC_DEEPDIVE_MONTHLY,
+    yearly: process.env.NEXT_PUBLIC_PADDLE_PRICE_PACFIC_DEEPDIVE_ANNUAL,
   },
 };
 
