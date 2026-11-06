@@ -25,7 +25,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (error || !isUuid(userId)) return null;
 
   const [profile] = await getDb()<{ name: string; email: string; email_verified: boolean; status: string }[]>`
-    select name, email, email_verified, status from profile where id = ${userId}`;
+    select name, email, email_verified, status from profile where id = ${userId}`.catch((e: { code?: string }) => {
+    if (e?.code === "42P01") {
+      throw new Error(
+        "Aoient's tables are missing in the database the server connects to (DATABASE_URL, or POSTGRES_URL on Vercel). " +
+          "Run supabase/setup.sql in the SQL Editor of that same Supabase project.",
+      );
+    }
+    throw e;
+  });
   if (!profile || profile.status !== "active") return null;
   return { id: userId, name: profile.name, email: profile.email, emailVerified: profile.email_verified };
 }
