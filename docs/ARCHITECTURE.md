@@ -67,6 +67,7 @@ Server actions, API route handlers and pages all pass through steps 2–6; none 
 | ADR-8 | **shadcn/ui-pattern components authored in-repo** (Radix + CVA + Tailwind). | The shadcn registry was unreachable from the build environment; the components follow its structure and can be diffed against upstream later. |
 | ADR-9 | **Email provider interface** with a console adapter. | No paid service required to develop; the UI states when an email was *not* delivered externally. |
 | ADR-10 | **Browser-only account mode is the default for now** (`NEXT_PUBLIC_AUTH_MODE=local`). Sign-up/sign-in save accounts in `localStorage` (PBKDF2-hashed passwords) and land on `/pricing`. The database-backed auth, organizations and RBAC stay in the codebase and return with `NEXT_PUBLIC_AUTH_MODE=server`. | Product owner request: run the app without a database until one is provisioned. This mode is a prototype, not a security boundary — see Known limitations. |
+| ADR-12 | **Light theme by default, not following the OS.** Dark remains a manual choice in the user menu; the "System" option was removed. | Product owner request. |
 | ADR-11 | **No storage quotas in plans; no file-storage subsystem yet.** | Product owner request: storage removed from pricing and the system. Revisit if Documents (M5) needs file uploads. |
 
 ## Known limitations (current)

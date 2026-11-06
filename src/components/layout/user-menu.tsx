@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Building2, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { Building2, LogOut, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { Avatar } from "@/components/ui/avatar";
@@ -35,7 +35,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Theme</DropdownMenuLabel>
-        {([["light", Sun, "Light"], ["dark", Moon, "Dark"], ["system", Monitor, "System"]] as const).map(([value, Icon, label]) => (
+        {([["light", Sun, "Light"], ["dark", Moon, "Dark"]] as const).map(([value, Icon, label]) => (
           <DropdownMenuItem key={value} onSelect={() => setTheme(value)} aria-checked={theme === value} role="menuitemradio">
             <Icon />{label}{theme === value && <span className="ml-auto text-xs text-primary">Active</span>}
           </DropdownMenuItem>
