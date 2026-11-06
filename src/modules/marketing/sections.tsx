@@ -369,7 +369,7 @@ const FAQ = [
   },
   {
     q: "How does billing work?",
-    a: "Each plan is offered monthly or yearly, with yearly priced at ten months. Checkout runs through Paddle. A plan becomes active only after Paddle's signed confirmation reaches our server; that activation step is still being built.",
+    a: "Every new workspace gets a 14-day free trial, no card needed. Each plan is offered monthly or yearly, with yearly priced at ten months, and checkout runs through Paddle. A plan switches on automatically once Paddle's signed confirmation reaches our server, and plan limits are checked on the server.",
   },
   {
     q: "Is there a dark mode?",

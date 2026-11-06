@@ -5,6 +5,8 @@ import type { PaidTransaction, TransactionLookup } from "@/server/billing/paddle
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "./auto-refresh";
+import { PLANS, priceFor } from "@/lib/billing/plans";
+import { addInterval } from "@/lib/billing/entitlements";
 
 const CONFETTI_COLORS = ["#7c3aed", "#d946ef", "#fb923c", "#22d3ee", "#12b76a", "#facc15"];
 
@@ -26,7 +28,19 @@ const CONFETTI = Array.from({ length: 48 }, (_, i) => {
   };
 });
 
-export function PaymentSuccess({ result, firstName, retryHref }: { result: TransactionLookup; firstName: string; retryHref: string }) {
+type Workspace = { name: string; slug: string } | null;
+
+export function PaymentSuccess({
+  result,
+  firstName,
+  retryHref,
+  workspace = null,
+}: {
+  result: TransactionLookup;
+  firstName: string;
+  retryHref: string;
+  workspace?: Workspace;
+}) {
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background">
       <header className="relative z-10 border-b border-border bg-surface/80 backdrop-blur">
@@ -35,17 +49,33 @@ export function PaymentSuccess({ result, firstName, retryHref }: { result: Trans
         </div>
       </header>
       <main className="relative z-10 mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-        {result.kind === "paid" ? <Paid details={result.details} firstName={firstName} /> : <NotConfirmed result={result} retryHref={retryHref} />}
+        {result.kind === "paid" ? <Paid details={result.details} firstName={firstName} workspace={workspace} /> : <NotConfirmed result={result} retryHref={retryHref} />}
       </main>
     </div>
   );
 }
 
-function Paid({ details, firstName }: { details: PaidTransaction; firstName: string }) {
+const longDate = (d: Date | string) => new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+function Paid({ details, firstName, workspace }: { details: PaidTransaction; firstName: string; workspace: Workspace }) {
+  const plan = PLANS.find((p) => p.name === details.planName);
+  const trial = details.trial;
+  const firstCharge = trial?.firstChargeAt ? new Date(trial.firstChargeAt) : null;
+  const coveredUntil = firstCharge && details.interval ? addInterval(firstCharge, details.interval) : null;
+  const nextPrice = plan && details.interval ? `$${priceFor(plan, details.interval).amount}` : null;
   const rows: [string, ReactNode][] = [
     ["Plan", <span key="plan">{details.planName}{details.interval && <span className="text-muted-foreground"> · {details.interval}</span>}</span>],
-    ["Amount paid", <span key="amount" className="font-semibold">{details.total}</span>],
-    ["Tax included", details.tax],
+    ...(trial
+      ? ([
+          ["Due today", <span key="due" className="font-semibold">{details.total}</span>],
+          ["Free trial", `${trial.days} days`],
+          ...(firstCharge ? ([["First payment", `${nextPrice ? `${nextPrice} on ` : ""}${longDate(firstCharge)}`]] as [string, ReactNode][]) : []),
+          ...(coveredUntil ? ([["Covered until", longDate(coveredUntil)]] as [string, ReactNode][]) : []),
+        ] as [string, ReactNode][])
+      : ([
+          ["Amount paid", <span key="amount" className="font-semibold">{details.total}</span>],
+          ["Tax included", details.tax],
+        ] as [string, ReactNode][])),
     ...(details.paymentMethod ? ([["Payment method", details.paymentMethod]] as [string, ReactNode][]) : []),
     ...(details.invoiceNumber ? ([["Invoice", details.invoiceNumber]] as [string, ReactNode][]) : []),
     ...(details.billedAt
@@ -79,13 +109,22 @@ function Paid({ details, firstName }: { details: PaidTransaction; firstName: str
         </div>
 
         <p className="animate-fade-up mt-8 text-sm font-medium uppercase tracking-widest text-success" style={{ animationDelay: "350ms" }}>
-          Payment successful
+          {trial ? "Subscription started" : "Payment successful"}
         </p>
         <h1 className="animate-fade-up mt-3 text-balance text-4xl font-semibold tracking-tight sm:text-5xl" style={{ animationDelay: "450ms" }}>
           Congratulations{firstName ? `, ${firstName}` : ""}!
         </h1>
         <p className="animate-fade-up mx-auto mt-4 max-w-md text-balance text-muted-foreground" style={{ animationDelay: "550ms" }}>
-          Your payment for <span className="font-medium text-foreground">{details.planName}</span> went through. Thank you for choosing Aoient.
+          {trial ? (
+            <>
+              Your <span className="font-medium text-foreground">{details.planName}</span> plan is active with a <span className="whitespace-nowrap">{trial.days}-day</span> free trial.
+              Nothing was charged today{firstCharge ? `; your first payment is on ${longDate(firstCharge)}` : ""}.
+            </>
+          ) : (
+            <>
+              Your payment for <span className="font-medium text-foreground">{details.planName}</span> went through. Thank you for choosing Aoient.
+            </>
+          )}
         </p>
       </div>
 
@@ -119,16 +158,19 @@ function Paid({ details, firstName }: { details: PaidTransaction; firstName: str
       </section>
 
       <section className="animate-fade-up mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6" style={{ animationDelay: "800ms" }}>
-        <h2 className="flex items-center gap-2 text-sm font-semibold"><Clock className="size-4 text-amber-500" aria-hidden />What happens next</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold"><Clock className="size-4 text-primary" aria-hidden />What happens next</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your payment is confirmed, but automatic plan activation in Aoient isn&apos;t live yet, so your workspace won&apos;t show paid features
-          right away. Keep your transaction ID; your plan will be applied to your account once activation is released.
+          Paddle confirms the subscription to our server, which applies the {details.planName} plan to{" "}
+          {workspace ? <span className="font-medium text-foreground">{workspace.name}</span> : "your workspace"} automatically, usually within a
+          minute. {trial && coveredUntil
+            ? `Your free trial and first ${details.interval === "yearly" ? "year" : "month"} together cover you until ${longDate(coveredUntil)}. Cancel before ${longDate(firstCharge!)} and you won't be charged.`
+            : "You can see it any time under Settings → Billing & plan."}
         </p>
       </section>
 
       <div className="animate-fade-up mt-8 flex flex-wrap justify-center gap-3" style={{ animationDelay: "900ms" }}>
         <Button asChild className="group">
-          <Link href="/organizations">Go to your workspace<ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden /></Link>
+          <Link href={workspace ? `/${workspace.slug}/settings/billing` : "/organizations"}>{workspace ? "See your plan" : "Go to your workspace"}<ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden /></Link>
         </Button>
         <Button asChild variant="secondary"><Link href="/pricing">Back to plans</Link></Button>
       </div>

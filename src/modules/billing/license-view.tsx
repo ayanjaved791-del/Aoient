@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Check, Clock, CreditCard, Crown, ShieldCheck, Users } from "lucide-react";
 import type { License, Usage } from "@/server/billing/license";
 import { PLANS } from "@/lib/billing/plans";
-import { daysLeft } from "@/lib/billing/entitlements";
+import { daysLeft, licenseTimeline } from "@/lib/billing/entitlements";
+import { priceFor } from "@/lib/billing/plans";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,9 @@ export function licenseLabel(license: License | null): { text: string; tone: "su
   switch (license.state) {
     case "trial": {
       const d = daysLeft(license.trialEndsAt);
-      return { text: d === null ? "Trial" : `Trial · ${d} day${d === 1 ? "" : "s"} left`, tone: "primary" };
+      const left = d === null ? "" : ` · ${d} day${d === 1 ? "" : "s"} left`;
+      // A bought plan in Paddle's free trial is a subscription, not the app trial.
+      return license.source === "paddle" ? { text: `Subscribed · free trial${left}`, tone: "success" } : { text: `Trial${left}`, tone: "primary" };
     }
     case "active":
       return { text: "Active", tone: "success" };
@@ -44,6 +47,19 @@ export function LicenseView({
   const plan = license ? PLANS.find((p) => p.id === license.plan) : undefined;
   const e = license?.entitlements;
   const paid = license?.source === "paddle" && license.state !== "expired";
+  const timeline = licenseTimeline(license);
+  const firstCharge = plan && license?.billingInterval ? priceFor(plan, license.billingInterval) : null;
+  const interval = license?.billingInterval === "yearly" ? "Yearly" : "Monthly";
+  const details: [string, string][] =
+    timeline.kind === "app-trial"
+      ? [["Billing", "Free trial, no card"], ["Trial ends", fmtDate(timeline.trialEndsAt)], ["Payments", "—"]]
+      : timeline.kind === "paid-trial"
+        ? [["Billing", interval], ["First payment", fmtDate(timeline.firstChargeAt)], ["Covered until", fmtDate(timeline.coveredUntil)]]
+        : timeline.kind === "paid"
+          ? [["Billing", interval], ["Renews", fmtDate(timeline.renewsAt)], ["Payments", "Paddle"]]
+          : timeline.kind === "ending"
+            ? [["Billing", "Canceled"], ["Access until", fmtDate(timeline.endsAt)], ["Payments", "Paddle"]]
+            : [["Billing", "—"], ["Ended", fmtDate(license?.trialEndsAt ?? license?.currentPeriodEndsAt ?? null)], ["Payments", "—"]];
   const seatsUsed = usage.activeMembers + usage.pendingInvitations;
 
   return (
@@ -60,21 +76,22 @@ export function LicenseView({
           </div>
           <Badge tone={label.tone} className="text-sm">{label.text}</Badge>
           <dl className="grid w-full gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-muted-foreground">Billing</dt>
-              <dd className="font-medium">{license?.source === "paddle" ? (license.billingInterval === "yearly" ? "Yearly" : license.billingInterval === "monthly" ? "Monthly" : "—") : "Free trial, no card"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {license?.state === "trial" ? "Trial ends" : license?.state === "canceling" ? "Access until" : license?.state === "expired" ? "Ended" : "Renews"}
-              </dt>
-              <dd className="font-medium">{fmtDate(license?.state === "trial" || license?.status === "trialing" ? license.trialEndsAt : license?.currentPeriodEndsAt ?? null)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Payments</dt>
-              <dd className="font-medium">{license?.source === "paddle" ? "Paddle" : "—"}</dd>
-            </div>
+            {details.map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-muted-foreground">{k}</dt>
+                <dd className="font-medium">{v}</dd>
+              </div>
+            ))}
           </dl>
+          {timeline.kind === "paid-trial" && (
+            <p className="w-full rounded-lg bg-success-subtle px-3 py-2 text-sm text-secondary-foreground">
+              Your {plan?.name} plan is active and starts with a free trial. Paddle charges
+              {firstCharge ? ` $${firstCharge.amount}` : " the first payment"} on {fmtDate(timeline.firstChargeAt)}, which covers you until{" "}
+              {fmtDate(timeline.coveredUntil)}
+              {timeline.coveredUntil ? ` (${daysLeft(timeline.coveredUntil)} days of access from today)` : ""}. Cancel before{" "}
+              {fmtDate(timeline.firstChargeAt)} and you won&apos;t be charged.
+            </p>
+          )}
           {license?.state === "expired" && (
             <p className="w-full rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger">
               This workspace is read-only: your data is safe and visible, but changes are paused until a plan is active.
@@ -160,7 +177,8 @@ function Meter({ icon: Icon, label, hint, used, max }: { icon: typeof Users; lab
 
 /** Thin bar under the workspace header for trial / payment / expiry states. */
 export function LicenseBanner({ slug, license, canManage }: { slug: string; license: License | null; canManage: boolean }) {
-  if (license?.state === "active") return null;
+  // Nothing to nag about once a plan is bought (including its free trial).
+  if (license?.state === "active" || (license?.state === "trial" && license.source === "paddle")) return null;
   const label = licenseLabel(license);
   const message =
     !license || license.state === "expired"

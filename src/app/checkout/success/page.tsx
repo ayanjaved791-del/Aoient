@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { requireUserOrRedirect } from "@/server/auth/session";
 import { lookupTransaction } from "@/server/billing/paddle-transactions";
 import { PaymentSuccess } from "@/modules/billing/payment-success";
+import { resolveOrgContext } from "@/server/tenancy/context";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = { title: "Payment successful" };
@@ -14,7 +15,14 @@ async function ConfirmedPayment({ searchParams }: { searchParams: Promise<{ txn?
   // The transaction ID comes from the browser, so it is only a lookup key:
   // Paddle's API (server-side, secret key) decides whether it was paid and by whom.
   const result = await lookupTransaction(txn, user.email);
-  return <PaymentSuccess result={result} firstName={user.name.split(" ")[0] ?? ""} retryHref={here} />;
+  // Link to the workspace the plan is for, but only if this user belongs to it.
+  let workspace: { name: string; slug: string } | null = null;
+  if (result.kind === "paid" && result.details.organizationId) {
+    workspace = await resolveOrgContext(user.id, { id: result.details.organizationId })
+      .then((ctx) => ({ name: ctx.organization.name, slug: ctx.organization.slug }))
+      .catch(() => null);
+  }
+  return <PaymentSuccess result={result} firstName={user.name.split(" ")[0] ?? ""} retryHref={here} workspace={workspace} />;
 }
 
 export default function PaymentSuccessPage(props: { searchParams: Promise<{ txn?: string }> }) {

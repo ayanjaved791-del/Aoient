@@ -68,6 +68,23 @@ describe("lookupTransaction", () => {
   });
 });
 
+describe("free-trial checkouts", () => {
+  it("reports a started trial (nothing charged) with its first payment date", async () => {
+    const txn = paidTxn({
+      details: { totals: { grand_total: "0", tax: "0", subtotal: "0" } },
+      items: [{ price: { name: "Medisea Monthly", trial_period: { interval: "day", frequency: 14 } } }],
+      billing_period: { starts_at: "2026-11-07T10:00:00Z", ends_at: "2026-11-21T10:00:00Z" },
+      custom_data: { aoientPlan: "medisea", interval: "monthly", organizationId: "org-1" },
+    });
+    const r = await lookupTransaction(TXN, "owner@example.com", { env: ENV, fetchImpl: paddleReturns(200, txn) });
+    expect(r).toMatchObject({ kind: "paid", details: { total: "$0.00", trial: { days: 14, firstChargeAt: "2026-11-21T10:00:00Z" }, organizationId: "org-1" } });
+  });
+  it("a charged payment is not a trial", async () => {
+    const r = await lookupTransaction(TXN, "owner@example.com", { env: ENV, fetchImpl: paddleReturns(200, paidTxn()) });
+    expect(r).toMatchObject({ kind: "paid", details: { trial: null } });
+  });
+});
+
 describe("paddle helpers", () => {
   it("uses the sandbox API unless the environment is production", () => {
     expect(paddleApiBase({})).toBe("https://sandbox-api.paddle.com");

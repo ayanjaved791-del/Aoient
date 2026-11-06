@@ -4,8 +4,8 @@
  * (with the secret PADDLE_API_KEY) whether it was really paid, and only shows it
  * to the customer whose email it was billed to.
  *
- * This confirms a payment for display. It does NOT activate a plan: that must
- * come from Paddle's signed webhook, which isn't built yet.
+ * This confirms a payment for display. It does NOT activate a plan: that only
+ * happens through Paddle's signed webhook (see paddle-webhook.ts).
  *
  * No `server-only` import so unit tests can run it; it is only imported by
  * server components.
@@ -42,6 +42,13 @@ export interface PaidTransaction {
   paymentMethod: string | null;
   period: { startsAt: string; endsAt: string } | null;
   lineItems: { name: string; quantity: number; amount: string }[];
+  /**
+   * Set when this checkout started a free trial (nothing charged today):
+   * the trial length and when Paddle takes the first payment.
+   */
+  trial: { days: number; firstChargeAt: string | null } | null;
+  /** From checkout custom_data: only a hint for linking; callers must verify membership. */
+  organizationId: string | null;
 }
 
 const TXN_ID = /^txn_[a-z0-9]{10,64}$/;
@@ -63,14 +70,14 @@ interface PaddleTransaction {
   id: string;
   status: string;
   currency_code: string;
-  custom_data?: { aoientPlan?: string; interval?: string } | null;
+  custom_data?: { aoientPlan?: string; interval?: string; organizationId?: unknown } | null;
   invoice_number?: string | null;
   billed_at?: string | null;
   details?: {
     totals?: { grand_total?: string; total?: string; tax?: string; subtotal?: string };
     line_items?: { quantity?: number; totals?: { total?: string }; product?: { name?: string } | null }[];
   };
-  items?: { price?: { name?: string | null } }[];
+  items?: { price?: { name?: string | null; trial_period?: { interval?: string; frequency?: number } | null } }[];
   customer?: { email?: string; name?: string | null } | null;
   address?: { first_line?: string | null; second_line?: string | null; city?: string | null; postal_code?: string | null; region?: string | null; country_code?: string | null } | null;
   business?: { name?: string | null; tax_identifier?: string | null } | null;
@@ -150,10 +157,22 @@ export async function lookupTransaction(
       paymentMethod,
       period: txn.billing_period?.starts_at && txn.billing_period.ends_at ? { startsAt: txn.billing_period.starts_at, endsAt: txn.billing_period.ends_at } : null,
       lineItems,
+      trial: trialInfo(txn),
+      organizationId: typeof txn.custom_data?.organizationId === "string" ? txn.custom_data.organizationId : null,
     },
   };
 }
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const DAYS_PER: Record<string, number> = { day: 1, week: 7, month: 30, year: 365 };
+
+function trialInfo(txn: PaddleTransaction): PaidTransaction["trial"] {
+  const tp = txn.items?.[0]?.price?.trial_period;
+  const days = tp?.interval && tp.frequency ? (DAYS_PER[tp.interval] ?? 0) * tp.frequency : 0;
+  const grand = Number(txn.details?.totals?.grand_total ?? txn.details?.totals?.total ?? 0);
+  if (!days || grand !== 0) return null;
+  return { days, firstChargeAt: txn.billing_period?.ends_at ?? null };
 }

@@ -74,7 +74,10 @@ export async function buildReceiptPdf(t: PaidTransaction, opts: { generatedAt?: 
   p.text(t.total, M, y - 34, { font: bold, size: 30 });
   const amountW = bold.widthOfTextAtSize(p.safe(t.total, bold), 30);
   pill(page, M + amountW + 14, y - 30, "PAID", bold);
-  p.text(`${t.planName} plan${t.interval ? ` · ${t.interval === "yearly" ? "Yearly" : "Monthly"}` : ""} · paid ${fmtDate(t.billedAt)}`, M, y - 56, {
+  const summary = t.trial
+    ? `${t.planName} plan · ${t.trial.days}-day free trial${t.trial.firstChargeAt ? ` · first payment ${fmtDate(t.trial.firstChargeAt)}` : ""}`
+    : `${t.planName} plan${t.interval ? ` · ${t.interval === "yearly" ? "Yearly" : "Monthly"}` : ""} · paid ${fmtDate(t.billedAt)}`;
+  p.text(summary, M, y - 56, {
     size: 10,
     color: C.muted,
   });

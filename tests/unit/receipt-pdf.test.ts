@@ -9,6 +9,8 @@ const base: PaidTransaction = {
   customerName: "Owner Name", address: "1 Main St, London, GB", business: { name: "Studio Ltd", taxId: "GB123" },
   paymentMethod: "Visa •••• 4242", period: { startsAt: "2026-11-07T10:00:00Z", endsAt: "2026-12-07T10:00:00Z" },
   lineItems: [{ name: "Indiana", quantity: 1, amount: "$78.99" }],
+  trial: null,
+  organizationId: null,
 };
 
 describe("PDF receipt", () => {

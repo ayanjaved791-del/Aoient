@@ -88,3 +88,39 @@ export function daysLeft(until: Date | null, now: Date = new Date()): number | n
   if (!until) return null;
   return Math.max(0, Math.ceil((until.getTime() - now.getTime()) / 86_400_000));
 }
+
+/** Adds one billing interval (calendar month or year), as Paddle does. */
+export function addInterval(date: Date, interval: "monthly" | "yearly"): Date {
+  const d = new Date(date);
+  if (interval === "yearly") d.setUTCFullYear(d.getUTCFullYear() + 1);
+  else d.setUTCMonth(d.getUTCMonth() + 1);
+  return d;
+}
+
+export type LicenseTimeline =
+  /** Free app trial (no card). Ends on trialEndsAt unless a plan is bought. */
+  | { kind: "app-trial"; trialEndsAt: Date | null }
+  /**
+   * A bought plan that starts with Paddle's free trial (e.g. Medisea monthly):
+   * no charge until firstChargeAt, and that first payment covers one more
+   * interval, so access runs until coveredUntil (14 days + 1 month = 44 days).
+   */
+  | { kind: "paid-trial"; firstChargeAt: Date; coveredUntil: Date | null }
+  | { kind: "paid"; renewsAt: Date | null }
+  | { kind: "ending"; endsAt: Date | null }
+  | { kind: "none" };
+
+export function licenseTimeline(license: LicenseRecord | null, now: Date = new Date()): LicenseTimeline {
+  const state = licenseState(license, now);
+  if (!license || state === "expired") return { kind: "none" };
+  if (license.source === "trial") return { kind: "app-trial", trialEndsAt: license.trialEndsAt };
+  if (state === "canceling") return { kind: "ending", endsAt: license.currentPeriodEndsAt };
+  if (license.status === "trialing" && license.trialEndsAt) {
+    return {
+      kind: "paid-trial",
+      firstChargeAt: license.trialEndsAt,
+      coveredUntil: license.billingInterval ? addInterval(license.trialEndsAt, license.billingInterval) : null,
+    };
+  }
+  return { kind: "paid", renewsAt: license.currentPeriodEndsAt };
+}

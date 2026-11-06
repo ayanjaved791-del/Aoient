@@ -316,7 +316,7 @@ export function FeatureBento() {
           </div>
         </article>
       </li>
-      <Tile className="sm:col-span-2 lg:col-span-2" status="soon" delay={200} title="Monthly or yearly" body="Three plans, each billed monthly or yearly, with two months free on yearly. Plan activation after payment is being built.">
+      <Tile className="sm:col-span-2 lg:col-span-2" status="live" delay={200} title="Monthly or yearly" body="Three plans, each billed monthly or yearly, with two months free on yearly. Every workspace starts with a 14-day free trial, and a plan switches on as soon as Paddle confirms it.">
         <PlanToggle />
       </Tile>
     </ul>

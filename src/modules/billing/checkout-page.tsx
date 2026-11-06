@@ -18,6 +18,7 @@ import {
   type PlanId,
 } from "@/lib/billing/plans";
 import { Logo } from "@/components/ui/logo";
+import { addInterval } from "@/lib/billing/entitlements";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,8 @@ export function CheckoutPage({
   const [interval, setBillingInterval] = useState<BillingInterval>(initialInterval);
   const [status, setStatus] = useState<Status>("loading");
   const [checkout, setCheckout] = useState<CheckoutEventsData | null>(null);
+  // Fixed when the page opens, so trial dates don't shift between renders.
+  const [openedAt] = useState(() => Date.now());
   const paddleRef = useRef<Paddle | null>(null);
   const openedRef = useRef(false);
 
@@ -150,6 +153,13 @@ export function CheckoutPage({
   }
 
   const totals = checkout?.totals;
+  // Paddle tells us when the price starts with a free trial (e.g. Medisea monthly: 14 days).
+  const tp = checkout?.items?.[0]?.trial_period;
+  const trialDays = tp ? ({ day: 1, week: 7, month: 30, year: 365 } as Record<string, number>)[tp.interval] * tp.frequency : 0;
+  const firstCharge = trialDays ? new Date(openedAt + trialDays * 86_400_000) : null;
+  const coveredUntil = firstCharge ? addInterval(firstCharge, interval) : null;
+  const recurring = checkout?.recurring_totals ?? checkout?.items?.[0]?.recurring_totals;
+  const shortDate = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const currency = checkout?.currency_code ?? "USD";
 
   return (
@@ -239,10 +249,25 @@ export function CheckoutPage({
                   {totals ? money(totals.total, currency) : money(listPrice.amount, "USD")}
                 </dd>
               </div>
-              <p className="text-right text-xs text-white/60">
-                Then every {listPrice.per}
-                {interval === "yearly" && ` · ${12 - ANNUAL_MONTHS_CHARGED} months free`} · cancel anytime
-              </p>
+              {firstCharge && coveredUntil ? (
+                <div className="mt-3 grid gap-1.5 rounded-xl bg-white/10 p-3 text-xs">
+                  <p className="flex justify-between"><span className="text-white/70">Free trial</span><span>{trialDays} days</span></p>
+                  <p className="flex justify-between">
+                    <span className="text-white/70">First payment</span>
+                    <span className="tabular-nums">{money(recurring?.total ?? listPrice.amount, recurring ? currency : "USD")} on {shortDate(firstCharge)}</span>
+                  </p>
+                  <p className="flex justify-between"><span className="text-white/70">Covered until</span><span>{shortDate(coveredUntil)}</span></p>
+                  <p className="mt-1 text-white/60">
+                    {Math.round((coveredUntil.getTime() - openedAt) / 86_400_000)} days of {plan.name} in total. Cancel before {shortDate(firstCharge)} and
+                    you won&apos;t be charged.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-right text-xs text-white/60">
+                  Then every {listPrice.per}
+                  {interval === "yearly" && ` · ${12 - ANNUAL_MONTHS_CHARGED} months free`} · cancel anytime
+                </p>
+              )}
             </dl>
           </section>
 
@@ -275,8 +300,7 @@ export function CheckoutPage({
                 <p className="flex items-center gap-2 font-semibold"><CircleCheck className="size-5 text-success" aria-hidden />Payment submitted to Paddle</p>
                 <p className="mt-2 text-sm text-secondary-foreground">
                   Paddle will email your receipt{checkout?.customer?.email ? ` to ${checkout.customer.email}` : ""}. Your {plan.name} plan becomes
-                  active in Aoient only after our server receives Paddle&apos;s signed confirmation of the payment. That confirmation step
-                  isn&apos;t built yet, so no paid features are unlocked for now.
+                  active in Aoient as soon as our server receives Paddle&apos;s signed confirmation, usually within a minute.
                 </p>
                 <Button asChild variant="secondary" className="mt-4"><Link href="/pricing">Back to plans</Link></Button>
               </div>
