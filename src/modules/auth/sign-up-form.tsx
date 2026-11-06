@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import { describeAuthError } from "./auth-error";
 
 type Values = z.infer<typeof signUpSchema>;
 
@@ -28,7 +29,7 @@ export function SignUpForm() {
     setServerError(null);
     const { error } = await authClient.signUp.email({ name: values.name, email: values.email, password: values.password, callbackURL: next });
     if (error) {
-      setServerError(error.status === 429 ? "Too many attempts. Wait a minute and try again." : error.message ?? "We couldn't create your account.");
+      setServerError(describeAuthError(error, "We couldn't create your account."));
       return;
     }
     router.push(`/verify-email?email=${encodeURIComponent(values.email)}&next=${encodeURIComponent(next)}`);

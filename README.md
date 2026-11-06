@@ -18,6 +18,7 @@ cp .env.example .env          # fill in values (see docs/DEVELOPMENT.md)
 npm install                   # also generates the Prisma client
 npm run db:migrate            # apply migrations
 npm run db:seed               # permission catalogue + system roles
+npm run doctor                # checks env vars, database, migrations, seed
 npm run dev
 ```
 
@@ -32,6 +33,7 @@ Emails (verification, password reset, invitations) are printed to the server log
 | `npm test` | Unit + integration tests (needs `TEST_DATABASE_URL`) |
 | `npm run test:e2e` | Browser flow against a running server (see the script header) |
 | `npm run db:migrate` · `db:deploy` · `db:seed` | Prisma |
+| `npm run doctor` | Checks `.env`, database connection, migrations and seed; prints the fix for anything missing |
 
 ## Documentation
 

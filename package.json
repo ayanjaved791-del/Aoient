@@ -16,7 +16,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "postinstall": "prisma generate",
-    "test:e2e": "node tests/e2e/m1-identity-flow.mjs"
+    "test:e2e": "node tests/e2e/m1-identity-flow.mjs",
+    "doctor": "tsx scripts/doctor.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",

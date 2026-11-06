@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import { describeAuthError } from "./auth-error";
 
 type Values = z.infer<typeof signInSchema>;
 
@@ -28,10 +29,10 @@ export function SignInForm() {
     if (error) {
       if (error.code === "EMAIL_NOT_VERIFIED") {
         setError({ message: "Verify your email to continue. We've sent you a new verification link.", unverifiedEmail: values.email });
-      } else if (error.status === 429) {
-        setError({ message: "Too many attempts. Wait a minute and try again." });
-      } else {
+      } else if (error.status === 401) {
         setError({ message: "Incorrect email or password." });
+      } else {
+        setError({ message: describeAuthError(error, "We couldn't sign you in.") });
       }
       return;
     }
