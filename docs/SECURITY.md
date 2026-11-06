@@ -4,22 +4,23 @@ Status of the controls in spec §22. "✅" means implemented **and** covered by 
 
 | Control | Status | Implementation |
 | --- | --- | --- |
-| Password hashing, sessions | ✅ | Better Auth (scrypt), HTTP-only cookies, `Secure` in production, 7-day sessions refreshed daily. |
-| Email verification before sensitive actions | ✅ | Sign-in blocked until verified; org creation and invitation acceptance also re-check. |
-| Password reset | ✅ | Single-use, 1-hour tokens; generic response (no account enumeration); all sessions revoked on reset. |
-| Account deactivation | ✅ | `user.status = deactivated` blocks new sessions and invalidates existing ones in the DAL. |
+| Password hashing, sessions | ✅ | Supabase Auth (bcrypt); session in cookies managed by `@supabase/ssr`, refreshed by the proxy; the server verifies the JWT (`getClaims`) on every request. |
+| Email verification before sensitive actions | ✅ | Supabase blocks sign-in until the email is confirmed (keep "Confirm email" on); org creation and invitation acceptance re-check `profile.email_verified`. |
+| Password reset | ✅ | Supabase recovery link → `/auth/confirm` → new password; generic response (no account enumeration); all sessions signed out (`scope: global`) after the change. |
+| Account deactivation | ✅ | `profile.status = deactivated` makes the DAL treat the user as signed out. |
 | Server-side RBAC, deny by default | ✅ | `src/server/permissions/evaluator.ts`; every service asserts its permission. |
 | Privilege escalation | ✅ | Cannot grant permissions you lack, cannot grant Owner unless owner, cannot act on more-privileged members or yourself, cannot edit your own role. |
 | Tenant isolation | ✅ | `resolveOrgContext` + `organizationId` scoping; cross-tenant tests at service and HTTP layers (`tests/integration/tenant-isolation.test.ts`). |
 | No existence leaks | ✅ | Foreign and missing records produce identical NOT_FOUND responses. |
 | Input validation | ✅ | Zod on every server entry point (actions, routes); JSON body size limit. |
-| Injection | ✅ | Prisma parameterised queries; the one raw query uses tagged-template parameters. |
-| CSRF | ✅ | Server Actions have built-in origin checks; `/api/v1` mutations require a same-origin `Origin`/`Sec-Fetch-Site`. Better Auth checks `trustedOrigins`. |
+| Injection | ✅ | All SQL uses `postgres` tagged templates (parameterised); non-UUID ids are rejected before any query. Dynamic SQL is limited to fixed identifiers in migrations/tests. |
+| CSRF | ✅ | Server Actions have built-in origin checks; `/api/v1` mutations require a same-origin `Origin`/`Sec-Fetch-Site`. Auth requests go directly from the browser to Supabase. |
 | Open redirects | ✅ | `safeNextPath` allows only same-site relative paths. |
-| Rate limiting | ✅ | Auth: sign-in 5/min, sign-up 3/min, reset 3/5 min, verification 3/5 min (per IP, DB-backed). App: invitations 30/h per user & 100/h per org, org creation 10/h, accept 20/h. |
+| Rate limiting | ✅ | Auth: Supabase Auth's built-in limits (configurable in the dashboard). App: invitations 30/h per user & 100/h per org, org creation 10/h, accept 20/h. |
 | Invitations | ✅ | 256-bit random token, stored hashed, 7-day expiry, single-use (atomic claim — concurrent accepts tested), bound to recipient email, revocable. |
 | Audit log | ✅ | Org/member/role/invitation changes, written in the same transaction; metadata keys resembling secrets are stripped. |
 | Security headers | ✅ | `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`; `X-Powered-By` removed. |
+| Data API lock-down | ✅ | RLS enabled on every `public` table with no policies; tests prove `anon`/`authenticated` read 0 rows and cannot write. |
 | Secrets | ✅ | `.env` is git-ignored; `.env.example` lists names only; secrets read only in `server-only` modules. |
 | Files, Paddle webhooks, API keys | ⏳ | Milestones M5, M8, M7. |
 | MFA | ❌ | Not implemented — not claimed. |
@@ -27,6 +28,6 @@ Status of the controls in spec §22. "✅" means implemented **and** covered by 
 
 ## Known gaps / follow-ups
 
-- Better Auth stores session tokens in the database as issued (cookie value is HMAC-signed). Hashing at rest would need a custom adapter hook; tracked for M9 review.
+- Supabase Auth flows (sign-up, sign-in, reset) are verified against a local stand-in of the Auth API, not yet against a live Supabase project.
 - Content-Security-Policy is not yet set (requires nonce wiring for Next.js inline scripts) — M9.
 - Audit log viewer UI arrives with M2 (data is already recorded).

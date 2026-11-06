@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { initializePaddle, type Paddle, type PaddleEventData } from "@paddle/paddle-js";
-import { Building2, Check, LogOut, Rocket, Sparkles } from "lucide-react";
+import { Building2, Check, Rocket, Sparkles } from "lucide-react";
 import {
   PADDLE_CLIENT_TOKEN,
   PADDLE_ENVIRONMENT,
@@ -16,11 +16,9 @@ import {
   type BillingInterval,
   type Plan,
 } from "@/lib/billing/plans";
-import { useLocalUser } from "@/modules/auth/use-local-user";
+import { UserMenu } from "@/components/layout/user-menu";
 import { Logo } from "@/components/ui/logo";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +29,7 @@ type Notice =
   | { kind: "submitted"; plan: Plan }
   | { kind: "error"; message: string };
 
-export function PricingPage() {
-  const { user, signOut } = useLocalUser();
+export function PricingPage({ user }: { user: { name: string; email: string } }) {
   const { resolvedTheme } = useTheme();
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
@@ -66,7 +63,7 @@ export function PricingPage() {
       checkoutPlanRef.current = plan;
       paddleRef.current.Checkout.open({
         items: [{ priceId, quantity: 1 }],
-        customer: user ? { email: user.email } : undefined,
+        customer: { email: user.email },
         customData: { aoientPlan: plan.id, interval },
         settings: { displayMode: "overlay", theme: resolvedTheme === "dark" ? "dark" : "light" },
       });
@@ -77,28 +74,14 @@ export function PricingPage() {
     }
   }
 
-  if (!user) {
-    return (
-      <div className="mx-auto grid max-w-5xl gap-4 px-4 py-16" aria-busy="true">
-        <Skeleton className="mx-auto h-9 w-72" />
-        <div className="grid gap-6 md:grid-cols-3">
-          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-96" />)}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-dvh bg-background">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link href="/" aria-label="Aoient home" className="rounded-md"><Logo /></Link>
           <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={user.name} />
             <span className="hidden min-w-0 truncate text-sm font-medium sm:block">{user.name}</span>
-            <Button variant="secondary" size="sm" onClick={signOut}>
-              <LogOut aria-hidden /> Sign out
-            </Button>
+            <UserMenu name={user.name} email={user.email} />
           </div>
         </div>
       </header>
@@ -227,7 +210,7 @@ export function PricingPage() {
           Need more than 40 users or custom security? Enterprise plans are tailored to your team, with pricing on request.
         </p>
         <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-muted-foreground">
-          You&apos;re signed in with a browser-only account ({user.email}). Prices and limits are provisional and may change before launch.
+          Signed in as {user.email}. Prices and limits are provisional and may change before launch.
         </p>
       </main>
 
@@ -257,8 +240,8 @@ export function PricingPage() {
               <DialogTitle>Payment submitted to Paddle</DialogTitle>
               <DialogDescription>
                 Paddle will email your receipt for the {notice.plan.name} plan. Your plan becomes active in Aoient only after our server
-                confirms the payment with Paddle, and that step needs the database, which isn&apos;t connected yet. Until then no paid
-                features are unlocked.
+                receives Paddle&apos;s signed confirmation of the payment. That confirmation step isn&apos;t built yet, so no paid features
+                are unlocked for now.
               </DialogDescription>
             </DialogHeader>
           )}

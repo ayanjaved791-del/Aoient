@@ -13,27 +13,21 @@ Built from the *Aoient Master Technical Specification V2*. Delivery follows the 
 
 ## Quick start
 
-**Browser-only mode (default, no database):**
+Aoient runs on **Supabase** (Auth + Postgres).
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Copy `.env.example` to `.env` and fill in the Supabase values (Project URL, publishable key, database connection string) and `APP_URL`.
+3. In Supabase → Authentication → URL Configuration, set the Site URL and add `<APP_URL>/auth/confirm` to Redirect URLs.
 
 ```bash
 npm install
-npm run dev                   # open http://localhost:3000 and create an account
-```
-
-Accounts are saved in your browser's localStorage only (see docs/ARCHITECTURE.md ADR-10).
-
-**Database mode** (`NEXT_PUBLIC_AUTH_MODE=server` in `.env`):
-
-```bash
-cp .env.example .env          # fill in values (see docs/DEVELOPMENT.md)
-npm install                   # also generates the Prisma client
-npm run db:migrate            # apply migrations
+npm run db:migrate            # creates the tables in your Supabase database
 npm run db:seed               # permission catalogue + system roles
-npm run doctor                # checks env vars, database, migrations, seed
+npm run doctor                # checks settings, connection, migrations, seed
 npm run dev
 ```
 
-Emails (verification, password reset, invitations) are printed to the server log by the `console` provider until a real email provider is configured.
+Sign-up verification and password-reset emails are sent by Supabase. Invitation emails are printed to the server log until an email provider is configured. Details: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ## Scripts
 
@@ -41,10 +35,9 @@ Emails (verification, password reset, invitations) are printed to the server log
 | --- | --- |
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm run lint` · `npm run typecheck` | ESLint · TypeScript |
-| `npm test` | Unit + integration tests (needs `TEST_DATABASE_URL`) |
-| `npm run test:e2e` | Browser flow against a running server (see the script header) |
-| `npm run db:migrate` · `db:deploy` · `db:seed` | Prisma |
-| `npm run doctor` | Checks `.env`, database connection, migrations and seed; prints the fix for anything missing |
+| `npm test` | Unit + integration tests (needs a local Postgres in `TEST_DATABASE_URL`) |
+| `npm run db:migrate` · `db:seed` | Apply `supabase/migrations/*.sql` · sync permissions and system roles |
+| `npm run doctor` | Checks `.env`, Supabase settings, database connection, migrations and seed; prints the fix for anything missing |
 
 ## Documentation
 

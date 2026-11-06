@@ -1,32 +1,33 @@
 import "server-only";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "./auth";
-import { db } from "@/server/database/client";
+import { getDb } from "@/server/database/client";
+import { getSupabaseServerClient } from "./supabase";
 import { UnauthorizedError } from "@/lib/errors";
+import { isUuid } from "@/lib/ids";
 
 export interface SessionUser {
   id: string;
   name: string;
   email: string;
   emailVerified: boolean;
-  image: string | null;
 }
 
 /**
- * Data Access Layer entry point: validate the session cookie against the
- * database and return a narrow user, or null. Deactivated users are treated as
- * signed out even if a session row still exists.
+ * Data Access Layer entry point. Supabase Auth verifies the session token
+ * (`getClaims` checks the JWT signature), then the user's profile row decides
+ * the rest: deactivated users are treated as signed out.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return null;
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, name: true, email: true, emailVerified: true, image: true, status: true },
-  });
-  if (!user || user.status !== "active") return null;
-  return { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified, image: user.image };
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (error || !isUuid(userId)) return null;
+
+  const [profile] = await getDb()<{ name: string; email: string; email_verified: boolean; status: string }[]>`
+    select name, email, email_verified, status from profile where id = ${userId}`;
+  if (!profile || profile.status !== "active") return null;
+  return { id: userId, name: profile.name, email: profile.email, emailVerified: profile.email_verified };
 }
 
 /** For route handlers / server actions: throws 401. */

@@ -21,7 +21,7 @@ export const resetPasswordSchema = z
   .refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
 
 /** Only allow same-site relative redirects (blocks open redirects like //evil.com). */
-export function safeNextPath(next: string | null | undefined, fallback = "/organizations"): string {
+export function safeNextPath(next: string | null | undefined, fallback = "/pricing"): string {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
   return next;
 }

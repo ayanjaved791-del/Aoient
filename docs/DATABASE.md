@@ -1,33 +1,42 @@
 # Database
 
-PostgreSQL via Prisma 7 (`prisma/schema.prisma`, config in `prisma.config.ts`, client generated to `src/generated/prisma`).
+Supabase (managed PostgreSQL). Schema changes are plain SQL files in `supabase/migrations/`, compatible with the Supabase CLI (`supabase db push`) and applied by `npm run db:migrate` without it. The server queries the database directly with the [`postgres`](https://github.com/porsager/postgres) driver (tagged-template SQL, always parameterised). There is no ORM.
+
+## Access model
+
+- **Identity** lives in Supabase Auth (`auth.users`). A trigger in the migration mirrors each user into `public.profile` (name, lower-cased email, `email_verified`, `status`).
+- **App data** is read and written only by the Next.js server through `DATABASE_URL`, which enforces tenancy and RBAC itself (`src/server/tenancy`, `src/server/permissions`).
+- **Row Level Security is enabled on every table with no policies.** The public Supabase key in the browser (roles `anon` / `authenticated`) therefore cannot read or change any app data through Supabase's Data API. A test asserts this for every table (`tests/integration/tenant-isolation.test.ts`).
 
 ## Conventions
 
-- **IDs:** UUIDv7 strings (`@default(uuid(7))`).
-- **Tenancy:** every tenant-owned table has a direct, indexed `organizationId`. Queries filter by the value from a verified `OrgContext`, never from request input.
-- **Timestamps:** `createdAt` / `updatedAt` on mutable records; stored in UTC.
-- **Lifecycle:** explicit enums (`OrganizationStatus`, `MemberStatus`, `InvitationStatus`, `UserStatus`).
-- **Money / quantities (future modules):** `Decimal` for currency, integers for durations (seconds) and stock.
+- **IDs:** UUIDs (`gen_random_uuid()`). Non-UUID IDs in requests are treated as *not found* before they reach SQL.
+- **Columns:** `snake_case`; services map rows to camelCase objects.
+- **Tenancy:** every tenant-owned table has a direct, indexed `organization_id`. Queries filter by the value from a verified `OrgContext`, never from request input.
+- **Timestamps:** `timestamptz` (`created_at` / `updated_at`).
+- **Lifecycle:** explicit enums (`organization_status`, `member_status`, `invitation_status`, `user_status`).
+- **Transactions:** `transaction()` from `src/server/database/client.ts`; membership changes lock the organization row (`for update`) to protect the last-owner rule.
+- **Money / quantities (future modules):** `numeric` for currency, integers for durations (seconds) and stock.
 - **Deletion:** membership removal is a hard delete (history lives in the audit log); business records will be archived/soft-deleted.
-- **Migrations:** `npm run db:migrate` in development, `npm run db:deploy` in production. Never reset a production database.
+- **Migrations:** add a new timestamped file to `supabase/migrations/`; never edit one that has been applied. Applied files are recorded in `public.schema_migration`.
 
-## Current tables (M1)
+## Current tables
 
 | Table | Notes |
 | --- | --- |
-| `user`, `session`, `account`, `verification` | Better Auth core schema; `user.status` adds account deactivation. |
-| `rateLimit` | Better Auth rate-limit storage (DB-backed so limits hold across instances). |
+| `profile` | 1:1 with `auth.users` (cascade delete), kept in sync by trigger. `status = deactivated` signs the user out of Aoient. |
 | `rate_limit_bucket` | App-level fixed-window limiter (invitations, org creation, accept). |
 | `organization` | Tenant root: name, unique slug, timezone, currency, status. |
-| `organization_member` | Unique `(organizationId, userId)`; role + status. |
-| `role` | System roles (`organizationId` NULL, partial unique index on `key`) or org custom roles (unique `(organizationId, key)`). |
+| `organization_member` | Unique `(organization_id, user_id)`; role + status. |
+| `role` | System roles (`organization_id` NULL, partial unique index on `key`) or org custom roles (unique `(organization_id, key)`). |
 | `permission`, `role_permission` | Controlled catalogue mirrored from `src/server/permissions/catalog.ts`. |
-| `invitation` | Stores only `tokenHash` (SHA-256). Partial unique index: one pending invitation per `(organizationId, lower(email))`. |
-| `audit_log` | Actor, action, target, source, correlation id, sanitized metadata. |
-
-Hand-written SQL in `prisma/migrations/*_init/migration.sql` adds the two partial unique indexes Prisma cannot express.
+| `invitation` | Stores only `token_hash` (SHA-256). Partial unique index: one pending invitation per `(organization_id, lower(email))`. |
+| `audit_log` | Actor, action, target, source, correlation id, sanitised metadata. |
 
 ## Seed
 
 `npm run db:seed` synchronises the permission catalogue and system roles. It is idempotent and safe on every deploy. It creates **no** business or demo data.
+
+## Tests
+
+The integration suite runs on a **plain local Postgres** database (`TEST_DATABASE_URL`), never on the Supabase project. `tests/support/auth-stub.sql` provides a minimal stand-in for Supabase's `auth.users` table and API roles so the real migration and its RLS can be exercised.

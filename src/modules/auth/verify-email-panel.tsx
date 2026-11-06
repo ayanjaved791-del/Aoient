@@ -2,7 +2,8 @@
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { MailCheck } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { safeNextPath } from "@/lib/validation/auth";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -16,7 +17,11 @@ export function VerifyEmailPanel() {
 
   async function resend() {
     setStatus("sending");
-    const { error } = await authClient.sendVerificationEmail({ email, callbackURL: next });
+    const { error } = await getSupabaseBrowserClient().auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}` },
+    });
     setStatus(error ? "error" : "sent");
   }
 
@@ -27,12 +32,12 @@ export function VerifyEmailPanel() {
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-subtle text-primary"><MailCheck className="size-5" aria-hidden /></span>
         <p className="text-sm text-secondary-foreground">
           {email ? <>We sent a verification link to <span className="font-medium text-foreground">{email}</span>.</> : "We sent you a verification link."}{" "}
-          Open it to activate your account. The link expires in 1 hour.
+          Open it to activate your account.
         </p>
       </div>
       {status === "sent" && <Alert tone="success" title="A new link is on its way." />}
       {status === "error" && <Alert tone="danger" title="We couldn't send a new link right now. Try again in a few minutes." />}
-      {email && (
+      {email && isSupabaseConfigured && (
         <Button variant="secondary" onClick={resend} loading={status === "sending"} disabled={status === "sent"}>
           Resend verification email
         </Button>

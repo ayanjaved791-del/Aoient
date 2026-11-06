@@ -1,18 +1,29 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthCard } from "@/modules/auth/auth-card";
-import { LocalModeNotice } from "@/modules/auth/local-mode-notice";
-import { isLocalAuth } from "@/lib/local-auth";
 import { ResetPasswordForm } from "@/modules/auth/reset-password-form";
 import { FormSkeleton } from "@/modules/auth/form-skeleton";
+import { SupabaseMissingNotice } from "@/modules/auth/supabase-missing-notice";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseServerClient } from "@/server/auth/supabase";
 
 export const metadata: Metadata = { title: "Choose a new password" };
 
+async function ResetPasswordGate() {
+  // The recovery link (via /auth/confirm) signs the visitor in; without that session there is nothing to reset.
+  const supabase = await getSupabaseServerClient();
+  const claims = supabase ? (await supabase.auth.getClaims()).data?.claims : null;
+  return <ResetPasswordForm hasRecoverySession={Boolean(claims)} />;
+}
+
 export default function ResetPasswordPage() {
-  if (isLocalAuth) return <LocalModeNotice title="Choose a new password" />;
   return (
     <AuthCard title="Choose a new password">
-      <Suspense fallback={<FormSkeleton />}><ResetPasswordForm /></Suspense>
+      {isSupabaseConfigured ? (
+        <Suspense fallback={<FormSkeleton />}><ResetPasswordGate /></Suspense>
+      ) : (
+        <SupabaseMissingNotice />
+      )}
     </AuthCard>
   );
 }

@@ -3,7 +3,7 @@
  * Prints variable NAMES only, never values.
  */
 import "dotenv/config";
-import pg from "pg";
+import postgres from "postgres";
 
 type Result = { ok: boolean; label: string; fix?: string };
 const results: Result[] = [];
@@ -20,48 +20,41 @@ function validUrl(v: string | undefined) {
 async function main() {
   const env = process.env;
 
-  if (env.NEXT_PUBLIC_AUTH_MODE !== "server") {
-    console.log(
-      "Account mode: local — sign-up and sign-in save accounts in the browser, so no database is needed.\n" +
-        "Set NEXT_PUBLIC_AUTH_MODE=server in .env to use the database version; the checks below apply to it.\n",
-    );
-  }
-
   check(validUrl(env.APP_URL), "APP_URL is a full URL", "Set APP_URL in .env, e.g. http://localhost:3000 — the exact address you open in the browser.");
   check(
-    !env.BETTER_AUTH_URL || env.BETTER_AUTH_URL === env.APP_URL,
-    "BETTER_AUTH_URL matches APP_URL",
-    "Set BETTER_AUTH_URL to the same value as APP_URL.",
+    validUrl(env.NEXT_PUBLIC_SUPABASE_URL),
+    "NEXT_PUBLIC_SUPABASE_URL is set",
+    "Copy the Project URL from Supabase → Project Settings → API.",
   );
   check(
-    (env.BETTER_AUTH_SECRET ?? "").length >= 32,
-    "BETTER_AUTH_SECRET is at least 32 characters",
-    "Generate one with: openssl rand -base64 32",
+    Boolean(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is set",
+    "Copy the publishable (or legacy anon) key from Supabase → Project Settings → API Keys.",
   );
-  check(Boolean(env.DATABASE_URL), "DATABASE_URL is set", "Set DATABASE_URL, e.g. postgresql://user:pass@localhost:5432/aoient_dev");
+  check(
+    Boolean(env.DATABASE_URL),
+    "DATABASE_URL is set",
+    "Copy a connection string from Supabase → Connect (use the transaction pooler URL on Vercel).",
+  );
 
   if (env.DATABASE_URL) {
-    const client = new pg.Client({ connectionString: env.DATABASE_URL, connectionTimeoutMillis: 5000 });
-    let connected = false;
+    const sql = postgres(env.DATABASE_URL, { max: 1, connect_timeout: 5, onnotice: () => {} });
     try {
-      await client.connect();
-      connected = true;
+      await sql`select 1`;
       check(true, "Database is reachable");
-    } catch (e) {
-      check(false, "Database is reachable", `Could not connect (${(e as Error).message}). Start PostgreSQL and check the host, port, user, password and database name in DATABASE_URL.`);
-    }
-
-    if (connected) {
-      const tables = await client.query<{ name: string }>(
-        `SELECT table_name AS name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name IN ('user','session','organization','role','permission')`,
-      );
-      check(tables.rowCount === 5, "Database tables exist (migrations applied)", "Run: npm run db:deploy  (or npm run db:migrate in development)");
-
-      if (tables.rowCount === 5) {
-        const roles = await client.query(`SELECT 1 FROM role WHERE "isSystem" = true AND key = 'owner'`);
-        check((roles.rowCount ?? 0) > 0, "System roles are seeded", "Run: npm run db:seed  (needed before anyone can create an organization)");
+      const [t] = await sql<{ n: number }[]>`
+        select count(*)::int as n from information_schema.tables
+        where table_schema = 'public' and table_name in ('profile','organization','role','permission','organization_member')`;
+      const migrated = t.n === 5;
+      check(migrated, "Database tables exist (migrations applied)", "Run: npm run db:migrate");
+      if (migrated) {
+        const roles = await sql`select 1 from role where is_system and key = 'owner'`;
+        check(roles.length > 0, "System roles are seeded", "Run: npm run db:seed  (needed before anyone can create an organization)");
       }
-      await client.end();
+    } catch (e) {
+      check(false, "Database is reachable", `Could not connect (${(e as Error).message}). Check DATABASE_URL and the database password.`);
+    } finally {
+      await sql.end();
     }
   }
 

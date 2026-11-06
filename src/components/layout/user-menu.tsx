@@ -1,9 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Building2, LogOut, Moon, Sun } from "lucide-react";
+import { Building2, CreditCard, LogOut, Moon, Sun } from "lucide-react";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -14,7 +14,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
   const { theme, setTheme } = useTheme();
 
   async function signOut() {
-    await authClient.signOut();
+    await getSupabaseBrowserClient().auth.signOut();
     router.replace("/sign-in");
     router.refresh();
   }
@@ -32,6 +32,9 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/organizations"><Building2 />All organizations</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/pricing"><CreditCard />Plans &amp; pricing</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Theme</DropdownMenuLabel>

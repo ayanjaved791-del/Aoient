@@ -41,7 +41,5 @@ yarn-error.log*
 next-env.d.ts
 !.env.example
 
-# prisma generated client
-/src/generated/
 
 .e2e-server.log

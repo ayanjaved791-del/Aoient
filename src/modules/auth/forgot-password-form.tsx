@@ -3,7 +3,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { authClient } from "@/lib/auth-client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { SupabaseMissingNotice } from "./supabase-missing-notice";
 import { forgotPasswordSchema } from "@/lib/validation/auth";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -18,13 +20,17 @@ export function ForgotPasswordForm() {
   const { errors, isSubmitting } = form.formState;
 
   async function onSubmit(values: Values) {
-    const { error } = await authClient.requestPasswordReset({ email: values.email, redirectTo: "/reset-password" });
+    const { error } = await getSupabaseBrowserClient().auth.resetPasswordForEmail(values.email, {
+      redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
+    });
     // Generic response whether or not the account exists (no account enumeration).
     setState(error?.status === 429 ? "limited" : "sent");
   }
 
+  if (!isSupabaseConfigured) return <SupabaseMissingNotice />;
+
   if (state === "sent") {
-    return <Alert tone="success" title="Check your inbox">If an account exists for that address, we&apos;ve sent a link to reset your password. It expires in 1 hour.</Alert>;
+    return <Alert tone="success" title="Check your inbox">If an account exists for that address, we&apos;ve sent a link to reset your password.</Alert>;
   }
 
   return (

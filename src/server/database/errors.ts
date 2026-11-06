@@ -1,8 +1,8 @@
 import "server-only";
-import { Prisma } from "@/generated/prisma/client";
+import postgres from "postgres";
 
-export function isUniqueViolation(e: unknown, field?: string): boolean {
-  if (!(e instanceof Prisma.PrismaClientKnownRequestError) || e.code !== "P2002") return false;
-  if (!field) return true;
-  return JSON.stringify(e.meta ?? {}).includes(field);
+/** True for a Postgres unique-constraint violation, optionally on a constraint/index whose name contains `name`. */
+export function isUniqueViolation(e: unknown, name?: string): boolean {
+  if (!(e instanceof postgres.PostgresError) || e.code !== "23505") return false;
+  return !name || (e.constraint_name ?? "").includes(name);
 }

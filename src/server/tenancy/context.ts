@@ -1,5 +1,6 @@
 import "server-only";
-import { db } from "@/server/database/client";
+import { getDb } from "@/server/database/client";
+import { isUuid } from "@/lib/ids";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
 import { isPermissionKey, type PermissionKey } from "@/server/permissions/catalog";
 import { hasPermission, isOwner as subjectIsOwner, type PermissionSubject } from "@/server/permissions/evaluator";
@@ -37,50 +38,40 @@ export type OrgRef = { slug: string } | { id: string };
  * callers cannot probe for the existence of other tenants.
  */
 export async function resolveOrgContext(userId: string, ref: OrgRef): Promise<OrgContext> {
-  const member = await db.organizationMember.findFirst({
-    where: {
-      userId,
-      status: "active",
-      organization: { status: "active", ...("slug" in ref ? { slug: ref.slug } : { id: ref.id }) },
-    },
-    select: {
-      id: true,
-      organization: { select: { id: true, name: true, slug: true, timezone: true, currency: true } },
-      role: {
-        select: {
-          id: true,
-          key: true,
-          name: true,
-          isSystem: true,
-          organizationId: true,
-          permissions: { select: { permission: { select: { key: true } } } },
-        },
-      },
-    },
-  });
+  if (!isUuid(userId) || ("id" in ref && !isUuid(ref.id))) throw new NotFoundError("Organization not found");
+  const sql = getDb();
+  const [row] = await sql<{
+    member_id: string; org_id: string; org_name: string; slug: string; timezone: string; currency: string;
+    role_id: string; role_key: string; role_name: string; is_system: boolean; role_org_id: string | null; permissions: string[];
+  }[]>`
+    select m.id as member_id, o.id as org_id, o.name as org_name, o.slug, o.timezone, o.currency,
+           r.id as role_id, r.key as role_key, r.name as role_name, r.is_system, r.organization_id as role_org_id,
+           coalesce(array_agg(p.key) filter (where p.key is not null), '{}') as permissions
+    from organization_member m
+    join organization o on o.id = m.organization_id
+    join role r on r.id = m.role_id
+    left join role_permission rp on rp.role_id = r.id
+    left join permission p on p.id = rp.permission_id
+    where m.user_id = ${userId} and m.status = 'active' and o.status = 'active'
+      and ${"slug" in ref ? sql`o.slug = ${ref.slug}` : sql`o.id = ${ref.id}`}
+    group by m.id, o.id, r.id`;
 
-  if (!member) throw new NotFoundError("Organization not found");
+  if (!row) throw new NotFoundError("Organization not found");
 
   // Defence in depth: a custom role must belong to the same tenant.
-  if (member.role.organizationId !== null && member.role.organizationId !== member.organization.id) {
-    throw new NotFoundError("Organization not found");
-  }
+  if (row.role_org_id !== null && row.role_org_id !== row.org_id) throw new NotFoundError("Organization not found");
 
-  const permissions = new Set<PermissionKey>();
-  for (const rp of member.role.permissions) {
-    if (isPermissionKey(rp.permission.key)) permissions.add(rp.permission.key);
-  }
-
-  const subject = { roleKey: member.role.key, isSystemRole: member.role.isSystem, permissions };
+  const permissions = new Set<PermissionKey>(row.permissions.filter(isPermissionKey));
+  const subject = { roleKey: row.role_key, isSystemRole: row.is_system, permissions };
 
   return {
     ...subject,
     userId,
-    organizationId: member.organization.id,
-    organization: member.organization,
-    memberId: member.id,
-    roleId: member.role.id,
-    roleName: member.role.name,
+    organizationId: row.org_id,
+    organization: { id: row.org_id, name: row.org_name, slug: row.slug, timezone: row.timezone, currency: row.currency.trim() },
+    memberId: row.member_id,
+    roleId: row.role_id,
+    roleName: row.role_name,
     isOwner: subjectIsOwner(subject),
   };
 }

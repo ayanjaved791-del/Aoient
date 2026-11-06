@@ -4,14 +4,15 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { authClient } from "@/lib/auth-client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { safeNextPath, signUpSchema } from "@/lib/validation/auth";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
-import { isLocalAuth, LocalAuthError, localSignUp } from "@/lib/local-auth";
+import { SupabaseMissingNotice } from "./supabase-missing-notice";
 
 type Values = z.infer<typeof signUpSchema>;
 
@@ -26,20 +27,27 @@ export function SignUpForm() {
   });
   const { errors, isSubmitting } = form.formState;
 
+  if (!isSupabaseConfigured) return <SupabaseMissingNotice />;
+
   async function onSubmit(values: Values) {
     setServerError(null);
-    if (isLocalAuth) {
-      try {
-        await localSignUp(values);
-        router.replace("/pricing");
-      } catch (e) {
-        setServerError(e instanceof LocalAuthError ? e.message : "We couldn't create your account in this browser.");
-      }
-      return;
-    }
-    const { error } = await authClient.signUp.email({ name: values.name, email: values.email, password: values.password, callbackURL: next });
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase.auth.signUp({
+      email: values.email,
+      password: values.password,
+      options: {
+        data: { name: values.name },
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`,
+      },
+    });
     if (error) {
       setServerError(describeAuthError(error, "We couldn't create your account."));
+      return;
+    }
+    // With email confirmation off in Supabase, a session is returned straight away.
+    if (data.session) {
+      router.replace(next);
+      router.refresh();
       return;
     }
     router.push(`/verify-email?email=${encodeURIComponent(values.email)}&next=${encodeURIComponent(next)}`);

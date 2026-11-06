@@ -53,7 +53,7 @@ describe("RBAC and privilege escalation", () => {
     expect([...after.permissions]).toEqual(["organization.read"]);
 
     await expect(deleteCustomRole(s.ctx, role.id)).rejects.toMatchObject({ code: "CONFLICT" });
-    const actions = (await db.auditLog.findMany({ where: { organizationId: s.org.id }, select: { action: true } })).map((a) => a.action);
+    const actions = (await db()<{ action: string }[]>`select action from audit_log where organization_id = ${s.org.id}`).map((a) => a.action);
     expect(actions).toEqual(expect.arrayContaining(["organization.created", "role.created", "member.role_changed", "role.updated", "member.invited"]));
   });
 
@@ -65,7 +65,7 @@ describe("RBAC and privilege escalation", () => {
     const second = await addMember(s.org.id, "owner");
     await updateMember(second.ctx, s.ctx.memberId, { roleId: await systemRoleId("admin") });
     await expect(updateMember(second.ctx, admin.member.id, { roleId: await systemRoleId("employee") })).resolves.toBeUndefined();
-    const ownerCount = await db.organizationMember.count({ where: { organizationId: s.org.id, role: { key: "owner" } } });
+    const ownerCount = (await db()`select count(*)::int as n from organization_member m join role r on r.id = m.role_id where m.organization_id = ${s.org.id} and r.key = 'owner'`)[0].n;
     expect(ownerCount).toBe(1);
     await expect(leaveOrganization(second.ctx)).rejects.toMatchObject({ code: "CONFLICT" });
   });

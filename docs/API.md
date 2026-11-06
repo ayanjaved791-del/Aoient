@@ -41,4 +41,4 @@ Mutations must be same-origin (`Origin` header matching `APP_URL`).
 | POST | `/api/v1/organizations/:id/roles` | `organization.roles.manage` — `{ name, description?, permissions[] }` |
 | PATCH / DELETE | `/api/v1/organizations/:id/roles/:roleId` | `organization.roles.manage` (custom roles only) |
 
-Authentication endpoints are served by Better Auth under `/api/auth/*`.
+Authentication is handled by Supabase Auth (the browser talks to Supabase directly; email links land on `/auth/confirm`).

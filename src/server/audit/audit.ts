@@ -1,6 +1,7 @@
 import "server-only";
-import type { Prisma } from "@/generated/prisma/client";
-import type { Tx } from "@/server/database/client";
+import type { Db } from "@/server/database/client";
+
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
 export type AuditAction =
   | "organization.created"
@@ -26,7 +27,7 @@ export interface AuditEvent {
   source?: "web" | "api" | "system" | "webhook";
   correlationId?: string;
   /** Sanitised, non-sensitive context only. Never secrets, tokens or payment payloads. */
-  metadata?: Prisma.InputJsonValue;
+  metadata?: Record<string, Json>;
 }
 
 const FORBIDDEN_METADATA_KEYS = /pass(word)?|secret|token|authorization|cookie|card/i;
@@ -44,17 +45,10 @@ function sanitize(value: unknown): unknown {
 }
 
 /** Write an audit event inside the caller's transaction so it commits atomically with the change. */
-export async function recordAudit(tx: Tx, event: AuditEvent): Promise<void> {
-  await tx.auditLog.create({
-    data: {
-      organizationId: event.organizationId,
-      actorUserId: event.actorUserId,
-      action: event.action,
-      targetType: event.targetType,
-      targetId: event.targetId,
-      source: event.source ?? "web",
-      correlationId: event.correlationId,
-      metadata: event.metadata === undefined ? undefined : (sanitize(event.metadata) as Prisma.InputJsonValue),
-    },
-  });
+export async function recordAudit(tx: Db, event: AuditEvent): Promise<void> {
+  const metadata = event.metadata === undefined ? null : (sanitize(event.metadata) as Json);
+  await tx`
+    insert into audit_log (organization_id, actor_user_id, action, target_type, target_id, source, correlation_id, metadata)
+    values (${event.organizationId}, ${event.actorUserId}, ${event.action}, ${event.targetType ?? null}, ${event.targetId ?? null},
+            ${event.source ?? "web"}, ${event.correlationId ?? null}, ${metadata === null ? null : tx.json(metadata)})`;
 }

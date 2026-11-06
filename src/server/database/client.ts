@@ -1,35 +1,47 @@
 import "server-only";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@/generated/prisma/client";
+import postgres from "postgres";
 
 /**
- * Single Prisma client per process, created lazily on first use. Importing this
- * module never touches the database, so the app builds and runs without
- * DATABASE_URL in browser-only account mode (nothing calls the database then).
- * In development the instance is cached on `globalThis` so hot reloads do not
- * exhaust database connections.
+ * Server-side connection to the Supabase Postgres database (DATABASE_URL).
+ *
+ * Created lazily on first query, so importing this module never needs the
+ * database (the app builds without DATABASE_URL). One pool per process; cached
+ * on globalThis so dev hot reloads don't leak connections.
+ *
+ * On Vercel use Supabase's *transaction pooler* URL (port 6543); prepared
+ * statements are disabled for compatibility with it.
  */
-const globalForPrisma = globalThis as unknown as { __aoientPrisma?: PrismaClient };
+export type Sql = postgres.Sql;
+/** A connection or an open transaction — every query helper accepts either. */
+export type Db = postgres.Sql | postgres.TransactionSql;
 
-function createClient(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is not set. See .env.example.");
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const globalForDb = globalThis as unknown as { __aoientSql?: Sql };
+
+function createClient(): Sql {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not set. See .env.example.");
+  return postgres(url, {
+    max: Number(process.env.DATABASE_POOL_MAX ?? 5),
+    prepare: false,
+    idle_timeout: 20,
+    onnotice: () => {},
+    transform: { undefined: null },
+  });
 }
 
-function getClient(): PrismaClient {
-  if (!globalForPrisma.__aoientPrisma) globalForPrisma.__aoientPrisma = createClient();
-  return globalForPrisma.__aoientPrisma;
+export function getDb(): Sql {
+  globalForDb.__aoientSql ??= createClient();
+  return globalForDb.__aoientSql;
 }
 
-export const db: PrismaClient = new Proxy({} as PrismaClient, {
-  get(_target, prop) {
-    const client = getClient();
-    const value = Reflect.get(client, prop, client);
-    return typeof value === "function" ? value.bind(client) : value;
-  },
-});
+/** Run `fn` in a transaction; it commits when `fn` resolves and rolls back if it throws. */
+export async function transaction<T>(fn: (tx: postgres.TransactionSql) => Promise<T>): Promise<T> {
+  return (await getDb().begin(fn)) as T;
+}
 
-export type Db = PrismaClient;
-/** Transaction client type (the `tx` argument in `db.$transaction(async (tx) => …)`). */
-export type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
+/** For tests: close the pool so the process can exit. */
+export async function closeDb(): Promise<void> {
+  const sql = globalForDb.__aoientSql;
+  globalForDb.__aoientSql = undefined;
+  await sql?.end({ timeout: 5 });
+}

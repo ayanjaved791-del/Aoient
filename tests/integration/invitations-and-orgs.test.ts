@@ -19,7 +19,7 @@ describe("organization creation (AT-01)", () => {
     const ctx = await resolveOrgContext(user.id, { slug: "northwind" });
     expect(ctx.isOwner).toBe(true);
     expect(ctx.organization).toMatchObject({ id: org.id, timezone: "Europe/London", currency: "USD" });
-    expect(await db.auditLog.count({ where: { organizationId: org.id, action: "organization.created", actorUserId: user.id } })).toBe(1);
+    expect((await db()`select count(*)::int as n from audit_log where organization_id = ${org.id} and action = 'organization.created' and actor_user_id = ${user.id}`)[0].n).toBe(1);
   });
 
   it("rejects duplicate slugs and unverified users", async () => {
@@ -28,7 +28,7 @@ describe("organization creation (AT-01)", () => {
     await expect(createOrganization(user, { name: "Two", slug: "taken" })).rejects.toMatchObject({ code: "CONFLICT" });
     const unverified = await createUser({ verified: false });
     await expect(createOrganization(unverified, { name: "Three", slug: "three" })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    expect(await db.organization.count()).toBe(1);
+    expect((await db()`select count(*)::int as n from organization`)[0].n).toBe(1);
   });
 });
 
@@ -45,7 +45,7 @@ describe("invitation lifecycle (AT-03)", () => {
   it("stores only a hash, accepts once, creates membership with the role, and audits", async () => {
     const { id } = await createInvitation(s.ctx, { email: "New.Hire@Example.test", roleId: employeeRole });
     const token = lastToken();
-    const row = await db.invitation.findUniqueOrThrow({ where: { id } });
+    const [row] = await db()<{ tokenHash: string; status: string; email: string }[]>`select token_hash as "tokenHash", status, email from invitation where id = ${id}`;
     expect(row.tokenHash).toBe(hashToken(token));
     expect(JSON.stringify(row)).not.toContain(token);
     expect(row.email).toBe("new.hire@example.test");
@@ -61,7 +61,7 @@ describe("invitation lifecycle (AT-03)", () => {
     // Single use.
     await expect(acceptInvitation(invitee, token)).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(await getInvitationPreview(token)).toEqual({ state: "invalid" });
-    expect(await db.auditLog.count({ where: { action: "member.joined", targetId: ctx.memberId } })).toBe(1);
+    expect((await db()`select count(*)::int as n from audit_log where action = 'member.joined' and target_id = ${ctx.memberId}`)[0].n).toBe(1);
   });
 
   it("rejects a different email, unverified users, expired and revoked invitations", async () => {
@@ -72,8 +72,8 @@ describe("invitation lifecycle (AT-03)", () => {
     const unverified = await createUser({ email: "target@example.test", verified: false });
     await expect(acceptInvitation(unverified, token)).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-    await db.invitation.update({ where: { id }, data: { expiresAt: new Date(Date.now() - 1000) } });
-    await db.user.update({ where: { id: unverified.id }, data: { emailVerified: true } });
+    await db()`update invitation set expires_at = now() - interval '1 second' where id = ${id}`;
+    await db()`update auth.users set email_confirmed_at = now() where id = ${unverified.id}`;
     await expect(acceptInvitation({ ...unverified, emailVerified: true }, token)).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     const second = await createInvitation(s.ctx, { email: "target2@example.test", roleId: employeeRole });
@@ -82,7 +82,7 @@ describe("invitation lifecycle (AT-03)", () => {
     const target2 = await createUser({ email: "target2@example.test" });
     await expect(acceptInvitation(target2, token2)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(acceptInvitation(target2, "not-a-real-token")).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(await db.organizationMember.count({ where: { organizationId: s.org.id } })).toBe(1);
+    expect((await db()`select count(*)::int as n from organization_member where organization_id = ${s.org.id}`)[0].n).toBe(1);
   });
 
   it("re-inviting revokes the previous link; existing members cannot be re-invited", async () => {
@@ -90,7 +90,7 @@ describe("invitation lifecycle (AT-03)", () => {
     const first = lastToken();
     await createInvitation(s.ctx, { email: "DUP@example.test", roleId: employeeRole });
     expect(await getInvitationPreview(first)).toEqual({ state: "invalid" });
-    expect(await db.invitation.count({ where: { organizationId: s.org.id, status: "pending" } })).toBe(1);
+    expect((await db()`select count(*)::int as n from invitation where organization_id = ${s.org.id} and status = 'pending'`)[0].n).toBe(1);
 
     const member = await addMember(s.org.id, "employee", await createUser({ email: "member@example.test" }));
     expect(member.ctx.organizationId).toBe(s.org.id);
@@ -103,6 +103,6 @@ describe("invitation lifecycle (AT-03)", () => {
     const invitee = await createUser({ email: "race@example.test" });
     const results = await Promise.allSettled([acceptInvitation(invitee, token), acceptInvitation(invitee, token), acceptInvitation(invitee, token)]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    expect(await db.organizationMember.count({ where: { organizationId: s.org.id, userId: invitee.id } })).toBe(1);
+    expect((await db()`select count(*)::int as n from organization_member where organization_id = ${s.org.id} and user_id = ${invitee.id}`)[0].n).toBe(1);
   });
 });

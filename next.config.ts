@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
-  serverExternalPackages: ["pg"],
+  serverExternalPackages: ["postgres"],
   turbopack: {
     rules: {
       "*.css": {

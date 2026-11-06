@@ -1,10 +1,11 @@
 import "server-only";
-import { db, type Tx } from "@/server/database/client";
+import { getDb, transaction, type Db } from "@/server/database/client";
 import { recordAudit } from "@/server/audit/audit";
 import { assertPermission, type OrgContext } from "@/server/tenancy/context";
 import { isPermissionKey, MODULES, PERMISSIONS, type PermissionKey } from "@/server/permissions/catalog";
 import { isSubsetOf, type RoleDescriptor } from "@/server/permissions/evaluator";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { isUuid } from "@/lib/ids";
 import { parseInput } from "@/lib/validation/parse";
 import { roleSchema, slugify } from "@/lib/validation/organization";
 
@@ -23,40 +24,48 @@ export interface RoleSummary {
  * role or a custom role owned by this organization. A custom role id from a
  * different tenant resolves to NotFound — never to that tenant's role.
  */
-export async function loadAssignableRole(tx: Tx, organizationId: string, roleId: string): Promise<RoleDescriptor & { id: string; name: string }> {
-  const role = await tx.role.findFirst({
-    where: { id: roleId, OR: [{ organizationId: null, isSystem: true }, { organizationId }] },
-    select: { id: true, key: true, name: true, isSystem: true, permissions: { select: { permission: { select: { key: true } } } } },
-  });
+export async function loadAssignableRole(tx: Db, organizationId: string, roleId: string): Promise<RoleDescriptor & { id: string; name: string }> {
+  if (!isUuid(roleId)) throw new NotFoundError("Role not found");
+  const [role] = await tx<{ id: string; key: string; name: string; is_system: boolean; permissions: string[] }[]>`
+    select r.id, r.key, r.name, r.is_system,
+           coalesce(array_agg(p.key) filter (where p.key is not null), '{}') as permissions
+    from role r
+    left join role_permission rp on rp.role_id = r.id
+    left join permission p on p.id = rp.permission_id
+    where r.id = ${roleId}
+      and ((r.organization_id is null and r.is_system) or r.organization_id = ${organizationId})
+    group by r.id`;
   if (!role) throw new NotFoundError("Role not found");
   return {
     id: role.id,
     key: role.key,
     name: role.name,
-    isSystem: role.isSystem,
-    permissions: new Set(role.permissions.map((p) => p.permission.key).filter(isPermissionKey)),
+    isSystem: role.is_system,
+    permissions: new Set(role.permissions.filter(isPermissionKey)),
   };
 }
 
 export async function listRoles(ctx: OrgContext): Promise<RoleSummary[]> {
   assertPermission(ctx, "organization.members.read");
-  const roles = await db.role.findMany({
-    where: { OR: [{ organizationId: null, isSystem: true }, { organizationId: ctx.organizationId }] },
-    orderBy: [{ isSystem: "desc" }, { createdAt: "asc" }],
-    select: {
-      id: true, key: true, name: true, description: true, isSystem: true,
-      permissions: { select: { permission: { select: { key: true } } } },
-      _count: { select: { members: { where: { organizationId: ctx.organizationId } } } },
-    },
-  });
-  return roles.map((r) => ({
+  const sql = getDb();
+  const rows = await sql<{
+    id: string; key: string; name: string; description: string | null; is_system: boolean; permissions: string[]; member_count: number;
+  }[]>`
+    select r.id, r.key, r.name, r.description, r.is_system,
+           coalesce((select array_agg(p.key) from role_permission rp join permission p on p.id = rp.permission_id
+                     where rp.role_id = r.id), '{}') as permissions,
+           (select count(*)::int from organization_member m where m.role_id = r.id and m.organization_id = ${ctx.organizationId}) as member_count
+    from role r
+    where (r.organization_id is null and r.is_system) or r.organization_id = ${ctx.organizationId}
+    order by r.is_system desc, r.created_at asc`;
+  return rows.map((r) => ({
     id: r.id,
     key: r.key,
     name: r.name,
     description: r.description,
-    isSystem: r.isSystem,
-    permissions: r.permissions.map((p) => p.permission.key).filter(isPermissionKey),
-    memberCount: r._count.members,
+    isSystem: r.is_system,
+    permissions: r.permissions.filter(isPermissionKey),
+    memberCount: r.member_count,
   }));
 }
 
@@ -80,10 +89,21 @@ function validatePermissionKeys(ctx: OrgContext, keys: string[]): PermissionKey[
   return valid;
 }
 
-async function writeGrants(tx: Tx, roleId: string, keys: PermissionKey[]) {
-  const perms = await tx.permission.findMany({ where: { key: { in: keys } }, select: { id: true } });
-  await tx.rolePermission.deleteMany({ where: { roleId } });
-  if (perms.length) await tx.rolePermission.createMany({ data: perms.map((p) => ({ roleId, permissionId: p.id })) });
+async function writeGrants(tx: Db, roleId: string, keys: PermissionKey[]) {
+  await tx`delete from role_permission where role_id = ${roleId}`;
+  if (keys.length) {
+    await tx`
+      insert into role_permission (role_id, permission_id)
+      select ${roleId}, id from permission where key = any(${keys}::text[])`;
+  }
+}
+
+async function assertNameFree(tx: Db, organizationId: string, name: string, exceptId?: string) {
+  const [taken] = await tx`
+    select 1 from role
+    where organization_id = ${organizationId} and lower(name) = lower(${name})
+      ${exceptId ? tx`and id <> ${exceptId}` : tx``}`;
+  if (taken) throw new ConflictError("A role with this name already exists.");
 }
 
 export async function createCustomRole(ctx: OrgContext, input: unknown): Promise<{ id: string }> {
@@ -92,20 +112,17 @@ export async function createCustomRole(ctx: OrgContext, input: unknown): Promise
   const keys = validatePermissionKeys(ctx, data.permissions);
   const baseKey = `custom-${slugify(data.name) || "role"}`;
 
-  return db.$transaction(async (tx) => {
+  return transaction(async (tx) => {
     let key = baseKey;
-    for (let i = 2; await tx.role.findFirst({ where: { organizationId: ctx.organizationId, key }, select: { id: true } }); i++) {
+    for (let i = 2; (await tx`select 1 from role where organization_id = ${ctx.organizationId} and key = ${key}`).length; i++) {
       key = `${baseKey}-${i}`;
     }
-    const nameTaken = await tx.role.findFirst({
-      where: { organizationId: ctx.organizationId, name: { equals: data.name, mode: "insensitive" } },
-      select: { id: true },
-    });
-    if (nameTaken) throw new ConflictError("A role with this name already exists.");
+    await assertNameFree(tx, ctx.organizationId, data.name);
 
-    const role = await tx.role.create({
-      data: { organizationId: ctx.organizationId, key, name: data.name, description: data.description || null, isSystem: false },
-    });
+    const [role] = await tx<{ id: string }[]>`
+      insert into role (organization_id, key, name, description, is_system)
+      values (${ctx.organizationId}, ${key}, ${data.name}, ${data.description || null}, false)
+      returning id`;
     await writeGrants(tx, role.id, keys);
     await recordAudit(tx, {
       organizationId: ctx.organizationId, actorUserId: ctx.userId, action: "role.created",
@@ -115,8 +132,10 @@ export async function createCustomRole(ctx: OrgContext, input: unknown): Promise
   });
 }
 
-async function loadCustomRole(tx: Tx, ctx: OrgContext, roleId: string) {
-  const role = await tx.role.findFirst({ where: { id: roleId, organizationId: ctx.organizationId, isSystem: false } });
+async function loadCustomRole(tx: Db, ctx: OrgContext, roleId: string) {
+  if (!isUuid(roleId)) throw new NotFoundError("Role not found");
+  const [role] = await tx<{ id: string; name: string }[]>`
+    select id, name from role where id = ${roleId} and organization_id = ${ctx.organizationId} and not is_system`;
   if (!role) throw new NotFoundError("Role not found");
   return role;
 }
@@ -126,20 +145,15 @@ export async function updateCustomRole(ctx: OrgContext, roleId: string, input: u
   const data = parseInput(roleSchema, input);
   const keys = validatePermissionKeys(ctx, data.permissions);
 
-  await db.$transaction(async (tx) => {
+  await transaction(async (tx) => {
     const role = await loadCustomRole(tx, ctx, roleId);
     if (role.id === ctx.roleId) throw new ForbiddenError("You cannot edit the role you are using.");
     // Editing a role must not let you act on members more privileged than you.
     const current = await loadAssignableRole(tx, ctx.organizationId, role.id);
     if (!isSubsetOf(current.permissions, ctx.permissions)) throw new ForbiddenError("This role has permissions you do not hold.");
+    await assertNameFree(tx, ctx.organizationId, data.name, role.id);
 
-    const nameTaken = await tx.role.findFirst({
-      where: { organizationId: ctx.organizationId, name: { equals: data.name, mode: "insensitive" }, NOT: { id: role.id } },
-      select: { id: true },
-    });
-    if (nameTaken) throw new ConflictError("A role with this name already exists.");
-
-    await tx.role.update({ where: { id: role.id }, data: { name: data.name, description: data.description || null } });
+    await tx`update role set name = ${data.name}, description = ${data.description || null}, updated_at = now() where id = ${role.id}`;
     await writeGrants(tx, role.id, keys);
     await recordAudit(tx, {
       organizationId: ctx.organizationId, actorUserId: ctx.userId, action: "role.updated",
@@ -151,14 +165,15 @@ export async function updateCustomRole(ctx: OrgContext, roleId: string, input: u
 
 export async function deleteCustomRole(ctx: OrgContext, roleId: string): Promise<void> {
   assertPermission(ctx, "organization.roles.manage");
-  await db.$transaction(async (tx) => {
+  await transaction(async (tx) => {
     const role = await loadCustomRole(tx, ctx, roleId);
-    const inUse = await tx.organizationMember.count({ where: { roleId: role.id } });
-    const pendingInvites = await tx.invitation.count({ where: { roleId: role.id, status: "pending" } });
-    if (inUse || pendingInvites) {
+    const [{ in_use }] = await tx<{ in_use: boolean }[]>`
+      select exists (select 1 from organization_member where role_id = ${role.id})
+          or exists (select 1 from invitation where role_id = ${role.id} and status = 'pending') as in_use`;
+    if (in_use) {
       throw new ConflictError("Reassign members and revoke pending invitations using this role before deleting it.");
     }
-    await tx.role.delete({ where: { id: role.id } });
+    await tx`delete from role where id = ${role.id}`;
     await recordAudit(tx, {
       organizationId: ctx.organizationId, actorUserId: ctx.userId, action: "role.deleted",
       targetType: "role", targetId: role.id, metadata: { name: role.name },

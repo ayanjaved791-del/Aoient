@@ -1,29 +1,54 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/config";
 
 /**
- * Optimistic routing only: if there is no session cookie at all, send the
- * visitor to sign-in. This is NOT the security boundary — every page, action
- * and route handler re-validates the session and tenant membership on the server.
+ * 1. Keeps the Supabase session fresh: refreshed auth cookies are written to
+ *    both the request (for this render) and the response (for the browser).
+ * 2. Optimistic routing: signed-out visitors to app pages go to sign-in.
+ *
+ * This is NOT the security boundary — every page, action and route handler
+ * re-validates the session and tenant membership on the server.
  */
-const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/verify-email", "/forgot-password", "/reset-password", "/invite", "/api", "/_next"];
+const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/verify-email", "/forgot-password", "/reset-password", "/invite", "/auth", "/api", "/_next"];
 
-// Browser-only accounts live in localStorage, which the server can't see, so the
-// /home page guards itself on the client while that mode is active.
-const LOCAL_MODE_PUBLIC = process.env.NEXT_PUBLIC_AUTH_MODE === "server" ? [] : ["/home", "/pricing"];
+function isPublic(pathname: string) {
+  return pathname === "/" || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
-export function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  if (pathname === "/" || LOCAL_MODE_PUBLIC.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    return NextResponse.next();
+function toSignIn(req: NextRequest) {
+  const url = req.nextUrl.clone();
+  url.pathname = "/sign-in";
+  url.search = `?next=${encodeURIComponent(req.nextUrl.pathname + req.nextUrl.search)}`;
+  return NextResponse.redirect(url);
+}
+
+export async function proxy(req: NextRequest) {
+  if (!isSupabaseConfigured) return isPublic(req.nextUrl.pathname) ? NextResponse.next() : toSignIn(req);
+
+  let res = NextResponse.next({ request: req });
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    cookies: {
+      getAll: () => req.cookies.getAll(),
+      setAll: (list, headers) => {
+        for (const { name, value } of list) req.cookies.set(name, value);
+        res = NextResponse.next({ request: req });
+        for (const { name, value, options } of list) res.cookies.set(name, value, options);
+        for (const [k, v] of Object.entries(headers ?? {})) res.headers.set(k, v);
+      },
+    },
+  });
+
+  // Verifies (and if needed refreshes) the session. Do not run code between
+  // creating the client and this call.
+  const { data } = await supabase.auth.getClaims();
+
+  if (!data?.claims && !isPublic(req.nextUrl.pathname)) {
+    const redirect = toSignIn(req);
+    for (const c of res.cookies.getAll()) redirect.cookies.set(c);
+    return redirect;
   }
-  const hasSession = req.cookies.getAll().some((c) => c.name.endsWith("better-auth.session_token"));
-  if (!hasSession) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/sign-in";
-    url.search = `?next=${encodeURIComponent(pathname + req.nextUrl.search)}`;
-    return NextResponse.redirect(url);
-  }
-  return NextResponse.next();
+  return res;
 }
 
 export const config = {

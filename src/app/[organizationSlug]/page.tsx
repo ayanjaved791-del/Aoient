@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight, MailPlus, ShieldCheck, Users } from "lucide-react";
-import { db } from "@/server/database/client";
+import { getOverviewCounts } from "@/server/organizations/views";
 import { can } from "@/server/tenancy/context";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,13 +13,8 @@ async function Overview({ params }: { params: Promise<{ organizationSlug: string
   const { user, ctx } = await getPageOrgContext(organizationSlug);
   const base = `/${ctx.organization.slug}`;
   const canSeeMembers = can(ctx, "organization.members.read");
-  const [members, pending, customRoles] = canSeeMembers
-    ? await Promise.all([
-        db.organizationMember.count({ where: { organizationId: ctx.organizationId, status: "active" } }),
-        db.invitation.count({ where: { organizationId: ctx.organizationId, status: "pending", expiresAt: { gt: new Date() } } }),
-        db.role.count({ where: { organizationId: ctx.organizationId } }),
-      ])
-    : [null, null, null];
+  const counts = canSeeMembers ? await getOverviewCounts(ctx) : null;
+  const [members, pending, customRoles] = counts ? [counts.members, counts.pending, counts.customRoles] : [null, null, null];
 
   const tiles = [
     { href: `${base}/settings/members`, icon: Users, label: "Active members", value: members, show: canSeeMembers },
