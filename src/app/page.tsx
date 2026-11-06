@@ -8,7 +8,7 @@ import {
   FaqSection,
   LandingFooter,
   LandingHeader,
-  ModuleMarquee,
+  IntegrationMarquee,
   ModulesSection,
   SectionHeading,
   SecuritySection,
@@ -23,7 +23,7 @@ export default function LandingPage() {
       <LandingHeader />
       <main>
         <Hero />
-        <ModuleMarquee />
+        <IntegrationMarquee />
         <TechStack />
 
         <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">

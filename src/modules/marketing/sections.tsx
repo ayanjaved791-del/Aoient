@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ModuleIcon, type ModuleKey } from "./module-icons";
+import { BrandTile, PLANNED_INTEGRATIONS } from "./brand-logos";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -102,26 +103,30 @@ const MODULES: { key: ModuleKey; name: string; body: string; live?: boolean }[] 
 
 const LIVE_TODAY = ["Email sign-up", "Organizations", "Invitations", "Custom roles", "Audit log", "REST API"];
 
-export function ModuleMarquee() {
-  const row = (reverse: boolean) => (
+export function IntegrationMarquee() {
+  const half = Math.ceil(PLANNED_INTEGRATIONS.length / 2);
+  const row = (icons: typeof PLANNED_INTEGRATIONS, reverse: boolean) => (
     <div className="flex w-max gap-3 motion-safe:animate-marquee" style={reverse ? { animationDirection: "reverse" } : undefined}>
-      {[...MODULES, ...MODULES].map(({ key, name }, i) => (
+      {[...icons, ...icons].map((icon, i) => (
         <span
           key={i}
           className="inline-flex items-center gap-2.5 whitespace-nowrap rounded-full border border-neutral-200 bg-white py-1.5 pl-1.5 pr-4 text-sm font-medium text-neutral-800 shadow-xs dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200"
         >
-          <ModuleIcon module={key} size="xs" className="rounded-full shadow-sm" />
-          {name}
+          <BrandTile icon={icon} className="size-7 rounded-full shadow-none" glyphClassName="size-3.5" />
+          {icon.title}
         </span>
       ))}
     </div>
   );
   return (
-    <section aria-label="Modules" className="border-y border-neutral-200 bg-neutral-50 py-10 dark:border-neutral-900 dark:bg-neutral-950/50">
-      <p className="text-center text-xs font-medium uppercase tracking-[0.2em] text-neutral-500">Twelve building blocks · one workspace</p>
+    <section aria-labelledby="integrations-heading" className="border-y border-neutral-200 bg-neutral-50 py-10 dark:border-neutral-900 dark:bg-neutral-950/50">
+      <p id="integrations-heading" className="text-center text-xs font-medium uppercase tracking-[0.2em] text-neutral-500">
+        Planned integrations · not connected yet
+      </p>
+      <p className="sr-only">{PLANNED_INTEGRATIONS.map((i) => i.title).join(", ")}</p>
       <div aria-hidden className="mt-6 grid gap-3 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
-        {row(false)}
-        {row(true)}
+        {row(PLANNED_INTEGRATIONS.slice(0, half), false)}
+        {row(PLANNED_INTEGRATIONS.slice(half), true)}
       </div>
     </section>
   );
@@ -213,7 +218,7 @@ export function ModulesSection() {
                 <div className="flex items-start justify-between gap-3">
                   <ModuleIcon
                     module={key}
-                    className={cn("transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110", live && "from-white/25 to-white/5 ring-white/30 dark:from-black/80 dark:to-black dark:text-white")}
+                    className={cn("transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110", live && "bg-white/10 text-white ring-white/20 dark:bg-black/5 dark:text-black dark:ring-black/15")}
                   />
                   <span
                     className={cn(

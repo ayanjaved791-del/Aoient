@@ -1,4 +1,9 @@
-import { siNextdotjs, siPaddle, siPostgresql, siSupabase, siTypescript, siVercel, type SimpleIcon } from "simple-icons";
+import {
+  siAirtable, siAsana, siCalendly, siDropbox, siFigma, siGithub, siGmail, siGooglecalendar, siGoogledrive, siGooglemeet,
+  siGooglesheets, siHubspot, siJira, siMailchimp, siNextdotjs, siNotion, siPaddle, siPaypal, siPostgresql, siQuickbooks,
+  siStripe, siSupabase, siTrello, siTypescript, siVercel, siWhatsapp, siXero, siZapier, siZoom,
+  type SimpleIcon,
+} from "simple-icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -48,5 +53,40 @@ export function TechStack() {
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Tools Aoient Connect is planned to integrate with. None are connected yet;
+ * every place these appear says so.
+ */
+export const PLANNED_INTEGRATIONS: SimpleIcon[] = [
+  siGmail, siGooglecalendar, siGoogledrive, siGooglesheets, siGooglemeet, siZoom, siStripe, siPaypal,
+  siQuickbooks, siXero, siHubspot, siNotion, siGithub, siFigma, siTrello, siAsana, siJira, siDropbox,
+  siZapier, siCalendly, siWhatsapp, siMailchimp, siAirtable,
+];
+
+/** Very dark brand colours are drawn in the page's foreground colour so they stay visible in dark mode. */
+function isNearBlack(hex: string) {
+  const n = parseInt(hex, 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 40;
+}
+
+/** A real brand logo, in the brand's own colour, on a neutral tile. */
+export function BrandTile({ icon, className, glyphClassName }: { icon: SimpleIcon; className?: string; glyphClassName?: string }) {
+  const dark = isNearBlack(icon.hex);
+  return (
+    <span
+      className={cn(
+        "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900",
+        className,
+      )}
+    >
+      <svg role="img" viewBox="0 0 24 24" className={cn("size-5", dark && "fill-black dark:fill-white", glyphClassName)} style={dark ? undefined : { fill: `#${icon.hex}` }}>
+        <title>{icon.title}</title>
+        <path d={icon.path} />
+      </svg>
+    </span>
   );
 }

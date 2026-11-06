@@ -1,9 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Lock } from "lucide-react";
 import { PLANS, priceFor } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
-import { ModuleIcon, type ModuleKey } from "./module-icons";
+import type { SimpleIcon } from "simple-icons";
+import { Check, Lock } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
+import { BrandTile, PLANNED_INTEGRATIONS } from "./brand-logos";
 
 type Status = "live" | "soon";
 
@@ -55,20 +57,20 @@ function Tile({
   );
 }
 
-const INNER: ModuleKey[] = ["people", "crm", "projects", "time"];
-const OUTER: ModuleKey[] = ["finance", "flow", "analytics", "documents", "inventory", "workspace", "connect"];
+const INNER = PLANNED_INTEGRATIONS.slice(0, 4);
+const OUTER = PLANNED_INTEGRATIONS.slice(4, 12);
 
 function Orbit() {
-  const ring = (icons: ModuleKey[], size: number, duration: string, reverse = false) => (
+  const ring = (icons: SimpleIcon[], size: number, duration: string, reverse = false) => (
     <div
       className="absolute rounded-full border border-dashed border-neutral-300 motion-safe:animate-orbit dark:border-neutral-700"
       style={{ width: size, height: size, animationDuration: duration, animationDirection: reverse ? "reverse" : "normal" }}
     >
-      {icons.map((key, i) => {
+      {icons.map((icon, i) => {
         const angle = (i / icons.length) * Math.PI * 2;
         return (
           <span
-            key={key}
+            key={icon.slug}
             className="absolute -ml-5 -mt-5 motion-safe:animate-orbit"
             style={{
               left: `${50 + 50 * Math.cos(angle)}%`,
@@ -77,7 +79,7 @@ function Orbit() {
               animationDirection: reverse ? "normal" : "reverse",
             }}
           >
-            <ModuleIcon module={key} size="sm" className="size-10 rounded-xl" />
+            <BrandTile icon={icon} />
           </span>
         );
       })}
@@ -87,11 +89,8 @@ function Orbit() {
     <div className="relative flex h-[280px] w-full scale-[0.8] items-center justify-center sm:h-[340px] sm:scale-100">
       {ring(OUTER, 320, "80s", true)}
       {ring(INNER, 180, "50s")}
-      <span className="relative flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-orange-400 shadow-[0_0_0_8px_rgb(168_85_247/0.12),0_16px_40px_-8px_rgb(168_85_247/0.6)]">
-        <svg viewBox="0 0 24 24" className="size-8">
-          <circle cx="12" cy="12" r="6" fill="none" strokeWidth="2" className="stroke-white" />
-          <circle cx="18" cy="7.5" r="2" className="fill-white" />
-        </svg>
+      <span className="relative flex size-16 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-[0_16px_40px_-12px_rgb(124_58_237/0.45)] dark:border-neutral-800 dark:bg-neutral-900">
+        <Logo withWordmark={false} className="[&_svg]:size-10" />
       </span>
     </div>
   );
@@ -159,7 +158,8 @@ function Invitation() {
         <div className="mt-3 flex items-center justify-between">
           <span className="rounded-full bg-black px-3 py-1 text-[11px] font-medium text-white dark:bg-white dark:text-black">Accept</span>
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 opacity-0 ring-1 ring-inset ring-emerald-500/30 motion-safe:animate-invite-badge dark:text-emerald-400">
-            ✓ Joined
+            <Check className="mr-0.5 inline size-3 -translate-y-px" strokeWidth={3} aria-hidden />
+            Joined
           </span>
         </div>
       </div>
@@ -268,8 +268,8 @@ export function FeatureBento() {
       <Tile
         className="sm:col-span-2 lg:col-span-4 lg:row-span-2"
         status="soon"
-        title="Eleven modules, one source of truth"
-        body="People, CRM, Projects, Time, Finance, Flow, Analytics, Documents, Inventory, Workspace and Connect share the same records — so nothing is typed twice."
+        title="Connect the tools you already use"
+        body="Planned integrations for Aoient Connect, such as Gmail, Google Calendar, Stripe, QuickBooks and HubSpot. None are connected yet; they'll be added as Connect is built."
       >
         <Orbit />
       </Tile>
