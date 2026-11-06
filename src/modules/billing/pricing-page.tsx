@@ -112,7 +112,14 @@ export function PricingPage() {
         </div>
 
         <div className="mt-8 flex justify-center">
-          <div role="radiogroup" aria-label="Billing period" className="inline-flex rounded-full border border-border bg-surface p-1">
+          <div role="radiogroup" aria-label="Billing period" className="relative inline-grid grid-cols-2 rounded-full border border-border bg-surface p-1">
+            <span
+              aria-hidden
+              className={cn(
+                "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-navy shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-primary",
+                interval === "yearly" && "translate-x-full",
+              )}
+            />
             {(["monthly", "yearly"] as const).map((value) => (
               <button
                 key={value}
@@ -121,8 +128,8 @@ export function PricingPage() {
                 aria-checked={interval === value}
                 onClick={() => setBillingInterval(value)}
                 className={cn(
-                  "rounded-full px-5 py-1.5 text-sm font-medium uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  interval === value ? "bg-navy text-white dark:bg-primary" : "text-muted-foreground hover:text-foreground",
+                  "relative z-10 rounded-full px-5 py-1.5 text-sm font-medium uppercase tracking-wide transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  interval === value ? "text-white" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {value}
@@ -132,13 +139,13 @@ export function PricingPage() {
         </div>
 
         <ul className="mt-10 grid gap-6 md:grid-cols-3 md:items-stretch">
-          {PLANS.map((plan) => {
+          {PLANS.map((plan, index) => {
             const Icon = ICONS[plan.id];
             const price = priceFor(plan, interval);
             const featured = plan.featured;
             return (
-              <li key={plan.id} className="flex flex-col">
-                <p className="mb-3 h-10 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <li key={plan.id} className="animate-rise-in flex flex-col" style={{ animationDelay: `${120 + index * 120}ms` }}>
+                <p key={interval} className="animate-fade-up mb-3 h-10 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {interval === "yearly" ? (
                     <>Save {saving}%<br />{freeMonths} months free</>
                   ) : (
@@ -148,25 +155,33 @@ export function PricingPage() {
                 <article
                   aria-labelledby={`plan-${plan.id}`}
                   className={cn(
-                    "relative flex flex-1 flex-col overflow-hidden rounded-xl border p-6 shadow-xs",
+                    "group relative isolate flex flex-1 flex-col overflow-hidden rounded-xl border p-6 shadow-xs transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-2 focus-within:-translate-y-2",
                     featured
-                      ? "border-navy bg-navy text-white dark:border-primary dark:bg-primary-subtle"
-                      : "border-border bg-surface",
+                      ? "border-navy bg-navy text-white hover:shadow-[0_24px_48px_-12px_rgba(99,91,255,0.45)] md:scale-[1.03] md:hover:scale-[1.05] dark:border-primary dark:bg-primary-subtle"
+                      : "border-border bg-surface hover:border-primary/50 hover:shadow-[0_20px_40px_-16px_rgba(16,24,40,0.25)]",
                   )}
                 >
+                  {featured && (
+                    <span
+                      aria-hidden
+                      className="animate-glow-pulse pointer-events-none absolute -z-10 -left-16 -top-16 size-48 rounded-full bg-primary/40 blur-3xl"
+                    />
+                  )}
                   <div
                     className={cn(
                       "absolute right-0 top-0 rounded-bl-xl px-4 py-2 text-right",
                       featured ? "bg-white text-navy dark:bg-primary dark:text-white" : "bg-navy text-white dark:bg-primary",
                     )}
                   >
-                    <span className="text-2xl font-semibold">${price.amount.toLocaleString("en-US")}</span>
-                    <span className="block text-[11px] font-medium opacity-80">per {price.per}</span>
+                    <span key={interval} className="animate-price-pop block">
+                      <span className="text-2xl font-semibold tabular-nums">${price.amount.toLocaleString("en-US")}</span>
+                      <span className="block text-[11px] font-medium opacity-80">per {price.per}</span>
+                    </span>
                   </div>
 
                   <span
                     className={cn(
-                      "flex size-11 items-center justify-center rounded-lg border",
+                      "relative flex size-11 items-center justify-center rounded-lg border transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110",
                       featured ? "border-white/20 bg-white/10" : "border-border bg-background text-primary",
                     )}
                   >
@@ -180,14 +195,14 @@ export function PricingPage() {
                   </h2>
                   <p className={cn("mt-1 text-sm", featured ? "text-white/75" : "text-muted-foreground")}>{plan.tagline}</p>
                   {interval === "yearly" && (
-                    <p className={cn("mt-1 text-xs", featured ? "text-white/75" : "text-muted-foreground")}>
+                    <p className={cn("animate-fade-up mt-1 text-xs", featured ? "text-white/75" : "text-muted-foreground")}>
                       ${(price.amount / 12).toFixed(2)}/month, billed yearly
                     </p>
                   )}
 
                   <ul className="mt-6 grid flex-1 content-start gap-3 text-sm">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex gap-2.5">
+                    {plan.features.map((f, i) => (
+                      <li key={f} className="animate-fade-up flex gap-2.5" style={{ animationDelay: `${360 + index * 120 + i * 45}ms` }}>
                         <Check className={cn("mt-0.5 size-4 shrink-0", featured ? "text-white" : "text-success")} aria-hidden />
                         <span>{f}</span>
                       </li>
@@ -195,7 +210,7 @@ export function PricingPage() {
                   </ul>
 
                   <Button
-                    className={cn("mt-8 w-full", featured && "bg-white text-navy hover:bg-white/90 dark:bg-primary dark:text-white dark:hover:bg-primary-hover")}
+                    className={cn("relative mt-8 w-full transition-transform active:scale-[0.98]", featured && "bg-white text-navy hover:bg-white/90 dark:bg-primary dark:text-white dark:hover:bg-primary-hover")}
                     loading={busyPlan === plan.id}
                     onClick={() => buy(plan)}
                     aria-label={`Buy ${plan.name}, ${interval}`}
