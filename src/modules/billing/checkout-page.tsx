@@ -78,6 +78,8 @@ export function CheckoutPage({
           break;
         case "checkout.completed":
           setStatus("completed");
+          // The success page re-checks this transaction with Paddle's API on the server.
+          if (e.data?.transaction_id) router.push(`/checkout/success?txn=${encodeURIComponent(e.data.transaction_id)}`);
           break;
         case "checkout.error":
           setStatus("error");
@@ -87,7 +89,7 @@ export function CheckoutPage({
     return () => {
       paddleListener = null;
     };
-  }, []);
+  }, [router]);
 
   // Open the inline checkout once (and again if the site theme changes).
   useEffect(() => {
