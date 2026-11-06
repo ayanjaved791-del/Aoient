@@ -1,0 +1,270 @@
+// Aoient — database schema
+// Conventions (see docs/DATABASE.md):
+//  * Non-guessable UUID primary keys (UUIDv7 for index locality).
+//  * Every tenant-owned table has a direct `organizationId` column + index.
+//  * createdAt / updatedAt on mutable records.
+//  * Lifecycle states are explicit enums.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Identity (Better Auth) ─────────────────────────────
+// Field names are dictated by Better Auth's core schema. Do not rename without
+// updating `src/server/auth/auth.ts`.
+
+enum UserStatus {
+  active
+  deactivated
+}
+
+model User {
+  id            String     @id @default(uuid(7))
+  name          String
+  email         String     @unique
+  emailVerified Boolean    @default(false)
+  image         String?
+  status        UserStatus @default(active)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  sessions            Session[]
+  accounts            Account[]
+  memberships         OrganizationMember[]
+  invitationsSent     Invitation[]         @relation("InvitationInviter")
+  auditLogs           AuditLog[]
+  organizationsCreated Organization[]      @relation("OrganizationCreator")
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid(7))
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid(7))
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid(7))
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+/// Better Auth rate-limit storage (database-backed so limits hold across instances).
+model RateLimit {
+  id          String @id @default(uuid(7))
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
+}
+
+/// Application-level fixed-window rate limiting for non-auth sensitive endpoints
+/// (invitations, public API, uploads).
+model RateLimitBucket {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+
+  @@map("rate_limit_bucket")
+}
+
+// ───────────────────────────── Tenancy ─────────────────────────────
+
+enum OrganizationStatus {
+  active
+  suspended
+  archived
+}
+
+model Organization {
+  id          String             @id @default(uuid(7))
+  name        String
+  slug        String             @unique
+  timezone    String             @default("UTC")
+  currency    String             @default("USD") @db.Char(3)
+  status      OrganizationStatus @default(active)
+  createdById String?
+  createdBy   User?              @relation("OrganizationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  members     OrganizationMember[]
+  roles       Role[]
+  invitations Invitation[]
+  auditLogs   AuditLog[]
+
+  @@map("organization")
+}
+
+enum MemberStatus {
+  active
+  suspended
+}
+
+model OrganizationMember {
+  id             String       @id @default(uuid(7))
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId         String
+  role           Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  status         MemberStatus @default(active)
+  joinedAt       DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, status])
+  @@map("organization_member")
+}
+
+/// System roles have organizationId = null and isSystem = true and are shared by
+/// every tenant. Custom roles belong to exactly one organization.
+model Role {
+  id             String        @id @default(uuid(7))
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String
+  name           String
+  description    String?
+  isSystem       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  permissions RolePermission[]
+  members     OrganizationMember[]
+  invitations Invitation[]
+
+  // NULLS NOT DISTINCT is not expressible in Prisma; uniqueness of system role
+  // keys is enforced by the partial index in migration `0001_init`.
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("role")
+}
+
+/// Controlled permission catalogue. Rows are synchronised from
+/// `src/server/permissions/catalog.ts` by `prisma/seed.ts` / `syncPermissionCatalog`.
+model Permission {
+  id          String   @id @default(uuid(7))
+  key         String   @unique
+  description String
+  module      String
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permission")
+}
+
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permission")
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
+  expired
+}
+
+model Invitation {
+  id             String           @id @default(uuid(7))
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  roleId         String
+  role           Role             @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  /// SHA-256 of the random invitation token. The raw token only exists in the email link.
+  tokenHash      String           @unique
+  status         InvitationStatus @default(pending)
+  expiresAt      DateTime
+  invitedById    String?
+  invitedBy      User?            @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId, status])
+  @@index([email])
+  @@map("invitation")
+}
+
+// ───────────────────────────── Audit ─────────────────────────────
+
+enum AuditSource {
+  web
+  api
+  system
+  webhook
+}
+
+model AuditLog {
+  id             String        @id @default(uuid(7))
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUserId    String?
+  actor          User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action         String
+  targetType     String?
+  targetId       String?
+  source         AuditSource   @default(web)
+  correlationId  String?
+  /// Sanitised metadata only — never secrets, tokens or full payment payloads.
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
+  @@index([actorUserId])
+  @@map("audit_log")
+}

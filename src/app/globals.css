@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/*
+ * Aoient design tokens (spec §5).
+ * Semantic tokens map to the brand palette; components only use semantic names
+ * (bg-surface, text-muted-foreground, border-border, …) so dark mode is a token swap.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --brand-navy: #101828;
+  --brand-slate: #344054;
+  --brand-indigo: #635bff;
+
+  --background: #f8fafc;      /* Canvas */
+  --surface: #ffffff;          /* Cards, dialogs, menus */
+  --surface-muted: #f2f4f7;
+  --foreground: #101828;       /* Navy — strong text */
+  --secondary-foreground: #344054; /* Slate — secondary text, nav */
+  --muted-foreground: #667085; /* Muted — metadata, helper text */
+  --border: #e4e7ec;
+  --input: #d0d5dd;
+  --primary: #635bff;
+  --primary-hover: #544ce6;
+  --primary-foreground: #ffffff;
+  --primary-subtle: #f0efff;
+  --success: #12b76a;
+  --success-subtle: #ecfdf3;
+  --warning: #f79009;
+  --warning-subtle: #fffaeb;
+  --danger: #f04438;
+  --danger-hover: #d92d20;
+  --danger-subtle: #fef3f2;
+  --ring: #635bff;
+  --sidebar: #ffffff;
+  --shadow-color: 16 24 40;
+}
+
+.dark {
+  --background: #0b0f19;
+  --surface: #111827;
+  --surface-muted: #1a2232;
+  --foreground: #f2f4f7;
+  --secondary-foreground: #d0d5dd;
+  --muted-foreground: #98a2b3;
+  --border: #253041;
+  --input: #344054;
+  --primary: #7a73ff;
+  --primary-hover: #8f89ff;
+  --primary-foreground: #ffffff;
+  --primary-subtle: #1e1b4b;
+  --success: #32d583;
+  --success-subtle: #053321;
+  --warning: #fdb022;
+  --warning-subtle: #4e1d09;
+  --danger: #f97066;
+  --danger-hover: #fda29b;
+  --danger-subtle: #55160c;
+  --ring: #8f89ff;
+  --sidebar: #0f1522;
+  --shadow-color: 0 0 0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-navy: var(--brand-navy);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px; /* cards: 10–14px per spec */
+
+  --shadow-xs: 0 1px 2px rgb(var(--shadow-color) / 0.05);
+  --shadow-sm: 0 1px 3px rgb(var(--shadow-color) / 0.08), 0 1px 2px rgb(var(--shadow-color) / 0.04);
+  --shadow-lg: 0 12px 24px -4px rgb(var(--shadow-color) / 0.10), 0 4px 8px -2px rgb(var(--shadow-color) / 0.05);
+
+  --animate-in: fade-in 140ms ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
