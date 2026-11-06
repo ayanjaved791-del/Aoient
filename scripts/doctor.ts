@@ -20,6 +20,13 @@ function validUrl(v: string | undefined) {
 async function main() {
   const env = process.env;
 
+  if (env.NEXT_PUBLIC_AUTH_MODE !== "server") {
+    console.log(
+      "Account mode: local — sign-up and sign-in save accounts in the browser, so no database is needed.\n" +
+        "Set NEXT_PUBLIC_AUTH_MODE=server in .env to use the database version; the checks below apply to it.\n",
+    );
+  }
+
   check(validUrl(env.APP_URL), "APP_URL is a full URL", "Set APP_URL in .env, e.g. http://localhost:3000 — the exact address you open in the browser.");
   check(
     !env.BETTER_AUTH_URL || env.BETTER_AUTH_URL === env.APP_URL,

@@ -7,9 +7,13 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/verify-email", "/forgot-password", "/reset-password", "/invite", "/api", "/_next"];
 
+// Browser-only accounts live in localStorage, which the server can't see, so the
+// /home page guards itself on the client while that mode is active.
+const LOCAL_MODE_PUBLIC = process.env.NEXT_PUBLIC_AUTH_MODE === "server" ? [] : ["/home"];
+
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (pathname === "/" || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+  if (pathname === "/" || LOCAL_MODE_PUBLIC.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return NextResponse.next();
   }
   const hasSession = req.cookies.getAll().some((c) => c.name.endsWith("better-auth.session_token"));

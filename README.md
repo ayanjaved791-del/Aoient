@@ -13,6 +13,17 @@ Built from the *Aoient Master Technical Specification V2*. Delivery follows the 
 
 ## Quick start
 
+**Browser-only mode (default, no database):**
+
+```bash
+npm install
+npm run dev                   # open http://localhost:3000 and create an account
+```
+
+Accounts are saved in your browser's localStorage only (see docs/ARCHITECTURE.md ADR-10).
+
+**Database mode** (`NEXT_PUBLIC_AUTH_MODE=server` in `.env`):
+
 ```bash
 cp .env.example .env          # fill in values (see docs/DEVELOPMENT.md)
 npm install                   # also generates the Prisma client

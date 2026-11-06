@@ -11,6 +11,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
+import { isLocalAuth, LocalAuthError, localSignUp } from "@/lib/local-auth";
 
 type Values = z.infer<typeof signUpSchema>;
 
@@ -27,6 +28,15 @@ export function SignUpForm() {
 
   async function onSubmit(values: Values) {
     setServerError(null);
+    if (isLocalAuth) {
+      try {
+        await localSignUp(values);
+        router.replace("/home");
+      } catch (e) {
+        setServerError(e instanceof LocalAuthError ? e.message : "We couldn't create your account in this browser.");
+      }
+      return;
+    }
     const { error } = await authClient.signUp.email({ name: values.name, email: values.email, password: values.password, callbackURL: next });
     if (error) {
       setServerError(describeAuthError(error, "We couldn't create your account."));

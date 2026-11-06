@@ -12,6 +12,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
+import { isLocalAuth, LocalAuthError, localSignIn } from "@/lib/local-auth";
 
 type Values = z.infer<typeof signInSchema>;
 
@@ -25,6 +26,15 @@ export function SignInForm() {
 
   async function onSubmit(values: Values) {
     setError(null);
+    if (isLocalAuth) {
+      try {
+        await localSignIn(values);
+        router.replace("/home");
+      } catch (e) {
+        setError({ message: e instanceof LocalAuthError ? e.message : "We couldn't sign you in." });
+      }
+      return;
+    }
     const { error } = await authClient.signIn.email({ email: values.email, password: values.password, callbackURL: next });
     if (error) {
       if (error.code === "EMAIL_NOT_VERIFIED") {
@@ -59,9 +69,11 @@ export function SignInForm() {
       <Field id="password" label="Password" error={errors.password?.message}>
         <Input type="password" autoComplete="current-password" {...form.register("password")} />
       </Field>
-      <div className="-mt-1 flex justify-end">
-        <Link href="/forgot-password" className="text-[13px] font-medium text-primary hover:underline">Forgot password?</Link>
-      </div>
+      {!isLocalAuth && (
+        <div className="-mt-1 flex justify-end">
+          <Link href="/forgot-password" className="text-[13px] font-medium text-primary hover:underline">Forgot password?</Link>
+        </div>
+      )}
       <Button type="submit" loading={isSubmitting} className="w-full">Sign in</Button>
     </form>
   );
