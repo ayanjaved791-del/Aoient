@@ -121,6 +121,13 @@
   --animate-knob-slide: knob-slide 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
   --animate-swap-out: swap-out 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
   --animate-swap-in: swap-in 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-shimmer: shimmer 6s linear infinite;
+  --animate-bob: bob 4s ease-in-out infinite;
+  --animate-twinkle: twinkle 3.2s ease-in-out infinite;
+  --animate-wiggle: wiggle 0.6s ease-in-out;
+  --animate-sheen: sheen 5s ease-in-out infinite;
+  --animate-ping-slow: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  --animate-gradient-pan: gradient-pan 8s ease infinite;
   --animate-label-first: label-first 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
   --animate-label-second: label-second 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
@@ -243,10 +250,92 @@
 .reveal-ready .reveal {
   opacity: 0;
   transform: translateY(28px);
-  transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1), transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 900ms cubic-bezier(0.22, 1, 0.36, 1), transform 900ms cubic-bezier(0.22, 1, 0.36, 1), filter 900ms cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: var(--reveal-delay, 0ms);
 }
-.reveal-ready .reveal.is-visible { opacity: 1; transform: none; }
+.reveal-ready .reveal[data-reveal="scale"] { transform: translateY(20px) scale(0.92); }
+.reveal-ready .reveal[data-reveal="left"] { transform: translateX(-48px); }
+.reveal-ready .reveal[data-reveal="right"] { transform: translateX(48px); }
+.reveal-ready .reveal[data-reveal="blur"] { transform: translateY(16px); filter: blur(14px); }
+.reveal-ready .reveal[data-reveal="flip"] { transform: perspective(1000px) rotateX(22deg) translateY(36px); transform-origin: 50% 0; }
+.reveal-ready .reveal.is-visible { opacity: 1; transform: none; filter: none; }
+
+/* Word / letter reveals */
+.words .w { display: inline-block; white-space: pre; }
+.reveal-ready .words .w {
+  transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1), transform 800ms cubic-bezier(0.22, 1, 0.36, 1), filter 800ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--d, 0ms) + var(--i, 0) * var(--step, 60ms));
+}
+.reveal-ready .words:not(.is-visible) .w { opacity: 0; transform: translateY(0.55em) rotate(4deg); filter: blur(8px); }
+.words-load .w { animation: word-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--d, 0ms) + var(--i, 0) * var(--step, 70ms)); }
+@keyframes word-in {
+  from { opacity: 0; transform: translateY(0.45em) rotate(3deg); filter: blur(10px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* Children appear one after another once the parent is visible */
+.reveal-ready .stagger > * { transition: opacity 700ms ease-out, transform 700ms cubic-bezier(0.22, 1, 0.36, 1); }
+.reveal-ready .stagger:not(.is-visible) > * { opacity: 0; transform: translateX(-10px); }
+.stagger > :nth-child(2) { transition-delay: 70ms; } .stagger > :nth-child(3) { transition-delay: 140ms; }
+.stagger > :nth-child(4) { transition-delay: 210ms; } .stagger > :nth-child(5) { transition-delay: 280ms; }
+.stagger > :nth-child(6) { transition-delay: 350ms; } .stagger > :nth-child(7) { transition-delay: 420ms; }
+.stagger > :nth-child(8) { transition-delay: 490ms; }
+
+/* Lines that draw themselves */
+.reveal-ready .draw { transform-origin: left; transition: transform 1400ms cubic-bezier(0.65, 0, 0.35, 1) 200ms; }
+.reveal-ready .draw:not(.is-visible) { transform: scaleX(0); }
+
+/* 3D tilt and magnetic buttons (pointer driven, see landing-effects.tsx) */
+[data-tilt] {
+  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1), translate 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms ease, box-shadow 500ms ease, background-color 300ms ease;
+}
+[data-tilt].is-tilting { transition-duration: 120ms, 500ms, 300ms, 500ms, 300ms; }
+[data-magnetic] {
+  transform: translate3d(var(--mx, 0px), var(--my, 0px), 0);
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-parallax] {
+  transform: perspective(1600px) rotateX(calc(var(--hs, 0) * 18deg + var(--py, 0) * -3deg)) rotateY(calc(var(--px, 0) * 4deg)) scale(calc(1 - var(--hs, 0) * 0.04));
+  transform-origin: 50% 0;
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Shine sweep on buttons */
+.shine { position: relative; overflow: hidden; isolation: isolate; }
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.45) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dark .shine::after { background: linear-gradient(110deg, transparent 30%, rgb(0 0 0 / 0.15) 50%, transparent 70%); }
+.shine:hover::after { transform: translateX(120%); }
+
+/* Scroll progress + header state */
+.scroll-progress { transform: scaleX(var(--progress, 0)); transform-origin: left; }
+.landing-header { transition: background-color 300ms, box-shadow 300ms, border-color 300ms; }
+[data-scrolled] .landing-header { box-shadow: 0 8px 30px -12px rgb(0 0 0 / 0.18); }
+
+.pause-on-hover:hover { animation-play-state: paused; }
+
+/* Smooth FAQ answers where the browser supports it */
+:root { interpolate-size: allow-keywords; }
+.faq-item::details-content { block-size: 0; overflow: hidden; transition: block-size 450ms cubic-bezier(0.22, 1, 0.36, 1), content-visibility 450ms allow-discrete; }
+.faq-item[open]::details-content { block-size: auto; }
+
+@keyframes shimmer { to { background-position: 200% center; } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes twinkle { 0%, 100% { opacity: 0.15; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-10deg) scale(1.1); } 75% { transform: rotate(8deg) scale(1.1); } }
+@keyframes sheen { 0%, 60% { transform: translateX(-120%) skewX(-20deg); } 85%, 100% { transform: translateX(220%) skewX(-20deg); } }
+@keyframes ping-slow { 0% { transform: scale(1); opacity: 0.5; } 80%, 100% { transform: scale(2.2); opacity: 0; } }
+@keyframes gradient-pan { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 
 /* Pointer spotlight on cards */
 [data-spotlight] { position: relative; isolation: isolate; }
@@ -281,6 +370,7 @@
   }
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
   @media (prefers-reduced-motion: reduce) {
+    [data-tilt], [data-magnetic], [data-parallax] { transform: none !important; }
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   }
 }

@@ -27,8 +27,10 @@ function Tile({
   status,
   className,
   delay = 0,
+  reveal = "flip",
   children,
 }: {
+  reveal?: "flip" | "scale" | "left" | "right" | "blur";
   title: string;
   body: string;
   status: Status;
@@ -37,9 +39,10 @@ function Tile({
   children: ReactNode;
 }) {
   return (
-    <li className={cn("reveal", className)} style={{ "--reveal-delay": `${delay}ms` } as CSSProperties}>
+    <li data-reveal={reveal} className={cn("reveal", className)} style={{ "--reveal-delay": `${delay}ms` } as CSSProperties}>
       <article
         data-spotlight
+        data-tilt="5"
         className="group flex h-full flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white transition-[border-color,box-shadow] duration-500 hover:border-neutral-400 hover:shadow-[0_24px_48px_-24px_rgb(0_0_0/0.25)] dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-600"
       >
         <div aria-hidden className="relative flex min-h-44 flex-1 items-center justify-center overflow-hidden p-6">
@@ -267,6 +270,7 @@ export function FeatureBento() {
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
       <Tile
         className="sm:col-span-2 lg:col-span-4 lg:row-span-2"
+        reveal="scale"
         status="soon"
         title="Connect the tools you already use"
         body="Planned integrations for Aoient Connect, such as Gmail, Google Calendar, Stripe, QuickBooks and HubSpot. None are connected yet; they'll be added as Connect is built."
@@ -294,9 +298,10 @@ export function FeatureBento() {
       <Tile className="lg:col-span-2" status="live" title="Versioned API" body="A JSON API under /api/v1 with the same permission checks as the app.">
         <ApiCode />
       </Tile>
-      <li className="reveal lg:col-span-2" style={{ "--reveal-delay": "100ms" } as CSSProperties}>
+      <li data-reveal="flip" className="reveal lg:col-span-2" style={{ "--reveal-delay": "100ms" } as CSSProperties}>
         <article
           data-spotlight
+          data-tilt="5"
           className="group flex h-full flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white transition-[border-color,box-shadow] duration-500 hover:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-600"
         >
           <div aria-hidden className="flex min-h-44 flex-1 items-center justify-center p-6">

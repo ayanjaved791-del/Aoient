@@ -44,11 +44,12 @@ export function PricingTeaser() {
           const price = priceFor(plan, interval);
           const featured = plan.featured;
           return (
-            <li key={plan.id} className="reveal" style={{ "--reveal-delay": `${i * 120}ms` } as React.CSSProperties}>
+            <li key={plan.id} data-reveal="flip" className="reveal" style={{ "--reveal-delay": `${i * 120}ms` } as React.CSSProperties}>
               <article
                 data-spotlight
+                data-tilt="6"
                 className={cn(
-                  "flex h-full flex-col rounded-2xl border p-7 transition-transform duration-500 hover:-translate-y-1.5",
+                  "flex h-full flex-col rounded-2xl border p-7 hover:-translate-y-1.5",
                   featured
                     ? "spin-border border-transparent bg-black text-white [--card-bg:#0a0a0a] [--spot:255_255_255] motion-safe:animate-spin-border dark:[--card-bg:#fafafa] dark:[--spot:0_0_0] dark:text-black"
                     : "border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950",
@@ -67,7 +68,7 @@ export function PricingTeaser() {
                   </span>
                   <span className={cn("text-sm", featured ? "text-white/65 dark:text-black/60" : "text-neutral-500")}>/ {price.per}</span>
                 </p>
-                <ul className="mt-6 grid flex-1 content-start gap-2.5 text-sm">
+                <ul className="stagger mt-6 grid flex-1 content-start gap-2.5 text-sm">
                   {plan.features.slice(0, 5).map((f) => (
                     <li key={f} className="flex gap-2.5">
                       <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -78,7 +79,7 @@ export function PricingTeaser() {
                 <Link
                   href="/sign-up"
                   className={cn(
-                    "group mt-8 inline-flex h-10 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors",
+                    "shine group mt-8 inline-flex h-10 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors",
                     featured
                       ? "bg-white text-black hover:bg-neutral-200 dark:bg-black dark:text-white dark:hover:bg-neutral-800"
                       : "bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200",

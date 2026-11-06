@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ModuleIcon, type ModuleKey } from "./module-icons";
+import { AnimatedText } from "./animated-text";
 import { BrandTile, PLANNED_INTEGRATIONS } from "./brand-logos";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
@@ -32,17 +33,18 @@ const delay = (ms: number) => ({ "--reveal-delay": `${ms}ms` }) as CSSProperties
 
 export function LandingHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-neutral-200/70 bg-white/75 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-black/70">
+    <header className="landing-header animate-fade-up sticky top-0 z-40 border-b border-neutral-200/70 bg-white/75 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-black/70">
+      <div aria-hidden className="scroll-progress absolute inset-x-0 -bottom-px h-0.5 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-orange-400" />
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link href="/" aria-label="Aoient home" className="rounded-md">
-          <Logo />
+        <Link href="/" aria-label="Aoient home" className="group/logo rounded-md">
+          <Logo className="[&_svg]:transition-transform [&_svg]:duration-700 group-hover/logo:[&_svg]:rotate-[360deg]" />
         </Link>
         <nav aria-label="Sections" className="hidden items-center gap-1 md:flex">
           {NAV.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="rounded-full px-3 py-1.5 text-sm text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white"
+              className="relative rounded-full px-3 py-1.5 text-sm text-neutral-600 transition-colors after:absolute after:inset-x-3 after:bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-violet-500 after:to-orange-400 after:transition-transform after:duration-300 hover:after:scale-x-100 hover:bg-neutral-100 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white"
             >
               {item.label}
             </a>
@@ -58,7 +60,8 @@ export function LandingHeader() {
           </Link>
           <Link
             href="/sign-up"
-            className="inline-flex h-9 items-center rounded-full bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+            data-magnetic
+            className="shine inline-flex h-9 items-center rounded-full bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
           >
             Get started
           </Link>
@@ -106,11 +109,11 @@ const LIVE_TODAY = ["Email sign-up", "Organizations", "Invitations", "Custom rol
 export function IntegrationMarquee() {
   const half = Math.ceil(PLANNED_INTEGRATIONS.length / 2);
   const row = (icons: typeof PLANNED_INTEGRATIONS, reverse: boolean) => (
-    <div className="flex w-max gap-3 motion-safe:animate-marquee" style={reverse ? { animationDirection: "reverse" } : undefined}>
+    <div className="pause-on-hover flex w-max gap-3 motion-safe:animate-marquee" style={reverse ? { animationDirection: "reverse" } : undefined}>
       {[...icons, ...icons].map((icon, i) => (
         <span
           key={i}
-          className="inline-flex items-center gap-2.5 whitespace-nowrap rounded-full border border-neutral-200 bg-white py-1.5 pl-1.5 pr-4 text-sm font-medium text-neutral-800 shadow-xs dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200"
+          className="inline-flex items-center gap-2.5 whitespace-nowrap rounded-full border border-neutral-200 bg-white py-1.5 pl-1.5 pr-4 text-sm font-medium text-neutral-800 shadow-xs transition-all duration-300 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200"
         >
           <BrandTile icon={icon} className="size-7 rounded-full shadow-none" glyphClassName="size-3.5" />
           {icon.title}
@@ -124,7 +127,7 @@ export function IntegrationMarquee() {
         Planned integrations · not connected yet
       </p>
       <p className="sr-only">{PLANNED_INTEGRATIONS.map((i) => i.title).join(", ")}</p>
-      <div aria-hidden className="mt-6 grid gap-3 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
+      <div className="mt-6 grid gap-3 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
         {row(PLANNED_INTEGRATIONS.slice(0, half), false)}
         {row(PLANNED_INTEGRATIONS.slice(half), true)}
       </div>
@@ -134,10 +137,23 @@ export function IntegrationMarquee() {
 
 export function SectionHeading({ eyebrow, title, body, invert }: { eyebrow: string; title: string; body: string; invert?: boolean }) {
   return (
-    <div className="reveal mx-auto max-w-2xl text-center">
-      <p className={cn("text-xs font-semibold uppercase tracking-[0.2em]", invert ? "text-neutral-400" : "text-neutral-500")}>{eyebrow}</p>
-      <h2 className={cn("mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-5xl", invert ? "text-white" : "text-black dark:text-white")}>{title}</h2>
-      <p className={cn("mt-4 text-pretty text-lg", invert ? "text-neutral-400" : "text-neutral-600 dark:text-neutral-400")}>{body}</p>
+    <div className="mx-auto max-w-2xl text-center">
+      <p
+        data-reveal="blur"
+        className={cn(
+          "reveal inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]",
+          invert ? "border-white/15 text-neutral-300" : "border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-400",
+        )}
+      >
+        <span className="size-1.5 rounded-full bg-gradient-to-r from-violet-500 to-orange-400" />
+        {eyebrow}
+      </p>
+      <h2 className={cn("mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-5xl", invert ? "text-white" : "text-black dark:text-white")}>
+        <AnimatedText text={title} delay={120} />
+      </h2>
+      <p className={cn("reveal mt-4 text-pretty text-lg", invert ? "text-neutral-400" : "text-neutral-600 dark:text-neutral-400")} style={delay(300)}>
+        {body}
+      </p>
     </div>
   );
 }
@@ -162,18 +178,19 @@ export function WorkflowSection() {
       <ol className="relative mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-6 lg:gap-4">
         <span
           aria-hidden
-          className="absolute left-[8%] right-[8%] top-7 hidden h-px bg-neutral-200 lg:block dark:bg-neutral-800"
+          className="draw absolute left-[8%] right-[8%] top-7 hidden h-px bg-neutral-300 lg:block dark:bg-neutral-700"
         />
         <span
           aria-hidden
           className="absolute left-[8%] right-[8%] top-7 hidden h-px bg-[linear-gradient(90deg,transparent,#a855f7,#f97316,transparent)] bg-[length:50%_100%] bg-no-repeat motion-safe:animate-beam lg:block"
         />
         {FLOW.map(({ key, title, body }, i) => (
-          <li key={title} className="reveal group relative flex gap-4 lg:flex-col lg:items-center lg:text-center" style={delay(i * 90)}>
+          <li key={title} data-reveal="scale" className="reveal group relative flex gap-4 lg:flex-col lg:items-center lg:text-center" style={delay(200 + i * 120)}>
             <span className="relative shrink-0 rounded-[20px] bg-white p-0 transition-transform duration-500 group-hover:-translate-y-1.5 group-hover:rotate-3 dark:bg-black">
               <ModuleIcon module={key} size="lg" />
               <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-black text-[10px] font-semibold text-white dark:bg-white dark:text-black">
-                {i + 1}
+                <span className="absolute inset-0 rounded-full bg-violet-500 motion-safe:animate-ping-slow" style={{ animationDelay: `${i * 0.5}s` }} />
+                <span className="relative">{i + 1}</span>
               </span>
             </span>
             <div>
@@ -203,22 +220,27 @@ export function ModulesSection() {
           {MODULES.map(({ key, name, body, live }, i) => (
             <li
               key={name}
+              data-reveal={i === 0 ? "scale" : "flip"}
               className={cn("reveal", i === 0 && "sm:col-span-2 lg:row-span-2", i === MODULES.length - 1 && "sm:col-span-2")}
-              style={delay((i % 4) * 80)}
+              style={delay((i % 4) * 90)}
             >
               <article
                 data-spotlight
+                data-tilt={i === 0 ? "3" : "8"}
                 className={cn(
-                  "group flex h-full flex-col rounded-3xl border p-6 transition-[transform,border-color] duration-500 hover:-translate-y-1",
+                  "group relative flex h-full flex-col overflow-hidden rounded-3xl border p-6 hover:-translate-y-1",
                   live
                     ? "border-black bg-black text-white [--spot:255_255_255] dark:border-white dark:bg-white dark:text-black dark:[--spot:0_0_0]"
                     : "border-neutral-200 bg-white hover:border-neutral-400 dark:border-neutral-800 dark:bg-black dark:hover:border-neutral-600",
                 )}
               >
+                {live && (
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/15 to-transparent motion-safe:animate-sheen dark:via-black/10" />
+                )}
                 <div className="flex items-start justify-between gap-3">
                   <ModuleIcon
                     module={key}
-                    className={cn("transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110", live && "bg-white/10 text-white ring-white/20 dark:bg-black/5 dark:text-black dark:ring-black/15")}
+                    className={cn("group-hover:motion-safe:animate-wiggle", live && "bg-white/10 text-white ring-white/20 dark:bg-black/5 dark:text-black dark:ring-black/15")}
                   />
                   <span
                     className={cn(
@@ -232,7 +254,7 @@ export function ModulesSection() {
                 <h3 className={cn("mt-5 font-semibold", !live && "text-black dark:text-white")}>{name}</h3>
                 <p className={cn("mt-1.5 text-sm leading-relaxed", live ? "text-white/70 dark:text-black/65" : "text-neutral-600 dark:text-neutral-400")}>{body}</p>
                 {live && (
-                  <ul className="mt-auto grid gap-2 pt-6 text-sm sm:grid-cols-2">
+                  <ul className="stagger mt-auto grid gap-2 pt-6 text-sm sm:grid-cols-2">
                     {LIVE_TODAY.map((item) => (
                       <li key={item} className="flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 dark:border-black/10">
                         <CircleCheck className="size-4 shrink-0" aria-hidden />
@@ -265,7 +287,7 @@ export function SecuritySection() {
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-80 w-[640px] -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-600/25 via-fuchsia-500/20 to-orange-400/20 blur-3xl" />
         <SectionHeading invert eyebrow="Security" title="Your data stays yours" body="Multi-tenant from the first line of code, with tests that try to read other companies' data and must fail." />
         <ul className="relative mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <li className="reveal sm:col-span-2 lg:col-span-1 lg:row-span-2">
+          <li data-reveal="scale" className="reveal sm:col-span-2 lg:col-span-1 lg:row-span-2">
             <div className="relative flex h-full min-h-72 flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-8">
               <div className="relative flex size-36 items-center justify-center rounded-full border border-white/15">
                 <span className="absolute inset-3 rounded-full border border-dashed border-white/20 motion-safe:animate-orbit" style={{ animationDuration: "30s" }} />
@@ -276,12 +298,13 @@ export function SecuritySection() {
             </div>
           </li>
           {SECURITY.map(({ icon: Icon, tone, title, body, span }, i) => (
-            <li key={title} className={cn("reveal", span)} style={delay((i % 3) * 90)}>
+            <li key={title} data-reveal={i % 2 ? "left" : "right"} className={cn("reveal", span)} style={delay((i % 3) * 110)}>
               <article
                 data-spotlight
-                className="h-full rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition-colors duration-500 [--spot:255_255_255] hover:border-white/25"
+                data-tilt="5"
+                className="group h-full rounded-3xl border border-white/10 bg-white/[0.03] p-6 [--spot:255_255_255] hover:border-white/25"
               >
-                <span className={cn("flex size-10 items-center justify-center rounded-xl ring-1 ring-inset", tone)}>
+                <span className={cn("flex size-10 items-center justify-center rounded-xl ring-1 ring-inset transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6", tone)}>
                   <Icon className="size-5" aria-hidden />
                 </span>
                 <h3 className="mt-4 font-semibold">{title}</h3>
@@ -306,15 +329,18 @@ export function StepsSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
       <SectionHeading eyebrow="Get started" title="Up and running in minutes" body="No sales call, no setup project. These steps work today." />
-      <ol className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div aria-hidden className="mx-auto mt-14 hidden h-1 max-w-6xl overflow-hidden rounded-full bg-neutral-100 lg:block dark:bg-neutral-900">
+        <span className="draw block h-full rounded-full bg-gradient-to-r from-sky-500 via-violet-500 via-60% to-emerald-500" />
+      </div>
+      <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STEPS.map(({ icon: Icon, tone, title, body }, i) => (
-          <li key={title} className="reveal" style={delay(i * 100)}>
-            <article data-spotlight className="group h-full rounded-3xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-950">
+          <li key={title} data-reveal="flip" className="reveal" style={delay(i * 140)}>
+            <article data-spotlight data-tilt="8" className="group h-full rounded-3xl border border-neutral-200 bg-white p-6 hover:border-neutral-300 hover:shadow-[0_24px_48px_-24px_rgb(0_0_0/0.25)] dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-700">
               <div className="flex items-center justify-between">
                 <span className="text-5xl font-semibold tracking-tighter text-neutral-200 transition-colors duration-500 group-hover:text-transparent group-hover:bg-gradient-to-br group-hover:from-violet-600 group-hover:to-orange-400 group-hover:bg-clip-text dark:text-neutral-800">
                   0{i + 1}
                 </span>
-                <span className={cn("flex size-11 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ring-1 ring-inset ring-white/25 transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110", tone)}>
+                <span className={cn("flex size-11 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ring-1 ring-inset ring-white/25 group-hover:motion-safe:animate-wiggle", tone)}>
                   <Icon className="size-5" strokeWidth={2.25} aria-hidden />
                 </span>
               </div>
@@ -355,21 +381,26 @@ export function FaqSection() {
   return (
     <section id="faq" className="scroll-mt-20 border-t border-neutral-200 dark:border-neutral-900">
       <div className="mx-auto grid max-w-6xl gap-12 px-4 py-24 sm:px-6 sm:py-32 lg:grid-cols-[1fr_1.5fr]">
-        <div className="reveal">
+        <div data-reveal="left" className="reveal">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">FAQ</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-5xl dark:text-white">Questions, answered</h2>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-5xl dark:text-white">
+            <AnimatedText text="Questions, answered" delay={150} />
+          </h2>
           <p className="mt-4 text-neutral-600 dark:text-neutral-400">Straight answers about what works today and what&apos;s coming.</p>
         </div>
         <div className="grid gap-3">
           {FAQ.map(({ q, a }, i) => (
             <details
               key={q}
-              className="reveal group rounded-2xl border border-neutral-200 bg-white px-5 transition-colors open:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:open:border-neutral-600"
-              style={delay(i * 70)}
+              data-reveal="right"
+              className="faq-item reveal group rounded-2xl border border-neutral-200 bg-white px-5 transition-[border-color,box-shadow] duration-300 open:border-neutral-400 open:shadow-[0_16px_40px_-20px_rgb(124_58_237/0.35)] hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-950 dark:open:border-neutral-600"
+              style={delay(i * 90)}
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-medium text-black dark:text-white [&::-webkit-details-marker]:hidden">
                 {q}
-                <ChevronDown className="size-4 shrink-0 transition-transform duration-300 group-open:rotate-180" aria-hidden />
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-neutral-200 transition-all duration-300 group-open:rotate-180 group-open:border-transparent group-open:bg-black group-open:text-white dark:border-neutral-800 dark:group-open:bg-white dark:group-open:text-black">
+                  <ChevronDown className="size-4" aria-hidden />
+                </span>
               </summary>
               <p className="animate-fade-up pb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{a}</p>
             </details>
@@ -383,7 +414,7 @@ export function FaqSection() {
 export function CtaSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 sm:pb-32">
-      <div className="reveal spin-border relative overflow-hidden rounded-[32px] [--card-bg:#0a0a0a] motion-safe:animate-spin-border dark:[--card-bg:#fafafa] [--spot:255_255_255] dark:[--spot:0_0_0]">
+      <div data-reveal="scale" className="reveal spin-border relative overflow-hidden rounded-[32px] [--card-bg:#0a0a0a] motion-safe:animate-spin-border dark:[--card-bg:#fafafa] [--spot:255_255_255] dark:[--spot:0_0_0]">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)] dark:bg-[radial-gradient(rgb(0_0_0/0.12)_1px,transparent_1px)]"
@@ -403,18 +434,22 @@ export function CtaSection() {
           </span>
         </div>
         <div className="relative px-6 py-20 text-center text-white sm:py-24 dark:text-black">
-          <h2 className="mx-auto max-w-2xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl">Bring your whole business into one place.</h2>
+          <h2 className="mx-auto max-w-2xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
+            <AnimatedText text="Bring your whole business into one place." delay={250} step={70} />
+          </h2>
           <p className="mx-auto mt-5 max-w-xl text-white/65 dark:text-black/60">Create a workspace, invite your team and grow into each module as it ships.</p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link
               href="/sign-up"
-              className="group inline-flex h-11 items-center gap-2 rounded-full bg-white px-6 text-sm font-medium text-black transition-transform hover:-translate-y-0.5 dark:bg-black dark:text-white"
+              data-magnetic
+              className="shine group inline-flex h-11 items-center gap-2 rounded-full bg-white px-6 text-sm font-medium text-black transition-transform hover:-translate-y-0.5 dark:bg-black dark:text-white"
             >
               Get started
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
             </Link>
             <Link
               href="/sign-in"
+              data-magnetic
               className="inline-flex h-11 items-center rounded-full border border-white/25 px-6 text-sm font-medium transition-colors hover:bg-white/10 dark:border-black/20 dark:hover:bg-black/5"
             >
               Sign in
@@ -436,20 +471,20 @@ export function LandingFooter() {
         </div>
         <nav aria-label="Product">
           <p className="text-sm font-semibold text-black dark:text-white">Product</p>
-          <ul className="mt-3 grid gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+          <ul className="stagger mt-3 grid gap-2 text-sm text-neutral-600 dark:text-neutral-400">
             {NAV.slice(0, 4).map((item) => (
               <li key={item.href}>
-                <a href={item.href} className="transition-colors hover:text-black dark:hover:text-white">{item.label}</a>
+                <a href={item.href} className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">{item.label}</a>
               </li>
             ))}
           </ul>
         </nav>
         <nav aria-label="Account">
           <p className="text-sm font-semibold text-black dark:text-white">Account</p>
-          <ul className="mt-3 grid gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-            <li><Link href="/sign-up" className="transition-colors hover:text-black dark:hover:text-white">Create account</Link></li>
-            <li><Link href="/sign-in" className="transition-colors hover:text-black dark:hover:text-white">Sign in</Link></li>
-            <li><Link href="/forgot-password" className="transition-colors hover:text-black dark:hover:text-white">Reset password</Link></li>
+          <ul className="stagger mt-3 grid gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+            <li><Link href="/sign-up" className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">Create account</Link></li>
+            <li><Link href="/sign-in" className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">Sign in</Link></li>
+            <li><Link href="/forgot-password" className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">Reset password</Link></li>
           </ul>
         </nav>
       </div>
@@ -457,7 +492,7 @@ export function LandingFooter() {
         <p className="mx-auto max-w-6xl px-4 py-6 text-xs text-neutral-500 sm:px-6">© 2026 Aoient</p>
       </div>
       <p aria-hidden className="pointer-events-none select-none overflow-hidden text-center text-[22vw] font-semibold leading-[0.8] tracking-tighter text-neutral-100 dark:text-neutral-900">
-        Aoient
+        <AnimatedText text="Aoient" by="letter" step={90} wordClassName="bg-gradient-to-b from-neutral-200 to-neutral-50 bg-clip-text text-transparent dark:from-neutral-800 dark:to-neutral-950" />
       </p>
     </footer>
   );

@@ -1,13 +1,34 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import type { CSSProperties } from "react";
 import { Logo } from "@/components/ui/logo";
+import { AnimatedText } from "./animated-text";
 import { ModuleIcon, type ModuleKey } from "./module-icons";
 
 const WORDS = ["people", "customers", "projects", "time", "finances"];
 
+/** Fixed positions (x %, y %, delay s) for the twinkling dots behind the hero. */
+const SPARKS: [number, number, number][] = [
+  [8, 18, 0], [16, 42, 1.1], [24, 9, 2.3], [31, 30, 0.6], [12, 62, 1.8], [88, 14, 0.3], [79, 36, 1.5],
+  [93, 48, 2.6], [70, 10, 0.9], [84, 64, 2.1], [42, 6, 1.3], [60, 22, 2.8], [4, 34, 0.5], [96, 28, 1.9],
+];
+
 export function Hero() {
   return (
-    <section className="relative overflow-hidden">
+    <section data-hero className="group/hero relative overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 opacity-0 transition-opacity duration-700 group-hover/hero:opacity-100"
+        style={{ background: "radial-gradient(520px circle at var(--hx, 50%) var(--hy, 30%), rgb(168 85 247 / 0.14), transparent 60%)" }}
+      />
+      {SPARKS.map(([x, y, d], i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="pointer-events-none absolute size-1 rounded-full bg-violet-500 opacity-40 motion-safe:animate-twinkle dark:bg-violet-300"
+          style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }}
+        />
+      ))}
       {/* Background: masked grid + drifting monochrome blobs */}
       <div
         aria-hidden
@@ -29,13 +50,14 @@ export function Hero() {
           Early access · workspaces, roles &amp; invitations are live
         </p>
 
-        <h1
-          className="animate-fade-up mx-auto mt-6 max-w-4xl text-balance text-5xl font-semibold tracking-tighter text-black sm:text-6xl lg:text-7xl dark:text-white"
-          style={{ animationDelay: "80ms" }}
-        >
-          One platform.
+        <h1 className="mx-auto mt-6 max-w-4xl text-balance text-5xl font-semibold tracking-tighter text-black sm:text-6xl lg:text-7xl dark:text-white">
+          <AnimatedText text="One platform." trigger="load" delay={80} step={110} />
           <br />
-          <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-400 bg-clip-text pb-2 text-transparent dark:from-violet-400 dark:via-fuchsia-400 dark:to-orange-300">Your entire business.</span>
+          <span className="words words-load inline-block" style={{ "--d": "320ms" } as CSSProperties}>
+            <span className="w bg-[linear-gradient(90deg,#7c3aed,#d946ef,#fb923c,#d946ef,#7c3aed)] bg-[length:200%_auto] bg-clip-text pb-2 text-transparent motion-safe:animate-shimmer dark:bg-[linear-gradient(90deg,#a78bfa,#e879f9,#fdba74,#e879f9,#a78bfa)]">
+              Your entire business.
+            </span>
+          </span>
         </h1>
 
         <p
@@ -56,14 +78,16 @@ export function Hero() {
         <div className="animate-fade-up mt-9 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "240ms" }}>
           <Link
             href="/sign-up"
-            className="group inline-flex h-11 items-center gap-2 rounded-full bg-black px-6 text-sm font-medium text-white shadow-[0_10px_30px_-8px_rgb(168_85_247/0.7)] transition-all hover:-translate-y-0.5 hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+            data-magnetic
+            className="shine group inline-flex h-11 items-center gap-2 rounded-full bg-black px-6 text-sm font-medium text-white shadow-[0_10px_30px_-8px_rgb(168_85_247/0.7)] transition-all hover:-translate-y-0.5 hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
           >
             Create your workspace
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
           </Link>
           <Link
             href="#features"
-            className="inline-flex h-11 items-center rounded-full border border-neutral-300 bg-white/60 px-6 text-sm font-medium text-black backdrop-blur transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-950/60 dark:text-white dark:hover:bg-neutral-900"
+            data-magnetic
+            className="shine inline-flex h-11 items-center rounded-full border border-neutral-300 bg-white/60 px-6 text-sm font-medium text-black backdrop-blur transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-950/60 dark:text-white dark:hover:bg-neutral-900"
           >
             See how it works
           </Link>
@@ -93,6 +117,7 @@ function ProductPreview() {
       <div className="motion-safe:animate-float relative">
         <div
           aria-hidden
+          data-parallax
           className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-[0_40px_80px_-24px_rgb(0_0_0/0.25)] dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-[0_40px_80px_-24px_rgb(0_0_0/0.9)]"
         >
           {/* Window chrome */}
