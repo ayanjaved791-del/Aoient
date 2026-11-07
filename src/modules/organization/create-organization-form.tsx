@@ -28,8 +28,8 @@ export function CreateOrganizationForm() {
 
   useEffect(() => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (tz) form.setValue("timezone", tz);
-  }, [form]);
+    if (tz && tzList.includes(tz)) form.setValue("timezone", tz);
+  }, [form, tzList]);
 
   useEffect(() => {
     if (!slugEdited) form.setValue("slug", slugify(name ?? ""), { shouldValidate: false });

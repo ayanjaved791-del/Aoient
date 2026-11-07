@@ -3,7 +3,9 @@ export const CURRENCIES = ["USD", "EUR", "GBP", "AED", "AUD", "CAD", "CHF", "INR
 
 export function timezones(): string[] {
   try {
-    return Intl.supportedValuesOf("timeZone");
+    // Chromium leaves "UTC" out of the list even though it is a valid (and the default) choice.
+    const list = Intl.supportedValuesOf("timeZone");
+    return list.includes("UTC") ? list : ["UTC", ...list];
   } catch {
     return ["UTC"];
   }

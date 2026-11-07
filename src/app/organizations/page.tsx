@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Building2, CreditCard, Plus, Sparkles, UserPlus } from "lucide-react";
+import { TRIAL_DAYS } from "@/lib/billing/entitlements";
+import { cn } from "@/lib/utils";
 import { requireUserOrRedirect } from "@/server/auth/session";
 import { listUserOrganizations } from "@/server/organizations/organizations";
 import { Button } from "@/components/ui/button";
@@ -11,20 +13,43 @@ import { CreateOrganizationForm } from "@/modules/organization/create-organizati
 
 export const metadata: Metadata = { title: "Organizations" };
 
+const SETUP_STEPS = [
+  { title: "Create workspace", icon: Building2 },
+  { title: "Invite your team", icon: UserPlus },
+  { title: "Choose a plan", icon: CreditCard },
+];
+
 async function OrganizationList() {
   const user = await requireUserOrRedirect("/organizations");
   const orgs = await listUserOrganizations(user.id);
 
   if (orgs.length === 0) {
+    const firstName = user.name.split(" ")[0];
     return (
-      <div className="grid gap-6">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Set up your organization</h1>
-          <p className="text-sm text-muted-foreground">
-            Your organization is the workspace your team shares. You&apos;ll be its owner. If a teammate already uses Aoient, ask them to invite you instead.
+      <div className="grid gap-8">
+        <div className="motion-safe:animate-rise grid gap-2 text-center">
+          <span className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-secondary-foreground shadow-xs">
+            <Sparkles className="size-3.5 text-primary" aria-hidden />{TRIAL_DAYS}-day free trial, no card needed
+          </span>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">{firstName ? `Welcome, ${firstName}` : "Welcome"}. Let&apos;s set up your workspace</h1>
+          <p className="mx-auto max-w-lg text-sm text-muted-foreground">
+            Your organization is the workspace your team shares, and you&apos;ll be its owner. If a teammate already uses Aoient, ask them to invite you instead.
           </p>
         </div>
-        <Card><CardContent className="py-6"><CreateOrganizationForm /></CardContent></Card>
+        <ol className="motion-safe:animate-rise grid gap-2 [animation-delay:80ms] sm:grid-cols-3">
+          {SETUP_STEPS.map((step, i) => (
+            <li key={step.title} className={cn("flex items-center gap-3 rounded-xl border p-3", i === 0 ? "border-primary/40 bg-primary-subtle/60" : "border-border bg-surface")}>
+              <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", i === 0 ? "bg-primary text-primary-foreground" : "bg-surface-muted text-muted-foreground")}>
+                <step.icon className="size-4" aria-hidden />
+              </span>
+              <span className="grid min-w-0 leading-tight">
+                <span className="text-xs text-muted-foreground">Step {i + 1}</span>
+                <span className="truncate text-sm font-medium">{step.title}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <Card className="motion-safe:animate-rise shadow-sm [animation-delay:160ms]"><CardContent className="py-6"><CreateOrganizationForm /></CardContent></Card>
       </div>
     );
   }
