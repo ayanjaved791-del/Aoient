@@ -58,6 +58,7 @@ export function suggestionsFor(ctx: OrgContext): string[] {
   if (s.roles) out.push("What can a Project Manager do?");
   if (can(ctx, "people.employee.read")) out.push("Who is on leave today?");
   if (can(ctx, "people.leave.approve")) out.push("Which leave requests are pending?");
+  else if (can(ctx, "people.leave.request")) out.push("Do I have pending leave?");
   out.push("How do I install the app?");
   return [...new Set(out)];
 }

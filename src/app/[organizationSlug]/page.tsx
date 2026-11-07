@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import {
-  Activity, ArrowRight, Contact, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
+  Activity, ArrowRight, Briefcase, CalendarCheck, Contact, MapPin, UserRound, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
 } from "lucide-react";
 import { getOverviewCounts } from "@/server/organizations/views";
 import { DASHBOARD_RANGES, getDashboard, parseRange, type DashboardRange, type TeamStats } from "@/server/dashboard/dashboard";
@@ -13,6 +13,9 @@ import { daysLeft } from "@/lib/billing/entitlements";
 import { getLicenseOverview } from "@/server/billing/license";
 import { getPeopleStats } from "@/server/people/employees";
 import { whoIsOut } from "@/server/people/leave";
+import { getPersonalDashboard, type PersonalDashboard } from "@/server/dashboard/personal";
+import { LeaveStatusBadge, RequestLeaveDialog } from "@/modules/people/leave-ui";
+import { EMPLOYMENT_LABELS, LEAVE_LABELS } from "@/modules/people/labels";
 import { listRecentActivity } from "@/server/audit/activity";
 import { can } from "@/server/tenancy/context";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
@@ -25,7 +28,7 @@ import { cn } from "@/lib/utils";
 
 const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact };
 
-function Hero({ firstName, orgName, roleName, actions }: { firstName: string; orgName: string; roleName: string; actions: { href: string; label: string; icon: typeof Users }[] }) {
+function Hero({ firstName, orgName, roleName, actions, personal }: { firstName: string; orgName: string; roleName: string; actions: { href: string; label: string; icon: typeof Users }[]; personal: boolean }) {
   return (
     <section className="relative isolate overflow-hidden rounded-2xl bg-navy px-6 py-8 text-white shadow-sm ring-1 ring-white/10 sm:px-8 sm:py-10 dark:bg-[#141a2e]">
       <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 -z-10 size-72 rounded-full bg-violet-500/40 blur-3xl motion-safe:animate-blob" />
@@ -36,7 +39,8 @@ function Hero({ firstName, orgName, roleName, actions }: { firstName: string; or
         Welcome back, {firstName}
       </h1>
       <p className="motion-safe:animate-rise mt-2 max-w-xl text-sm text-white/70 [animation-delay:120ms]">
-        You&apos;re signed in as <span className="font-medium text-white">{roleName}</span>. Everything below comes straight from your organization&apos;s records.
+        You&apos;re signed in as <span className="font-medium text-white">{roleName}</span>.{" "}
+        {personal ? "Here's your own work at a glance. You see what your role allows." : "Everything below comes straight from your organization's records."}
       </p>
       {actions.length > 0 && (
         <div className="motion-safe:animate-rise mt-6 flex flex-wrap gap-2 [animation-delay:180ms]">
@@ -249,6 +253,80 @@ function ActivityFeed({ items }: { items: ActivityItem[] }) {
   );
 }
 
+const fmtLeaveDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const leaveSpan = (start: string, end: string) => (start === end ? fmtLeaveDate(start) : `${fmtLeaveDate(start)} – ${fmtLeaveDate(end)}`);
+
+function MyProfileCard({ me, base }: { me: NonNullable<PersonalDashboard["me"]>; base: string }) {
+  const rows = [
+    { icon: Briefcase, label: "Job", value: [me.jobTitle, EMPLOYMENT_LABELS[me.employmentType]].filter(Boolean).join(" · ") },
+    { icon: Building2, label: "Department", value: me.department?.name ?? "Not set" },
+    { icon: UserRound, label: "Reports to", value: me.manager?.name ?? "No manager set" },
+    { icon: MapPin, label: "Location", value: me.location ?? "Not set" },
+    { icon: CalendarDays, label: "Started", value: me.startDate ? fmtLeaveDate(me.startDate) + `, ${me.startDate.slice(0, 4)}` : "Not set" },
+  ];
+  return (
+    <ListCard title="My profile" subtitle={me.onLeaveToday ? "You're on leave today" : undefined} action={{ href: `${base}/people/${me.id}`, label: "Open" }} delay={160}>
+      <div className="flex items-center gap-3">
+        <Avatar name={me.fullName} size="lg" />
+        <div className="min-w-0">
+          <p className="truncate font-semibold">{me.fullName}</p>
+          <p className="truncate text-sm text-muted-foreground">{me.jobTitle ?? "No job title yet"}</p>
+        </div>
+      </div>
+      <dl className="mt-4 grid gap-2.5">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center gap-2.5 text-sm">
+            <r.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <dt className="w-24 shrink-0 text-muted-foreground">{r.label}</dt>
+            <dd className="min-w-0 truncate">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {me.reports.length > 0 && (
+        <p className="mt-4 text-sm text-muted-foreground">
+          {me.reports.length} {me.reports.length === 1 ? "person reports" : "people report"} to you: {me.reports.slice(0, 3).map((r) => r.name).join(", ")}{me.reports.length > 3 ? "…" : ""}
+        </p>
+      )}
+    </ListCard>
+  );
+}
+
+function MyLeaveCard({ leave, base, slug }: { leave: PersonalDashboard["leave"]; base: string; slug: string }) {
+  const year = new Date().getFullYear();
+  return (
+    <Card className="motion-safe:animate-rise flex h-full min-w-0 flex-col p-5 [animation-delay:200ms] sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold">My leave</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Weekends aren&apos;t counted</p>
+        </div>
+        <RequestLeaveDialog slug={slug} />
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="rounded-lg border border-border p-3"><p className="text-xs text-muted-foreground">Taken in {year}</p><p className="mt-1 text-xl font-semibold tabular-nums">{leave.takenTotal}<span className="ml-1 text-xs font-normal text-muted-foreground">d</span></p></div>
+        <div className="rounded-lg border border-border p-3"><p className="text-xs text-muted-foreground">Waiting</p><p className="mt-1 text-xl font-semibold tabular-nums">{leave.pending.length}</p></div>
+        <div className="rounded-lg border border-border p-3"><p className="text-xs text-muted-foreground">Coming up</p><p className="mt-1 text-xl font-semibold tabular-nums">{leave.upcoming.length}</p></div>
+      </div>
+      {leave.takenThisYear.length > 0 && (
+        <p className="mt-3 text-xs text-muted-foreground">{leave.takenThisYear.map((t) => `${LEAVE_LABELS[t.type]}: ${t.days} d`).join(" · ")}</p>
+      )}
+      {[...leave.pending, ...leave.upcoming].length === 0 ? (
+        <p className="mt-4 flex flex-1 items-center justify-center rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">No pending or upcoming leave.</p>
+      ) : (
+        <ul className="mt-4 grid gap-2.5">
+          {[...leave.pending, ...leave.upcoming].slice(0, 5).map((l) => (
+            <li key={l.id} className="flex items-center gap-3 text-sm">
+              <span className="min-w-0 flex-1 truncate"><span className="font-medium">{LEAVE_LABELS[l.type]}</span> <span className="text-muted-foreground">· {leaveSpan(l.startDate, l.endDate)} · {l.days} d</span></span>
+              <LeaveStatusBadge status={l.status} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link href={`${base}/people/leave`} className="mt-4 text-sm font-medium text-primary hover:underline">All my leave</Link>
+    </Card>
+  );
+}
+
 function ComingNext() {
   return (
     <Card className="motion-safe:animate-rise relative overflow-hidden p-5 [animation-delay:420ms] sm:p-6">
@@ -330,13 +408,17 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
   const canReadAudit = can(ctx, "organization.audit.read");
   const canBilling = can(ctx, "billing.read");
   const canPeople = can(ctx, "people.employee.read");
-  const [counts, { license, usage }, feed, dash, peopleStats, out] = await Promise.all([
+  const canLeaveApprove = can(ctx, "people.leave.approve");
+  // Plan limits matter to people who pay or add seats; others don't need them.
+  const showPlan = canBilling || canInvite;
+  const [counts, { license, usage }, feed, dash, peopleStats, out, personal] = await Promise.all([
     canSeeMembers ? getOverviewCounts(ctx) : null,
     getLicenseOverview(ctx.organizationId),
     canReadAudit ? listRecentActivity(ctx, 6) : null,
     getDashboard(ctx, range),
     canPeople ? getPeopleStats(ctx) : null,
     canPeople ? whoIsOut(ctx) : null,
+    getPersonalDashboard(ctx),
   ]);
   const now = new Date();
   const ent = license?.entitlements;
@@ -347,7 +429,11 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
 
   const actions = [
     ...(canInvite ? [{ href: membersHref, label: "Invite people", icon: UserPlus }] : []),
-    ...(canSeeMembers ? [{ href: `${base}/settings/roles`, label: "Roles & permissions", icon: ShieldCheck }] : []),
+    ...(can(ctx, "people.employee.create") ? [{ href: `${base}/people`, label: "Add employee", icon: Contact }] : []),
+    ...(canLeaveApprove ? [{ href: `${base}/people/leave?tab=team`, label: "Review leave", icon: CalendarCheck }] : []),
+    ...(personal.me ? [{ href: `${base}/people/${personal.me.id}`, label: "My profile", icon: UserRound }] : []),
+    ...(canPeople && !canSeeMembers ? [{ href: `${base}/people`, label: "Team directory", icon: Users }] : []),
+    ...(can(ctx, "organization.roles.manage") ? [{ href: `${base}/settings/roles`, label: "Roles & permissions", icon: ShieldCheck }] : []),
     ...(canBilling ? [{ href: `${base}/settings/billing`, label: "Billing & plan", icon: CreditCard }] : []),
   ];
 
@@ -361,13 +447,28 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
   const busiestDay = activity?.byDay.reduce((best, d) => (d.value > best.value ? d : best), { day: "", value: 0 });
   const fmtDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 
+  const personalView = !team && !activity;
+  const showKpis = Boolean(team || activity || showPlan);
+  const personalWidgets: WidgetDef[] = [
+    ...(personal.me ? [{ id: "me", label: "My profile" }] : []),
+    ...(personal.leave.canRequest ? [{ id: "myleave", label: "My leave" }] : []),
+  ];
+  const personalRow = personalWidgets.length > 0 && (
+    <div className="grid gap-6 lg:grid-cols-2">
+      {personal.me && <Widget id="me"><MyProfileCard me={personal.me} base={base} /></Widget>}
+      {personal.leave.canRequest && <Widget id="myleave"><MyLeaveCard leave={personal.leave} base={base} slug={ctx.organization.slug} /></Widget>}
+    </div>
+  );
+
   const widgets: WidgetDef[] = [
-    { id: "kpis", label: "Key numbers" },
+    ...(personalView ? personalWidgets : []),
+    ...(showKpis ? [{ id: "kpis", label: "Key numbers" }] : []),
     ...(team || activity ? [{ id: "trends", label: "Trend charts" }] : []),
     ...(activity ? [{ id: "heatmap", label: "When your team works" }, { id: "areas", label: "Changes by area" }, { id: "people", label: "Most active people" }] : []),
     ...(team ? [{ id: "roles", label: "Team by role" }, { id: "joined", label: "Recently joined" }, { id: "invites", label: "Invitations" }, { id: "expiring", label: "Expiring invitations" }] : []),
     ...(peopleStats ? [{ id: "people", label: "People today" }] : []),
-    { id: "usage", label: "Plan usage" },
+    ...(!personalView ? personalWidgets : []),
+    ...(showPlan ? [{ id: "usage", label: "Plan usage" }] : []),
     ...(feed ? [{ id: "feed", label: "Recent activity" }] : []),
     ...(showChecklist ? [{ id: "setup", label: "Setup checklist" }] : []),
     { id: "next", label: "Coming next" },
@@ -375,13 +476,15 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
 
   return (
     <div className="grid gap-6">
-      <Hero firstName={user.name.split(" ")[0] || "there"} orgName={ctx.organization.name} roleName={ctx.roleName} actions={actions} />
+      <Hero firstName={user.name.split(" ")[0] || "there"} orgName={ctx.organization.name} roleName={ctx.roleName} actions={actions} personal={personalView} />
 
       <DashboardLayout storageKey={`aoient-dashboard-hidden:${ctx.organization.slug}`} widgets={widgets}
         exportHref={team || activity ? `${base}/dashboard-export?range=${range}` : null}
         filter={team || activity ? <RangeFilter base={base} range={range} timezone={dash.timezone} /> : null}>
 
-        <Widget id="kpis">
+        {personalView && personalRow}
+
+        {showKpis && <Widget id="kpis">
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {team && (
               <>
@@ -394,11 +497,11 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
                   hint={team.invitations.sent > 0 ? `${team.invitations.accepted} of ${team.invitations.sent} sent (${team.sentPrevRange} sent the ${range} days before)` : `None sent in ${range} days`} />
               </>
             )}
-            <StatTile index={3} href={canBilling ? `${base}/settings/billing` : base} icon={Sparkles} label={license ? `${license.planName} plan` : "Plan"}
+            {showPlan && <StatTile index={3} href={canBilling ? `${base}/settings/billing` : base} icon={Sparkles} label={license ? `${license.planName} plan` : "Plan"}
               value={trialLeft !== null ? `${trialLeft} d` : planLabel.text.split(" · ")[0]}
               hint={trialLeft !== null
                 ? (license?.source === "paddle" ? "Free trial left, then billing starts" : "Free trial left")
-                : license?.state === "active" ? `Paid ${license.billingInterval === "yearly" ? "yearly" : "monthly"} subscription` : planLabel.text} />
+                : license?.state === "active" ? `Paid ${license.billingInterval === "yearly" ? "yearly" : "monthly"} subscription` : planLabel.text} />}
             {activity && (
               <StatTile index={4} href={base} icon={Activity} label="Changes recorded" value={activity.total}
                 delta={{ current: activity.total, previous: activity.totalPrevRange, range }}
@@ -418,7 +521,7 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
                 hint={team.suspendedMembers > 0 ? `${team.suspendedMembers} suspended member${team.suspendedMembers === 1 ? "" : "s"}` : "No suspended members"} />
             )}
           </div>
-        </Widget>
+        </Widget>}
 
         {(team || activity) && (
           <Widget id="trends">
@@ -452,6 +555,8 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
           </div>
         )}
 
+        {!personalView && personalRow}
+
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {team && (
             <Widget id="roles">
@@ -481,7 +586,7 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
               </ListCard>
             </Widget>
           )}
-          <Widget id="usage">
+          {showPlan && <Widget id="usage">
             <ListCard title="Plan usage" subtitle={license ? `${license.planName} limits, checked on every change` : "No active plan"} action={canBilling ? { href: `${base}/settings/billing`, label: "Billing" } : undefined} delay={400}>
               {ent ? (
                 <div className="grid gap-4">
@@ -493,7 +598,7 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
                 <p className="text-sm text-muted-foreground">This workspace is read-only until a plan is active.</p>
               )}
             </ListCard>
-          </Widget>
+          </Widget>}
           {activity && (
             <Widget id="people">
               <ListCard title="Most active people" subtitle={`Recorded changes in ${range} days`} delay={440} empty={activity.topPeople.length === 0 ? "No changes in this period." : null}>

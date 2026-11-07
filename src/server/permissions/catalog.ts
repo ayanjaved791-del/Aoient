@@ -174,7 +174,6 @@ const byModule = (...modules: ModuleKey[]) =>
 /** Baseline every internal member gets. */
 const EMPLOYEE_BASE: PermissionKey[] = [
   "organization.read",
-  "organization.members.read",
   "people.employee.read",
   "people.leave.request",
   "projects.project.read",
@@ -200,7 +199,8 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; description: st
   hr_manager: {
     name: "HR Manager",
     description: "Manages employee records, leave, attendance and onboarding.",
-    permissions: [...new Set<PermissionKey>([...EMPLOYEE_BASE, ...byModule("people")])],
+    // Sees members so employee records can be matched to logins.
+    permissions: [...new Set<PermissionKey>([...EMPLOYEE_BASE, ...byModule("people"), "organization.members.read"])],
   },
   sales_manager: {
     name: "Sales Manager",

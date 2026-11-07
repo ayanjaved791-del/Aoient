@@ -25,7 +25,8 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
       ]
     : [];
   const org: SidebarGroup["links"] = [
-    ...(can(ctx, "organization.read") ? [{ href: `${base}/settings/general`, label: "General", icon: "general" as const }] : []),
+    // Read-only settings aren't useful to people who can't change them.
+    ...(can(ctx, "organization.update") ? [{ href: `${base}/settings/general`, label: "General", icon: "general" as const }] : []),
     ...(can(ctx, "billing.read") ? [{ href: `${base}/settings/billing`, label: "Billing & plan", icon: "billing" as const }] : []),
   ];
   const people: SidebarGroup["links"] = [
@@ -96,7 +97,10 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
       <div className="min-w-0 flex-1">{switcher}</div>
     </>
   );
-  const bottom = <PlanCard license={license} href={can(ctx, "billing.read") ? `${base}/settings/billing` : null} />;
+  // Plan details are for people who see billing or add seats; everyone is told when the workspace is read-only.
+  const seesPlan = can(ctx, "billing.read") || can(ctx, "organization.members.invite");
+  const readOnly = !license || license.state === "expired";
+  const bottom = seesPlan ? <PlanCard license={license} href={can(ctx, "billing.read") ? `${base}/settings/billing` : null} /> : null;
 
   return (
     <div className="flex min-h-dvh">
@@ -114,7 +118,7 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
             <div className="ml-auto"><UserMenu name={user.name} email={user.email} /></div>
           </div>
         </header>
-        <LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} />
+        {(seesPlan || readOnly) && <LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} />}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
         <AssistantPanel slug={ctx.organization.slug} organizationName={ctx.organization.name} roleName={ctx.roleName}
           suggestions={suggestionsFor(ctx).slice(0, 6)} fullAccess={assistantScope(ctx).team} />

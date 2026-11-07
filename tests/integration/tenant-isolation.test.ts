@@ -104,8 +104,10 @@ describe("tenant isolation — service layer", () => {
     expect(inB.roleKey).toBe("admin");
     // Admin rights in B do not carry into A.
     await expect(updateOrganization(inA, { name: "Renamed" })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    const aMembers = await listMembers(inA);
-    expect(aMembers.every((m) => m.userId !== s.bEmployee.user.id)).toBe(true);
+    // Employees can't see the member list; B's admin list never includes A-only people.
+    await expect(listMembers(inA)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const bMembers = await listMembers(inB);
+    expect(bMembers.every((m) => m.userId !== s.a.user.id)).toBe(true);
   });
 });
 
