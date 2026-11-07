@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
 import { SupabaseMissingNotice } from "./supabase-missing-notice";
+import { OAuthButtons } from "./oauth-buttons";
 
 type Values = z.infer<typeof signInSchema>;
 
@@ -43,6 +44,8 @@ export function SignInForm() {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="grid gap-4">
+      {params.get("error") === "oauth" && <Alert tone="danger" title="Google sign-in didn't complete.">Try again, or sign in with your email and password.</Alert>}
+      <OAuthButtons next={next} />
       {params.get("reset") === "success" && <Alert tone="success" title="Password updated">Sign in with your new password.</Alert>}
       {error && (
         <Alert tone="danger" title={error.message}>

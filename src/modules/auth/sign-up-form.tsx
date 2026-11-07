@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
 import { SupabaseMissingNotice } from "./supabase-missing-notice";
+import { OAuthButtons } from "./oauth-buttons";
 
 type Values = z.infer<typeof signUpSchema>;
 
@@ -55,6 +56,7 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="grid gap-4">
+      <OAuthButtons next={next} />
       {serverError && <Alert tone="danger" title={serverError} />}
       <Field id="name" label="Full name" error={errors.name?.message}>
         <Input autoComplete="name" autoFocus {...form.register("name")} />
