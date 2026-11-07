@@ -13,6 +13,8 @@ import { can, type OrgContext } from "@/server/tenancy/context";
 import { LicenseBanner, licenseLabel } from "@/modules/billing/license-view";
 import { TRIAL_DAYS, daysLeft } from "@/lib/billing/entitlements";
 import { cn } from "@/lib/utils";
+import { AssistantPanel } from "@/modules/assistant/assistant-panel";
+import { assistantScope, suggestionsFor } from "@/server/assistant/answer";
 
 /** Only pages the member can open are linked; each page still re-checks on the server. */
 function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
@@ -106,6 +108,8 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
         </header>
         <LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+        <AssistantPanel slug={ctx.organization.slug} organizationName={ctx.organization.name} roleName={ctx.roleName}
+          suggestions={suggestionsFor(ctx).slice(0, 6)} fullAccess={assistantScope(ctx).team} />
       </div>
     </div>
   );
