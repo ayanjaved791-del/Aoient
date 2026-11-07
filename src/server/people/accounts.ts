@@ -71,6 +71,8 @@ export async function getEmployeeLogin(ctx: OrgContext, employeeId: string): Pro
 export async function createEmployeeLogin(ctx: OrgContext, employeeId: string, input: unknown, admin: AdminOptions = {}): Promise<{ email: string }> {
   assertPermission(ctx, "people.employee.update");
   assertPermission(ctx, "organization.members.invite");
+  // The new login would see this record's private details, so the creator must be allowed to as well.
+  assertPermission(ctx, "people.employee.sensitive.read");
   if (!isUuid(employeeId)) throw new NotFoundError("Employee not found");
   const data = parseInput(createLoginSchema, input);
 

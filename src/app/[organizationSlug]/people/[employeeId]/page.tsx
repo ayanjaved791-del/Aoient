@@ -50,12 +50,12 @@ async function Profile({ params }: { params: Promise<{ organizationSlug: string;
   }
   const canEdit = can(ctx, "people.employee.update");
   const canSensitiveEdit = can(ctx, "people.employee.sensitive.read");
-  const canCreateLogin = !e.memberId && e.status === "active" && canEdit && can(ctx, "organization.members.invite");
+  const canCreateLogin = !e.memberId && e.status === "active" && canEdit && can(ctx, "organization.members.invite") && can(ctx, "people.employee.sensitive.read");
   const [leave, departments, everyone, members, login, roles] = await Promise.all([
     listLeaveForEmployee(ctx, e.id),
     canEdit ? listDepartments(ctx) : null,
     canEdit ? listEmployees(ctx, { status: "active" }) : null,
-    canEdit && can(ctx, "people.employee.create") ? listUnlinkedMembers(ctx, e.id) : null,
+    canEdit && can(ctx, "people.employee.create") && can(ctx, "people.employee.sensitive.read") ? listUnlinkedMembers(ctx, e.id) : null,
     e.memberId && (can(ctx, "organization.members.read") || e.isSelf) ? getEmployeeLogin(ctx, e.id) : null,
     canCreateLogin ? listGrantableRoles(ctx) : null,
   ]);

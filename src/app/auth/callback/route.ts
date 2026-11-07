@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/server/auth/supabase";
+import { revokeTemporaryPassword } from "@/server/auth/claim";
 import { safeNextPath } from "@/lib/validation/auth";
 
 /**
@@ -16,6 +17,14 @@ export async function GET(req: NextRequest) {
 
   const supabase = await getSupabaseServerClient();
   if (!supabase) return NextResponse.redirect(failTo);
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  return NextResponse.redirect(error ? failTo : new URL(next, url.origin));
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error || !data.user) return NextResponse.redirect(failTo);
+
+  // The person just proved they own this email. If an admin set a temporary
+  // password for it, retire that password so it can't be used to get in.
+  if (!(await revokeTemporaryPassword(data.user.id))) {
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    return NextResponse.redirect(failTo);
+  }
+  return NextResponse.redirect(new URL(next, url.origin));
 }

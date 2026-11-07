@@ -12,6 +12,7 @@ import { createEmployee, setEmployeeArchived, updateEmployee } from "@/server/pe
 import { createDepartment, deleteDepartment, updateDepartment } from "@/server/people/departments";
 import { cancelLeave, decideLeave, requestLeave } from "@/server/people/leave";
 import { createEmployeeLogin, resetEmployeePassword } from "@/server/people/accounts";
+import { isAppError } from "@/lib/errors";
 
 async function ctxFor(slug: string) {
   const user = await requireUser();
@@ -64,7 +65,9 @@ export async function createEmployeeWithLoginAction(slug: string, input: unknown
       const created = await createEmployeeLogin(ctx, id, login);
       return done({ id, login: created as { email: string } | { error: string } });
     } catch (e) {
-      return done({ id, login: { error: e instanceof Error ? e.message : "The login couldn't be created." } });
+      // Show our own messages only; internal errors stay in the server log.
+      if (!isAppError(e)) console.error("[people] login creation failed", e);
+      return done({ id, login: { error: isAppError(e) ? e.message : "The login couldn't be created. Try again from their profile." } });
     }
   });
 }

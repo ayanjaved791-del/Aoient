@@ -59,8 +59,8 @@ async function Directory({ params, searchParams }: Props) {
     whoIsOut(ctx),
     getMyEmployeeId(ctx),
     canCreate ? listEmployees(ctx, { status: "active" }) : null,
-    canCreate ? listUnlinkedMembers(ctx) : null,
-    canCreate && can(ctx, "people.employee.update") ? listGrantableRoles(ctx) : null,
+    canCreate && can(ctx, "people.employee.sensitive.read") ? listUnlinkedMembers(ctx) : null,
+    canCreate && can(ctx, "people.employee.update") && can(ctx, "people.employee.sensitive.read") ? listGrantableRoles(ctx) : null,
   ]);
   const filtered = Boolean(query || departmentId || status !== "active");
 

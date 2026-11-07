@@ -20,8 +20,20 @@ export const resetPasswordSchema = z
   .object({ password: newPassword, confirmPassword: z.string() })
   .refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
 
-/** Only allow same-site relative redirects (blocks open redirects like //evil.com). */
+/**
+ * Only allow same-site relative redirects. Blocks //evil.com and its disguises:
+ * browsers drop tabs and newlines and read "\\" as "/", so "/\t/evil.com" or
+ * "/\\evil.com" would otherwise leave the site.
+ */
 export function safeNextPath(next: string | null | undefined, fallback = "/pricing"): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
-  return next;
+  if (!next || next.length > 2048 || !next.startsWith("/") || /[\u0000-\u001f\u007f\\]/.test(next)) return fallback;
+  const base = "https://aoient.invalid";
+  let url: URL;
+  try {
+    url = new URL(next, base);
+  } catch {
+    return fallback;
+  }
+  if (url.origin !== base) return fallback;
+  return `${url.pathname}${url.search}${url.hash}`;
 }

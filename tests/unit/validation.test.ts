@@ -35,3 +35,17 @@ describe("tokens", () => {
     expect(hashToken(a)).toMatch(/^[0-9a-f]{64}$/);
   });
 });
+
+import { safeNextPath } from "@/lib/validation/auth";
+
+describe("safeNextPath (open-redirect protection)", () => {
+  it("keeps same-site paths", () => {
+    expect(safeNextPath("/acme/people?tab=team#x", "/f")).toBe("/acme/people?tab=team#x");
+    expect(safeNextPath("/organizations", "/f")).toBe("/organizations");
+  });
+  it.each(["//evil.com", "/\\evil.com", "/\t/evil.com", "/\n/evil.com", "/\r//evil.com", "https://evil.com", "evil.com", "", "/%0a/x\\y", "javascript:alert(1)"])(
+    "rejects %j", (bad) => { expect(safeNextPath(bad, "/f")).toBe("/f"); });
+  it("normalises dot segments without leaving the site", () => {
+    expect(safeNextPath("/a/../../b", "/f")).toBe("/b");
+  });
+});

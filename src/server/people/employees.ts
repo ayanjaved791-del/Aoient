@@ -183,9 +183,22 @@ function uniqueError(e: unknown): never {
   throw e;
 }
 
+/**
+ * Whoever is linked to a record can read its private details (salary, birthday,
+ * contacts) as "their own". So linking or changing the linked account needs the
+ * same right as reading private details; otherwise someone could link their own
+ * account to a colleague's record and read it.
+ */
+function assertCanLinkAccount(ctx: OrgContext) {
+  if (!can(ctx, "people.employee.sensitive.read")) {
+    throw new ForbiddenError("Only people who can see private details can link an employee record to a workspace account.");
+  }
+}
+
 export async function createEmployee(ctx: OrgContext, input: unknown): Promise<{ id: string }> {
   assertPermission(ctx, "people.employee.create");
   const basic = parseInput(employeeBasicSchema, input);
+  if (basic.memberId) assertCanLinkAccount(ctx);
   const wantsSensitive = hasSensitiveInput(input);
   if (wantsSensitive) assertPermission(ctx, "people.employee.sensitive.read");
   const s = wantsSensitive ? parseInput(employeeSensitiveSchema, input) : null;
@@ -227,6 +240,7 @@ export async function updateEmployee(ctx: OrgContext, id: string, input: unknown
              to_char(start_date, 'YYYY-MM-DD') as start_date
       from employee where id = ${id} and organization_id = ${ctx.organizationId} for update`;
     if (!before) throw new NotFoundError("Employee not found");
+    if ((before.member_id ?? null) !== (basic.memberId ?? null)) assertCanLinkAccount(ctx);
     await checkReferences(tx, ctx, basic, id);
     await tx`
       update employee set full_name = ${basic.fullName}, work_email = ${basic.workEmail}, phone = ${basic.phone}, job_title = ${basic.jobTitle},

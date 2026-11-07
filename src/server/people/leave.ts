@@ -65,6 +65,8 @@ export async function requestLeave(ctx: OrgContext, input: unknown): Promise<{ i
     await assertWritable(tx, ctx.organizationId);
     const employeeId = await getMyEmployeeId(ctx, tx);
     if (!employeeId) throw new ForbiddenError("Your account isn't linked to an employee record yet. Ask HR or an admin to link it in People.");
+    const [active] = await tx`select 1 from employee where id = ${employeeId} and organization_id = ${ctx.organizationId} and status = 'active'`;
+    if (!active) throw new ForbiddenError("Your employee record is archived, so you can't request leave.");
     const [overlap] = await tx`
       select 1 from leave_request where employee_id = ${employeeId} and status in ('pending', 'approved')
         and start_date <= ${data.endDate} and end_date >= ${data.startDate}`;
@@ -126,6 +128,7 @@ export async function decideLeave(ctx: OrgContext, id: string, input: unknown): 
 export async function cancelLeave(ctx: OrgContext, id: string): Promise<void> {
   if (!isUuid(id)) throw new NotFoundError("Leave request not found");
   await transaction(async (tx) => {
+    await assertWritable(tx, ctx.organizationId);
     const employeeId = await getMyEmployeeId(ctx, tx);
     const [req] = await tx<{ status: LeaveStatus; started: boolean }[]>`
       select status, start_date <= (now() at time zone ${ctx.organization.timezone})::date as started from leave_request
