@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AuthCard } from "@/modules/auth/auth-card";
+import { AuthSwitchLink } from "@/modules/auth/auth-switch-link";
 import { SignUpForm } from "@/modules/auth/sign-up-form";
 import { FormSkeleton } from "@/modules/auth/form-skeleton";
 
@@ -12,7 +13,7 @@ export default function SignUpPage() {
     <AuthCard
       title="Create your account"
       description="Set up Aoient for your business. You'll verify your email next."
-      footer={<>Already have an account? <Link href="/sign-in" className="font-medium text-primary hover:underline">Sign in</Link></>}
+      footer={<>Already have an account? <Suspense fallback={<Link href="/sign-in" className="font-medium text-primary hover:underline">Sign in</Link>}><AuthSwitchLink to="/sign-in">Sign in</AuthSwitchLink></Suspense></>}
     >
       <Suspense fallback={<FormSkeleton fields={4} />}><SignUpForm /></Suspense>
     </AuthCard>

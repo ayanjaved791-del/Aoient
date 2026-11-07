@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { Suspense, type CSSProperties, type ReactNode } from "react";
 import {
   ArrowRight,
   Building2,
@@ -8,7 +8,6 @@ import {
   CreditCard,
   Database,
   KeyRound,
-  Menu,
   ScrollText,
   ShieldCheck,
   UserRoundPlus,
@@ -20,14 +19,10 @@ import { AnimatedText } from "./animated-text";
 import { BrandTile, PLANNED_INTEGRATIONS } from "./brand-logos";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
+import { MobileMenu, NavLinks } from "./nav-links";
+import { NAV } from "./nav-items";
+import { HeaderAccount, HeaderAccountFallback } from "./header-account";
 
-const NAV = [
-  { href: "#features", label: "Features" },
-  { href: "#modules", label: "Modules" },
-  { href: "#security", label: "Security" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
-];
 
 const delay = (ms: number) => ({ "--reveal-delay": `${ms}ms` }) as CSSProperties;
 
@@ -39,50 +34,13 @@ export function LandingHeader() {
         <Link href="/" aria-label="Aoient home" className="group/logo rounded-md">
           <Logo className="[&_svg]:transition-transform [&_svg]:duration-700 group-hover/logo:[&_svg]:rotate-[360deg]" />
         </Link>
-        <nav aria-label="Sections" className="hidden items-center gap-1 md:flex">
-          {NAV.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="relative rounded-full px-3 py-1.5 text-sm text-neutral-600 transition-colors after:absolute after:inset-x-3 after:bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-violet-500 after:to-orange-400 after:transition-transform after:duration-300 hover:after:scale-x-100 hover:bg-neutral-100 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white"
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
+        <NavLinks />
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link
-            href="/sign-in"
-            className="hidden h-9 items-center rounded-full px-3 text-sm font-medium text-neutral-700 transition-colors hover:text-black sm:inline-flex dark:text-neutral-300 dark:hover:text-white"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/sign-up"
-            data-magnetic
-            className="shine inline-flex h-9 items-center rounded-full bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
-          >
-            Get started
-          </Link>
-          <details className="group relative md:hidden">
-            <summary
-              aria-label="Open menu"
-              className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800 [&::-webkit-details-marker]:hidden"
-            >
-              <Menu className="size-4" aria-hidden />
-            </summary>
-            <nav
-              aria-label="Sections"
-              className="animate-fade-up absolute right-0 top-11 grid w-48 gap-0.5 rounded-2xl border border-neutral-200 bg-white p-2 shadow-lg dark:border-neutral-800 dark:bg-neutral-950"
-            >
-              {[...NAV, { href: "/sign-in", label: "Sign in" }].map((item) => (
-                <a key={item.href} href={item.href} className="rounded-lg px-3 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900">
-                  {item.label}
-                </a>
-              ))}
-            </nav>
-          </details>
+          <Suspense fallback={<HeaderAccountFallback />}>
+            <HeaderAccount />
+          </Suspense>
+          <MobileMenu extra={[{ href: "/sign-in", label: "Sign in" }]} />
         </div>
       </div>
     </header>
@@ -132,6 +90,47 @@ export function IntegrationMarquee() {
         {row(PLANNED_INTEGRATIONS.slice(half), true)}
       </div>
     </section>
+  );
+}
+
+/** Top of a marketing page: eyebrow, H1 that animates in on load, intro text. */
+export function PageHero({ eyebrow, title, body, children }: { eyebrow: string; title: string; body: string; children?: ReactNode }) {
+  return (
+    <section className="relative overflow-hidden border-b border-neutral-200 dark:border-neutral-900">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgb(0_0_0/0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgb(0_0_0/0.05)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_0%,black,transparent)] dark:bg-[linear-gradient(to_right,rgb(255_255_255/0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgb(255_255_255/0.06)_1px,transparent_1px)]"
+      />
+      <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[640px] -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-400/25 via-fuchsia-400/20 to-orange-300/25 blur-3xl motion-safe:animate-blob dark:from-violet-600/20 dark:via-fuchsia-600/15 dark:to-orange-500/15" />
+      <div className="relative mx-auto max-w-3xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pt-28">
+        <p className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-600 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-neutral-400">
+          <span className="size-1.5 rounded-full bg-gradient-to-r from-violet-500 to-orange-400" />
+          {eyebrow}
+        </p>
+        <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tighter sm:text-6xl">
+          <AnimatedText text={title} trigger="load" delay={80} step={70} />
+        </h1>
+        <p className="animate-fade-up mx-auto mt-5 max-w-2xl text-pretty text-lg text-neutral-600 dark:text-neutral-400" style={{ animationDelay: "260ms" }}>
+          {body}
+        </p>
+        {children && <div className="animate-fade-up mt-8 flex flex-wrap justify-center gap-3" style={{ animationDelay: "360ms" }}>{children}</div>}
+      </div>
+    </section>
+  );
+}
+
+/** "Learn more →" under a home-page section, pointing to that section's own page. */
+export function MoreLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <p className="reveal mt-10 text-center">
+      <Link
+        href={href}
+        className="group inline-flex items-center gap-1.5 rounded-full border border-neutral-300 px-4 py-2 text-sm font-medium transition-colors hover:border-black hover:bg-neutral-100 dark:border-neutral-700 dark:hover:border-white dark:hover:bg-neutral-900"
+      >
+        {children}
+        <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+      </Link>
+    </p>
   );
 }
 
@@ -207,7 +206,7 @@ export function WorkflowSection() {
   );
 }
 
-export function ModulesSection() {
+export function ModulesSection({ more }: { more?: ReactNode } = {}) {
   return (
     <section id="modules" className="scroll-mt-20 border-t border-neutral-200 bg-neutral-50 dark:border-neutral-900 dark:bg-neutral-950/40">
       <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
@@ -267,6 +266,7 @@ export function ModulesSection() {
             </li>
           ))}
         </ul>
+        {more}
       </div>
     </section>
   );
@@ -275,17 +275,17 @@ export function ModulesSection() {
 const SECURITY = [
   { icon: ShieldCheck, tone: "text-emerald-400 bg-emerald-400/10 ring-emerald-400/30", title: "Isolated by default", body: "Every page and API call re-checks on the server that you belong to the organization. IDs sent by the browser are never trusted on their own.", span: "lg:col-span-2" },
   { icon: Database, tone: "text-sky-400 bg-sky-400/10 ring-sky-400/30", title: "Locked-down database", body: "Row-level security is on for every table, so the public browser key can't read or write anything directly.", span: "" },
-  { icon: CreditCard, tone: "text-amber-300 bg-amber-300/10 ring-amber-300/30", title: "Honest payments", body: "Paid plans will only activate from Paddle's signed server confirmation — never from a browser redirect.", span: "" },
+  { icon: CreditCard, tone: "text-amber-300 bg-amber-300/10 ring-amber-300/30", title: "Honest payments", body: "Paid plans activate only from Paddle's signed server confirmation — never from a browser redirect.", span: "" },
   { icon: KeyRound, tone: "text-fuchsia-400 bg-fuchsia-400/10 ring-fuchsia-400/30", title: "Least privilege", body: "Custom roles can only bundle permissions their creator already holds.", span: "" },
   { icon: ScrollText, tone: "text-violet-400 bg-violet-400/10 ring-violet-400/30", title: "Every change on record", body: "Membership, role and settings changes are written to an audit log in the same transaction.", span: "lg:col-span-2" },
 ];
 
-export function SecuritySection() {
+export function SecuritySection({ more, title = "Your data stays yours" }: { more?: ReactNode; title?: string } = {}) {
   return (
     <section id="security" className="scroll-mt-20 bg-black text-white dark:border-y dark:border-neutral-900 dark:bg-neutral-950">
       <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-24 sm:px-6 sm:py-32">
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-80 w-[640px] -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-600/25 via-fuchsia-500/20 to-orange-400/20 blur-3xl" />
-        <SectionHeading invert eyebrow="Security" title="Your data stays yours" body="Multi-tenant from the first line of code, with tests that try to read other companies' data and must fail." />
+        <SectionHeading invert eyebrow="Security" title={title} body="Multi-tenant from the first line of code, with tests that try to read other companies' data and must fail." />
         <ul className="relative mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <li data-reveal="scale" className="reveal sm:col-span-2 lg:col-span-1 lg:row-span-2">
             <div className="relative flex h-full min-h-72 flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-8">
@@ -313,6 +313,7 @@ export function SecuritySection() {
             </li>
           ))}
         </ul>
+        {more}
       </div>
     </section>
   );
@@ -372,12 +373,36 @@ const FAQ = [
     a: "Every new workspace gets a 14-day free trial, no card needed. Each plan is offered monthly or yearly, with yearly priced at ten months, and checkout runs through Paddle. A plan switches on automatically once Paddle's signed confirmation reaches our server, and plan limits are checked on the server.",
   },
   {
+    q: "Is there a free trial?",
+    a: "Yes. Every new workspace gets 14 days with the Medisea plan's limits, no card needed. Buying Medisea monthly starts with Paddle's 14-day free trial too, so the first payment covers you until 44 days after you subscribe.",
+  },
+  {
+    q: "What happens when my trial ends?",
+    a: "The workspace becomes read-only: your data stays and is still visible, but changes are paused until a plan is active. Nothing is deleted.",
+  },
+  {
+    q: "Can I cancel at any time?",
+    a: "Yes. Owners open Settings → Billing & plan → Manage subscription, which takes you to Paddle's customer portal. After cancelling you keep access until the end of the period you paid for.",
+  },
+  {
+    q: "What limits does each plan have?",
+    a: "Medisea: 5 users and 1 admin seat. Indiana: 15 users, 3 admin seats and custom roles. Pacfic-DeepDive: 40 users, 10 admin seats and custom roles. These are checked on the server today; project and automation limits apply when those modules are released.",
+  },
+  {
+    q: "Does Aoient connect to Gmail, Slack or my other tools?",
+    a: "Not yet. Integrations are planned and shown on our site as \"not connected yet\". We won't show an integration as working until it is.",
+  },
+  {
+    q: "Can I invite clients or contractors?",
+    a: "You can invite anyone with the Client / Guest role, which has no permissions by default. A proper client portal for sharing specific items is planned for a later release.",
+  },
+  {
     q: "Is there a dark mode?",
     a: "Yes. Aoient starts in the light theme, and you can switch to dark from the header or your account menu.",
   },
 ];
 
-export function FaqSection() {
+export function FaqSection({ limit, more }: { limit?: number; more?: ReactNode } = {}) {
   return (
     <section id="faq" className="scroll-mt-20 border-t border-neutral-200 dark:border-neutral-900">
       <div className="mx-auto grid max-w-6xl gap-12 px-4 py-24 sm:px-6 sm:py-32 lg:grid-cols-[1fr_1.5fr]">
@@ -389,7 +414,7 @@ export function FaqSection() {
           <p className="mt-4 text-neutral-600 dark:text-neutral-400">Straight answers about what works today and what&apos;s coming.</p>
         </div>
         <div className="grid gap-3">
-          {FAQ.map(({ q, a }, i) => (
+          {(limit ? FAQ.slice(0, limit) : FAQ).map(({ q, a }, i) => (
             <details
               key={q}
               data-reveal="right"
@@ -405,6 +430,7 @@ export function FaqSection() {
               <p className="animate-fade-up pb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{a}</p>
             </details>
           ))}
+          {more}
         </div>
       </div>
     </section>
@@ -472,9 +498,9 @@ export function LandingFooter() {
         <nav aria-label="Product">
           <p className="text-sm font-semibold text-black dark:text-white">Product</p>
           <ul className="stagger mt-3 grid gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-            {NAV.slice(0, 4).map((item) => (
+            {NAV.map((item) => (
               <li key={item.href}>
-                <a href={item.href} className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">{item.label}</a>
+                <Link href={item.href} className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">{item.label}</Link>
               </li>
             ))}
           </ul>

@@ -9,33 +9,25 @@ import {
   ANNUAL_MONTHS_CHARGED,
   type BillingInterval,
 } from "@/lib/billing/plans";
-import { UserMenu } from "@/components/layout/user-menu";
-import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const ICONS = { medisea: Sparkles, indiana: Rocket, pacfic_deepdive: Building2 } as const;
 
-export function PricingPage({ user, orgSlug }: { user: { name: string; email: string }; orgSlug?: string }) {
+/**
+ * Plan picker. Public: visitors see the same plans; "Buy now" sends them to
+ * create an account first and then straight on to checkout.
+ */
+export function PricingPage({ user, orgSlug }: { user: { name: string; email: string } | null; orgSlug?: string }) {
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
   const saving = yearlySavingPercent();
   const freeMonths = 12 - ANNUAL_MONTHS_CHARGED;
 
   return (
-    <div className="min-h-dvh bg-background">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-          <Link href="/" aria-label="Aoient home" className="rounded-md"><Logo /></Link>
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="hidden min-w-0 truncate text-sm font-medium sm:block">{user.name}</span>
-            <UserMenu name={user.name} email={user.email} />
-          </div>
-        </div>
-      </header>
-
+    <div>
       <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Choose your plan</h1>
+          <h1 className="text-4xl font-semibold tracking-tighter sm:text-6xl">Choose your plan</h1>
           <p className="mt-3 text-muted-foreground">
             One platform for your people, customers, projects and time. Prices in USD; taxes are calculated at checkout.
           </p>
@@ -143,7 +135,7 @@ export function PricingPage({ user, orgSlug }: { user: { name: string; email: st
                     asChild
                     className={cn("relative mt-8 w-full transition-transform active:scale-[0.98]", featured && "bg-white text-navy hover:bg-white/90 dark:bg-primary dark:text-white dark:hover:bg-primary-hover")}
                   >
-                    <Link href={`/checkout/${plan.id}?interval=${interval}${orgSlug ? `&org=${orgSlug}` : ""}`} aria-label={`Buy ${plan.name}, ${interval}`}>
+                    <Link href={buyHref(plan.id, interval, orgSlug, Boolean(user))} aria-label={`Buy ${plan.name}, ${interval}`}>
                       Buy now
                     </Link>
                   </Button>
@@ -157,9 +149,15 @@ export function PricingPage({ user, orgSlug }: { user: { name: string; email: st
           Need more than 40 users or custom security? Enterprise plans are tailored to your team, with pricing on request.
         </p>
         <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-muted-foreground">
-          Signed in as {user.email}. Prices and limits are provisional and may change before launch.
+          {user ? `Signed in as ${user.email}. ` : "Every new workspace starts with a 14-day free trial, no card needed. "}
+          Prices and limits are provisional and may change before launch.
         </p>
       </main>
     </div>
   );
+}
+
+function buyHref(planId: string, interval: BillingInterval, orgSlug: string | undefined, signedIn: boolean) {
+  const checkout = `/checkout/${planId}?interval=${interval}${orgSlug ? `&org=${orgSlug}` : ""}`;
+  return signedIn ? checkout : `/sign-up?next=${encodeURIComponent(checkout)}`;
 }

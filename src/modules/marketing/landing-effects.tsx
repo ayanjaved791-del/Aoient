@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Progressive enhancement for the landing page. Without JavaScript every
@@ -9,6 +10,8 @@ import { useEffect } from "react";
  * - scroll progress bar, header state and hero preview parallax.
  */
 export function LandingEffects() {
+  // The effects live in the shared marketing layout, so re-scan whenever the page changes.
+  const pathname = usePathname();
   useEffect(() => {
     const root = document.documentElement;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -111,6 +114,6 @@ export function LandingEffects() {
       document.removeEventListener("pointermove", onPointerMove);
       document.documentElement.removeEventListener("pointerleave", onLeave);
     };
-  }, []);
+  }, [pathname]);
   return null;
 }

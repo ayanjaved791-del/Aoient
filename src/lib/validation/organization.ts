@@ -4,6 +4,8 @@ export const RESERVED_SLUGS = new Set([
   "api", "app", "admin", "auth", "sign-in", "sign-up", "sign-out", "verify-email", "forgot-password",
   "reset-password", "invite", "invitations", "onboarding", "organizations", "settings", "billing",
   "account", "static", "_next", "public", "help", "support", "docs", "status", "www", "aoient",
+  // Public site pages and app routes that would otherwise hide a workspace with the same URL.
+  "features", "modules", "security", "pricing", "faq", "checkout", "home", "about", "contact", "blog", "legal", "privacy", "terms",
 ]);
 
 export const slugSchema = z

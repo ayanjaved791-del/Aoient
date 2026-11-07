@@ -85,7 +85,7 @@ export function Hero() {
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
           </Link>
           <Link
-            href="#features"
+            href="/features"
             data-magnetic
             className="shine inline-flex h-11 items-center rounded-full border border-neutral-300 bg-white/60 px-6 text-sm font-medium text-black backdrop-blur transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-950/60 dark:text-white dark:hover:bg-neutral-900"
           >
