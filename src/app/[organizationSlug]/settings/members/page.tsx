@@ -30,10 +30,11 @@ async function Content({ params, searchParams }: Props) {
       <PageHeader
         title="Members"
         description={`${view.total} ${view.total === 1 ? "person has" : "people have"} access to ${ctx.organization.name}.`}
-        actions={view.canInvite ? <InviteMemberDialog slug={slug} roles={view.grantableRoles} defaultRoleId={defaultRole} /> : undefined}
+        actions={view.canInvite ? <InviteMemberDialog slug={slug} organizationName={ctx.organization.name} roles={view.grantableRoles} defaultRoleId={defaultRole} /> : undefined}
       />
       <PendingInvitations
         slug={slug}
+        organizationName={ctx.organization.name}
         canRevoke={can(ctx, "organization.members.invite")}
         invitations={view.invitations.map((i) => ({ ...i, expiresAt: i.expiresAt.toISOString() }))}
       />

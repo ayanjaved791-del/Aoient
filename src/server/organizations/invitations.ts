@@ -57,7 +57,21 @@ export async function listPendingInvitations(ctx: OrgContext): Promise<Invitatio
  * recipient email → membership created → invitation marked accepted → audited.
  * Re-inviting an address revokes the previous pending invitation.
  */
-export async function createInvitation(ctx: OrgContext, input: unknown): Promise<{ id: string; delivered: boolean }> {
+export interface CreatedInvitation {
+  id: string;
+  email: string;
+  roleName: string;
+  expiresAt: Date;
+  /**
+   * The join link. Returned once, to the inviter only, so they can share it
+   * themselves; the database keeps just its hash. It works only for `email`.
+   */
+  url: string;
+  /** Whether an email actually left the server. */
+  delivered: boolean;
+}
+
+export async function createInvitation(ctx: OrgContext, input: unknown): Promise<CreatedInvitation> {
   assertPermission(ctx, "organization.members.invite");
   const data = parseInput(createInvitationSchema, input);
   await enforceRateLimit(`invite:user:${ctx.userId}`, { max: 30, windowSeconds: 3600 });
@@ -101,19 +115,33 @@ export async function createInvitation(ctx: OrgContext, input: unknown): Promise
     throw e;
   });
 
-  // Sent after commit so a failed transaction never emails a dead link.
-  const provider = getEmailProvider();
-  await provider.send(
-    invitationMessage({
-      to: data.email,
-      organizationName: ctx.organization.name,
-      inviterName,
-      roleName: role.name,
-      url: `${appUrl()}/invite/${token}`,
-      expiresAt,
-    }),
-  );
-  return { id: invitation.id, delivered: provider.deliversExternally };
+  // Sent after commit so a failed transaction never emails a dead link. The
+  // invitation stands even if sending fails: the inviter still gets the link.
+  const url = `${appUrl()}/invite/${token}`;
+  let delivered = false;
+  try {
+    const provider = getEmailProvider();
+    await provider.send(invitationMessage({ to: data.email, organizationName: ctx.organization.name, inviterName, roleName: role.name, url, expiresAt }));
+    delivered = provider.deliversExternally;
+  } catch (e) {
+    console.error("[invitations] email not sent", e instanceof Error ? e.message : e);
+  }
+  return { id: invitation.id, email: data.email, roleName: role.name, expiresAt, url, delivered };
+}
+
+/**
+ * Only a hash of each link is stored, so an old link can't be shown again.
+ * This issues a fresh link for a pending (or expired) invitation with the same
+ * email and role, through the same checks as a new invite; the old link stops working.
+ */
+export async function renewInvitation(ctx: OrgContext, invitationId: string): Promise<CreatedInvitation> {
+  assertPermission(ctx, "organization.members.invite");
+  if (!isUuid(invitationId)) throw new NotFoundError("Invitation not found");
+  const [inv] = await getDb()<{ email: string; role_id: string }[]>`
+    select email, role_id from invitation
+    where id = ${invitationId} and organization_id = ${ctx.organizationId} and status = 'pending'`;
+  if (!inv) throw new NotFoundError("Invitation not found");
+  return createInvitation(ctx, { email: inv.email, roleId: inv.role_id });
 }
 
 export async function revokeInvitation(ctx: OrgContext, invitationId: string): Promise<void> {

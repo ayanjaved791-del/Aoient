@@ -9,7 +9,7 @@ import { requireUser } from "@/server/auth/session";
 import { resolveOrgContext } from "@/server/tenancy/context";
 import { runAction } from "@/server/actions/run";
 import { createOrganization, leaveOrganization, removeMember, updateMember, updateOrganization } from "@/server/organizations/organizations";
-import { acceptInvitation, createInvitation, revokeInvitation } from "@/server/organizations/invitations";
+import { acceptInvitation, createInvitation, renewInvitation, revokeInvitation } from "@/server/organizations/invitations";
 import { createCustomRole, deleteCustomRole, updateCustomRole } from "@/server/organizations/roles";
 import { createBillingPortalUrl } from "@/server/billing/paddle-portal";
 
@@ -38,7 +38,17 @@ export async function inviteMemberAction(slug: string, input: unknown) {
   return runAction(async () => {
     const result = await createInvitation(await ctxFor(slug), input);
     refresh();
-    return result;
+    return forClient(result);
+  });
+}
+
+const forClient = (r: Awaited<ReturnType<typeof createInvitation>>) => ({ ...r, expiresAt: r.expiresAt.toISOString() });
+
+export async function renewInvitationAction(slug: string, invitationId: string) {
+  return runAction(async () => {
+    const result = await renewInvitation(await ctxFor(slug), String(invitationId));
+    refresh();
+    return forClient(result);
   });
 }
 
