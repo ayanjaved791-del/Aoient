@@ -35,7 +35,9 @@ async function SignedInCheckout({ params, searchParams }: { params: Promise<{ pl
     const token = signCheckout(chosen.id, user.id);
     if (hasLivePaidSubscription(license)) target = { kind: "already-subscribed", organization: chosen };
     else if (!token) target = { kind: "not-configured", organization: chosen };
-    else target = { kind: "ready", organization: chosen, checkoutToken: token };
+    // The signed token itself is only handed out after the buyer agrees to the
+    // Terms and Privacy Policy (startCheckoutAction); here we only check it can be made.
+    else target = { kind: "ready", organization: chosen };
   }
 
   return <CheckoutPage planId={plan.id} initialInterval={interval} user={{ name: user.name, email: user.email }} target={target} />;

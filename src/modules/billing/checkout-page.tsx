@@ -22,6 +22,8 @@ import { addInterval } from "@/lib/billing/entitlements";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { TermsConsent } from "@/modules/legal/terms-consent";
+import { startCheckoutAction } from "./actions";
 
 const ICONS = { medisea: Sparkles, indiana: Rocket, pacfic_deepdive: Building2 } as const;
 const FRAME_CLASS = "aoient-paddle-frame";
@@ -46,7 +48,7 @@ function money(amount: number, currency: string) {
 
 /** Decided on the server: which workspace this checkout pays for, or why it can't start. */
 export type CheckoutTarget =
-  | { kind: "ready"; organization: { id: string; name: string; slug: string }; checkoutToken: string }
+  | { kind: "ready"; organization: { id: string; name: string; slug: string } }
   | { kind: "choose"; organizations: { id: string; name: string; slug: string }[] }
   | { kind: "no-organization" }
   | { kind: "already-subscribed"; organization: { name: string; slug: string } }
@@ -71,6 +73,20 @@ export function CheckoutPage({
   const [checkout, setCheckout] = useState<CheckoutEventsData | null>(null);
   // Fixed when the page opens, so trial dates don't shift between renders.
   const [openedAt] = useState(() => Date.now());
+  const [agree, setAgree] = useState(false);
+  const [agreeError, setAgreeError] = useState<string | null>(null);
+  const [checkoutToken, setCheckoutToken] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+
+  async function continueToPayment() {
+    if (target.kind !== "ready") return;
+    if (!agree) return setAgreeError("Please agree to the Terms of Service and Privacy Policy before paying.");
+    setStarting(true);
+    const res = await startCheckoutAction(target.organization.slug, true);
+    setStarting(false);
+    if (res.ok) setCheckoutToken(res.data.checkoutToken);
+    else setAgreeError(res.error.message);
+  }
   const paddleRef = useRef<Paddle | null>(null);
   const openedRef = useRef(false);
 
@@ -108,7 +124,7 @@ export function CheckoutPage({
 
   // Open the inline checkout once (and again if the site theme changes).
   useEffect(() => {
-    if (!resolvedTheme || !priceId || !PADDLE_CLIENT_TOKEN || target.kind !== "ready") return;
+    if (!resolvedTheme || !priceId || !PADDLE_CLIENT_TOKEN || target.kind !== "ready" || !checkoutToken) return;
     let cancelled = false;
     getPaddle()
       .then((paddle) => {
@@ -120,7 +136,7 @@ export function CheckoutPage({
           items: [{ priceId, quantity: 1 }],
           customer: { email: user.email },
           // The webhook trusts organizationId only together with the server-signed token.
-          customData: { aoientPlan: plan.id, interval, organizationId: target.organization.id, checkoutToken: target.checkoutToken },
+          customData: { aoientPlan: plan.id, interval, organizationId: target.organization.id, checkoutToken },
           settings: {
             displayMode: "inline",
             variant: "one-page",
@@ -140,7 +156,7 @@ export function CheckoutPage({
     };
     // The interval is switched in place with updateItems (below), not by reopening.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedTheme]);
+  }, [resolvedTheme, checkoutToken]);
 
   useEffect(() => () => paddleRef.current?.Checkout.close(), []);
 
@@ -312,7 +328,20 @@ export function CheckoutPage({
               </div>
             ) : null}
 
-            {ready && (
+            {ready && !checkoutToken && (
+              <div className="mt-6 grid gap-4">
+                <TermsConsent checked={agree} onChange={(v) => { setAgree(v); if (v) setAgreeError(null); }} error={agreeError} purpose="buy this plan" />
+                <ul className="grid gap-1.5 text-xs text-muted-foreground">
+                  <li>• Paddle is the merchant of record: it charges your card, issues the invoice and handles tax.</li>
+                  <li>• Subscriptions renew automatically until you cancel; cancelling keeps access until the paid period ends.</li>
+                </ul>
+                <Button size="lg" onClick={continueToPayment} loading={starting} disabled={!agree}>
+                  <Lock className="size-4" aria-hidden />Continue to payment
+                </Button>
+              </div>
+            )}
+
+            {ready && checkoutToken && (
               <div className={cn("relative mt-4", (status === "completed" || status === "error") && "hidden")}>
                 {status === "loading" && (
                   <div className="absolute inset-0 grid content-start gap-3" aria-busy="true" aria-label="Loading checkout">

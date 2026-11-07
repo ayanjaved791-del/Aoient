@@ -13,6 +13,7 @@ import { acceptInvitation, createInvitation, renewInvitation, revokeInvitation }
 import { createCustomRole, deleteCustomRole, updateCustomRole } from "@/server/organizations/roles";
 import { createBillingPortalUrl } from "@/server/billing/paddle-portal";
 import { syncMyLicense } from "@/server/billing/paddle-sync";
+import { assertTermsAccepted } from "@/server/legal/acceptance";
 
 async function ctxFor(slug: string) {
   const user = await requireUser();
@@ -22,7 +23,8 @@ async function ctxFor(slug: string) {
 export async function createOrganizationAction(input: unknown) {
   return runAction(async () => {
     const user = await requireUser();
-    const org = await createOrganization(user, input);
+    await assertTermsAccepted(user.id, input);
+    const org = await createOrganization(user, input, { recordTerms: true });
     return { slug: org.slug };
   });
 }

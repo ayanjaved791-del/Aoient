@@ -2,6 +2,7 @@ import "server-only";
 import { getDb, transaction, type Db } from "@/server/database/client";
 import { isUniqueViolation } from "@/server/database/errors";
 import { recordAudit } from "@/server/audit/audit";
+import { recordAcceptance } from "@/server/legal/acceptance";
 import { enforceRateLimit } from "@/server/rate-limit/limiter";
 import { assertPermission, type OrgContext } from "@/server/tenancy/context";
 import { OWNER_ROLE_KEY } from "@/server/permissions/catalog";
@@ -38,7 +39,11 @@ const ORG_SLUG_CONSTRAINT = "organization_slug_key";
  * AT-01: the creator becomes Owner; organization + membership + audit are
  * written in one transaction so they are always consistent.
  */
-export async function createOrganization(user: { id: string; emailVerified: boolean }, input: unknown) {
+/**
+ * @param opts.recordTerms store, in the same transaction, that the creator agreed
+ *   to the current Terms and Privacy Policy (callers check that first).
+ */
+export async function createOrganization(user: { id: string; emailVerified: boolean }, input: unknown, opts: { recordTerms?: boolean } = {}) {
   if (!user.emailVerified) throw new ForbiddenError("Verify your email address before creating an organization.");
   const data = parseInput(createOrganizationSchema, input);
   await enforceRateLimit(`org-create:${user.id}`, { max: 10, windowSeconds: 3600 });
@@ -53,6 +58,7 @@ export async function createOrganization(user: { id: string; emailVerified: bool
         returning id, name, slug`;
       await tx`insert into organization_member (organization_id, user_id, role_id) values (${org.id}, ${user.id}, ${ownerRole.id})`;
       await startTrial(tx, org.id);
+      if (opts.recordTerms) await recordAcceptance(tx, { userId: user.id, organizationId: org.id, context: "workspace" });
       await recordAudit(tx, {
         organizationId: org.id, actorUserId: user.id, action: "organization.created",
         targetType: "organization", targetId: org.id, metadata: { name: org.name, slug: org.slug },

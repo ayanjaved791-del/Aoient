@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateOrganizationForm } from "@/modules/organization/create-organization-form";
+import { hasAcceptedCurrentTerms } from "@/server/legal/acceptance";
 
 export const metadata: Metadata = { title: "Organizations" };
 
@@ -49,7 +50,7 @@ async function OrganizationList() {
             </li>
           ))}
         </ol>
-        <Card className="motion-safe:animate-rise shadow-sm [animation-delay:160ms]"><CardContent className="py-6"><CreateOrganizationForm /></CardContent></Card>
+        <Card className="motion-safe:animate-rise shadow-sm [animation-delay:160ms]"><CardContent className="py-6"><CreateOrganizationForm termsAccepted={await hasAcceptedCurrentTerms(user.id)} /></CardContent></Card>
       </div>
     );
   }
