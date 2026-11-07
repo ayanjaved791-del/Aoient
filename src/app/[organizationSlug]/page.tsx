@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import {
-  ArrowRight, Building2, Check, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
+  ArrowRight, Building2, Check, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
 } from "lucide-react";
 import { getOverviewCounts } from "@/server/organizations/views";
+import { DASHBOARD_RANGES, getDashboard, parseRange, type DashboardRange, type TeamStats } from "@/server/dashboard/dashboard";
+import { TimeSeriesChart } from "@/components/charts/time-series-chart";
+import { licenseLabel } from "@/modules/billing/license-view";
+import { daysLeft } from "@/lib/billing/entitlements";
 import { getLicenseOverview } from "@/server/billing/license";
 import { listRecentActivity } from "@/server/audit/activity";
 import { can } from "@/server/tenancy/context";
@@ -51,16 +55,16 @@ function Hero({ firstName, orgName, roleName, actions }: { firstName: string; or
   );
 }
 
-function StatTile({ href, icon: Icon, label, value, limit, hint, index, wide }: { wide?: boolean; href: string; icon: typeof Users; label: string; value: number; limit?: number | null; hint?: string; index: number }) {
-  const pct = limit ? Math.min(100, Math.round((value / limit) * 100)) : null;
+function StatTile({ href, icon: Icon, label, value, limit, hint, index }: { href: string; icon: typeof Users; label: string; value: number | string; limit?: number | null; hint?: string; index: number }) {
+  const pct = limit && typeof value === "number" ? Math.min(100, Math.round((value / limit) * 100)) : null;
   return (
-    <Link href={href} className={cn("group motion-safe:animate-rise min-w-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring", wide && "col-span-2 sm:col-span-1")} style={{ animationDelay: `${120 + index * 70}ms` }}>
+    <Link href={href} className={cn("group motion-safe:animate-rise min-w-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring")} style={{ animationDelay: `${120 + index * 70}ms` }}>
       <Card className="h-full p-4 transition-all sm:p-5 group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:shadow-sm">
         <div className="flex items-center justify-between">
           <span className="flex size-9 items-center justify-center rounded-lg bg-primary-subtle text-primary"><Icon className="size-4.5" aria-hidden /></span>
           <ArrowRight className="size-4 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" aria-hidden />
         </div>
-        <p className="mt-4 text-3xl font-semibold tabular-nums tracking-tight">
+        <p className="mt-4 truncate text-2xl font-semibold tracking-tight sm:text-3xl">
           {value}
           {limit ? <span className="text-base font-medium text-muted-foreground"> / {limit}</span> : null}
         </p>
@@ -181,20 +185,115 @@ function ComingNext() {
   );
 }
 
-async function Overview({ params }: { params: Promise<{ organizationSlug: string }> }) {
-  const { organizationSlug } = await params;
+function RangeFilter({ base, range, timezone }: { base: string; range: DashboardRange; timezone: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div role="group" aria-label="Date range" className="inline-flex rounded-lg border border-border bg-surface p-0.5 shadow-xs">
+        {DASHBOARD_RANGES.map((r) => (
+          <Link
+            key={r}
+            href={r === 30 ? base : `${base}?range=${r}`}
+            scroll={false}
+            aria-current={r === range ? "true" : undefined}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              r === range ? "bg-primary text-primary-foreground shadow-xs" : "text-secondary-foreground hover:bg-surface-muted hover:text-foreground",
+            )}
+          >
+            {r} days
+          </Link>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">Last {range} days · days in {timezone.replaceAll("_", " ")}</p>
+    </div>
+  );
+}
+
+function ChartCard({ title, subtitle, children, delay }: { title: string; subtitle: string; children: React.ReactNode; delay: number }) {
+  return (
+    <Card className="motion-safe:animate-rise min-w-0 p-5 sm:p-6" style={{ animationDelay: `${delay}ms` }}>
+      <h2 className="text-base font-semibold">{title}</h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+      <div className="mt-4">{children}</div>
+    </Card>
+  );
+}
+
+function RoleBreakdown({ roles, total, href }: { roles: { name: string; count: number }[]; total: number; href: string }) {
+  const max = Math.max(1, ...roles.map((r) => r.count));
+  return (
+    <Card className="motion-safe:animate-rise p-5 [animation-delay:340ms] sm:p-6">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-semibold">Team by role</h2>
+        <Link href={href} className="text-sm font-medium text-primary hover:underline">Manage</Link>
+      </div>
+      <p className="mt-0.5 text-sm text-muted-foreground">{total} active {total === 1 ? "member" : "members"}</p>
+      <ul className="mt-5 grid gap-3.5">
+        {roles.map((r) => (
+          <li key={r.name} className="grid gap-1.5">
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="truncate">{r.name}</span>
+              <span className="font-medium tabular-nums">{r.count}<span className="ml-1 text-xs font-normal text-muted-foreground">{Math.round((r.count / Math.max(total, 1)) * 100)}%</span></span>
+            </div>
+            <div className="h-2 rounded-full bg-primary-subtle" aria-hidden>
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (r.count / max) * 100)}%` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function InvitationSummary({ inv, range, href }: { inv: TeamStats["invitations"]; range: number; href: string }) {
+  const rows = [
+    { label: "Accepted", value: inv.accepted, icon: CircleCheck, tone: "text-success" },
+    { label: "Still open", value: inv.sent - inv.accepted - inv.expired - inv.revoked, icon: Clock3, tone: "text-primary" },
+    { label: "Expired", value: inv.expired, icon: CircleAlert, tone: "text-warning" },
+    { label: "Revoked", value: inv.revoked, icon: CircleX, tone: "text-muted-foreground" },
+  ];
+  return (
+    <Card className="motion-safe:animate-rise p-5 [animation-delay:400ms] sm:p-6">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-semibold">Invitations</h2>
+        <Link href={href} className="text-sm font-medium text-primary hover:underline">View</Link>
+      </div>
+      <p className="mt-0.5 text-sm text-muted-foreground">{inv.sent} sent in the last {range} days</p>
+      {inv.sent === 0 ? (
+        <p className="mt-5 rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">No invitations sent in this period.</p>
+      ) : (
+        <ul className="mt-5 grid grid-cols-2 gap-3">
+          {rows.map((r) => (
+            <li key={r.label} className="rounded-lg border border-border p-3">
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><r.icon className={cn("size-3.5", r.tone)} aria-hidden />{r.label}</p>
+              <p className="mt-1 text-xl font-semibold">{r.value}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+async function Overview({ params, searchParams }: { params: Promise<{ organizationSlug: string }>; searchParams: Promise<{ range?: string }> }) {
+  const [{ organizationSlug }, { range: rangeParam }] = await Promise.all([params, searchParams]);
+  const range = parseRange(rangeParam);
   const { user, ctx } = await getPageOrgContext(organizationSlug);
   const base = `/${ctx.organization.slug}`;
   const canSeeMembers = can(ctx, "organization.members.read");
   const canInvite = can(ctx, "organization.members.invite");
   const canReadAudit = can(ctx, "organization.audit.read");
   const canBilling = can(ctx, "billing.read");
-  const [counts, { license }, activity] = await Promise.all([
+  const [counts, { license }, activity, dash] = await Promise.all([
     canSeeMembers ? getOverviewCounts(ctx) : null,
     getLicenseOverview(ctx.organizationId),
-    canReadAudit ? listRecentActivity(ctx, 8) : null,
+    canReadAudit ? listRecentActivity(ctx, 6) : null,
+    getDashboard(ctx, range),
   ]);
   const ent = license?.entitlements;
+  const team = dash.team;
+  const planLabel = licenseLabel(license);
+  const trialLeft = license?.state === "trial" ? daysLeft(license.trialEndsAt) : null;
 
   const actions = [
     ...(canInvite ? [{ href: `${base}/settings/members`, label: "Invite people", icon: UserPlus }] : []),
@@ -204,7 +303,7 @@ async function Overview({ params }: { params: Promise<{ organizationSlug: string
 
   const steps: Step[] = [{ title: "Create your workspace", body: "", done: true }];
   if (canInvite && counts) {
-    steps.push({ title: "Invite a teammate", body: "Send an invitation link by email. It expires after 7 days.", done: counts.members > 1 || counts.pending > 0, href: `${base}/settings/members`, cta: "Invite" });
+    steps.push({ title: "Invite a teammate", body: "Create a join link and share it. It expires after 7 days.", done: counts.members > 1 || counts.pending > 0, href: `${base}/settings/members`, cta: "Invite" });
   }
   if (can(ctx, "organization.roles.manage") && counts && ent?.customRoles) {
     steps.push({ title: "Create a custom role", body: "Give people exactly the access they need.", done: counts.customRoles > 0, href: `${base}/settings/roles`, cta: "Create" });
@@ -212,40 +311,72 @@ async function Overview({ params }: { params: Promise<{ organizationSlug: string
   if (can(ctx, "billing.manage")) {
     steps.push({ title: "Choose a plan", body: "Your free trial keeps everything open until it ends.", done: license?.source === "paddle", href: `${base}/settings/billing`, cta: "See plans" });
   }
+  const showChecklist = steps.length > 1 && steps.some((s) => !s.done);
+  const acceptance = team && team.invitations.sent > 0 ? Math.round((team.invitations.accepted / team.invitations.sent) * 100) : null;
 
   return (
     <div className="grid gap-6">
       <Hero firstName={user.name.split(" ")[0] || "there"} orgName={ctx.organization.name} roleName={ctx.roleName} actions={actions} />
 
-      {counts && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-          <StatTile wide index={0} href={`${base}/settings/members`} icon={Users} label="Active members" value={counts.members}
-            limit={ent ? ent.maxMembers : null} hint={ent ? "Seats include pending invitations" : undefined} />
-          <StatTile index={1} href={`${base}/settings/members`} icon={MailPlus} label="Pending invitations" value={counts.pending} />
-          <StatTile index={2} href={`${base}/settings/roles`} icon={ShieldCheck} label="Custom roles" value={counts.customRoles}
-            hint={ent && !ent.customRoles ? `Not included in ${license?.planName}` : undefined} />
+      {(team || dash.activityByDay) && <RangeFilter base={base} range={range} timezone={dash.timezone} />}
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {team && counts && (
+          <>
+            <StatTile index={0} href={`${base}/settings/members`} icon={Users} label="Active members" value={team.activeMembers}
+              limit={ent ? ent.maxMembers : null}
+              hint={team.joinedInRange > 0 ? `+${team.joinedInRange} joined in ${range} days` : `No one joined in ${range} days`} />
+            <StatTile index={1} href={`${base}/settings/members`} icon={MailPlus} label="Pending invitations" value={team.invitations.pending}
+              hint={team.invitations.expiringSoon > 0 ? `${team.invitations.expiringSoon} expire within 48 h` : "None expiring soon"} />
+            <StatTile index={2} href={`${base}/settings/members`} icon={CircleCheck} label="Invites accepted" value={acceptance === null ? "—" : `${acceptance}%`}
+              hint={team.invitations.sent > 0 ? `${team.invitations.accepted} of ${team.invitations.sent} sent in ${range} days` : `None sent in ${range} days`} />
+          </>
+        )}
+        <StatTile index={3} href={canBilling ? `${base}/settings/billing` : base} icon={Sparkles} label={license ? `${license.planName} plan` : "Plan"}
+          value={trialLeft !== null ? `${trialLeft} d` : planLabel.text.split(" · ")[0]}
+          hint={trialLeft !== null
+            ? (license?.source === "paddle" ? "Free trial left, then billing starts" : "Free trial left")
+            : license?.state === "active" ? `Paid ${license.billingInterval === "yearly" ? "yearly" : "monthly"} subscription` : planLabel.text} />
+      </div>
+
+      {(team || dash.activityByDay) && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {team && (
+            <ChartCard title="Team size" subtitle="Current active members, by the day they joined" delay={220}>
+              <TimeSeriesChart data={team.teamByDay} kind="area" valueLabel="Members" unit={["member", "members"]} />
+            </ChartCard>
+          )}
+          {dash.activityByDay && (
+            <ChartCard title="Workspace activity" subtitle={`${dash.activityByDay.reduce((a, d) => a + d.value, 0)} recorded changes in ${range} days`} delay={280}>
+              <TimeSeriesChart data={dash.activityByDay} kind="bar" valueLabel="Changes" unit={["change", "changes"]} />
+            </ChartCard>
+          )}
+        </div>
+      )}
+
+      {team && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <RoleBreakdown roles={team.roles} total={team.activeMembers} href={`${base}/settings/roles`} />
+          <InvitationSummary inv={team.invitations} range={range} href={`${base}/settings/members`} />
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="grid content-start gap-6 lg:col-span-3">
-          {steps.length > 1 && steps.some((s) => !s.done) && <SetupChecklist steps={steps} />}
           {activity && <ActivityFeed items={activity} />}
           {!activity && <ComingNext />}
         </div>
         <div className="grid content-start gap-6 lg:col-span-2">
+          {showChecklist && <SetupChecklist steps={steps} />}
           {activity && <ComingNext />}
-          <Card className="motion-safe:animate-rise p-5 [animation-delay:480ms] sm:p-6">
-            <h2 className="text-base font-semibold">Your access</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              You&apos;re <span className="font-medium text-foreground">{ctx.roleName}</span> in {ctx.organization.name}. What you can see and change is checked on the server for every request.
-            </p>
-            {canSeeMembers && (
-              <Link href={`${base}/settings/roles`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-                See what each role can do <ArrowRight className="size-4" aria-hidden />
-              </Link>
-            )}
-          </Card>
+          {!showChecklist && (
+            <Card className="motion-safe:animate-rise p-5 [animation-delay:480ms] sm:p-6">
+              <h2 className="text-base font-semibold">Your access</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                You&apos;re <span className="font-medium text-foreground">{ctx.roleName}</span> in {ctx.organization.name}. What you can see and change is checked on the server for every request.
+              </p>
+            </Card>
+          )}
         </div>
       </div>
     </div>
@@ -256,16 +387,16 @@ function OverviewSkeleton() {
   return (
     <div className="grid gap-6">
       <Skeleton className="h-52 rounded-2xl" />
-      <div className="grid gap-4 sm:grid-cols-3"><Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" /></div>
-      <div className="grid gap-6 lg:grid-cols-5"><Skeleton className="h-64 lg:col-span-3" /><Skeleton className="h-64 lg:col-span-2" /></div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4"><Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" /></div>
+      <div className="grid gap-6 lg:grid-cols-2"><Skeleton className="h-72" /><Skeleton className="h-72" /></div>
     </div>
   );
 }
 
-export default function WorkspaceHome({ params }: PageProps<"/[organizationSlug]">) {
+export default function WorkspaceHome({ params, searchParams }: PageProps<"/[organizationSlug]">) {
   return (
     <Suspense fallback={<OverviewSkeleton />}>
-      <Overview params={params} />
+      <Overview params={params} searchParams={searchParams as Promise<{ range?: string }>} />
     </Suspense>
   );
 }

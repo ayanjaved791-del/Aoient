@@ -27,7 +27,7 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ...(can(ctx, "billing.read") ? [{ href: `${base}/settings/billing`, label: "Billing & plan", icon: "billing" as const }] : []),
   ];
   return [
-    { links: [{ href: base, label: "Overview", icon: "overview", exact: true }] },
+    { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
     ...(team.length ? [{ label: "Team", links: team }] : []),
     ...(org.length ? [{ label: "Organization", links: org }] : []),
   ];
