@@ -8,7 +8,8 @@ import { createOrganizationSchema, slugify } from "@/lib/validation/organization
 import { CURRENCIES, timezones } from "@/lib/formatting/options";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Input, NativeSelect } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Alert } from "@/components/ui/alert";
 import { createOrganizationAction } from "./actions";
 
@@ -17,6 +18,7 @@ type Values = z.input<typeof createOrganizationSchema>;
 export function CreateOrganizationForm() {
   const router = useRouter();
   const tzList = useMemo(() => timezones(), []);
+  const tzOptions = useMemo(() => tzList.map((tz) => ({ value: tz, label: tz.replaceAll("_", " ") })), [tzList]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [slugEdited, setSlugEdited] = useState(false);
   const form = useForm<Values>({
@@ -58,14 +60,10 @@ export function CreateOrganizationForm() {
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="timezone" label="Time zone" error={errors.timezone?.message}>
-          <NativeSelect {...form.register("timezone")}>
-            {tzList.map((tz) => <option key={tz} value={tz}>{tz.replaceAll("_", " ")}</option>)}
-          </NativeSelect>
+          <FormSelect control={form.control} name="timezone" options={tzOptions} searchable />
         </Field>
         <Field id="currency" label="Default currency" error={errors.currency?.message}>
-          <NativeSelect {...form.register("currency")}>
-            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </NativeSelect>
+          <FormSelect control={form.control} name="currency" options={CURRENCIES.map((c) => ({ value: c, label: c }))} searchable />
         </Field>
       </div>
       <Button type="submit" loading={isSubmitting} className="w-full sm:w-auto sm:justify-self-end">Create organization</Button>

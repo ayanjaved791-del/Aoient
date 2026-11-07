@@ -7,7 +7,8 @@ import type { z } from "zod";
 import { createInvitationSchema } from "@/lib/validation/organization";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Input, NativeSelect } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Alert } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { inviteMemberAction } from "./actions";
@@ -64,7 +65,7 @@ export function InviteMemberDialog({ slug, organizationName, roles, defaultRoleI
             <Input type="email" autoComplete="off" placeholder="name@company.com" {...form.register("email")} />
           </Field>
           <Field id="invite-role" label="Role" hint={selectedRole?.description ?? undefined} error={errors.roleId?.message}>
-            <NativeSelect {...form.register("roleId")}>{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</NativeSelect>
+            <FormSelect control={form.control} name="roleId" options={roles.map((r) => ({ value: r.id, label: r.name, description: r.description }))} />
           </Field>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>

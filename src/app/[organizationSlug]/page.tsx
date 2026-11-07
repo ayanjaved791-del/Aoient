@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import {
-  ArrowRight, Building2, Check, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
+  Activity, ArrowRight, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
 } from "lucide-react";
 import { getOverviewCounts } from "@/server/organizations/views";
 import { DASHBOARD_RANGES, getDashboard, parseRange, type DashboardRange, type TeamStats } from "@/server/dashboard/dashboard";
 import { TimeSeriesChart } from "@/components/charts/time-series-chart";
+import { DashboardLayout, Widget, type WidgetDef } from "@/modules/dashboard/widgets";
+import { ActivityHeatmap } from "@/modules/dashboard/activity-heatmap";
 import { licenseLabel } from "@/modules/billing/license-view";
 import { daysLeft } from "@/lib/billing/entitlements";
 import { getLicenseOverview } from "@/server/billing/license";
@@ -55,7 +57,7 @@ function Hero({ firstName, orgName, roleName, actions }: { firstName: string; or
   );
 }
 
-function StatTile({ href, icon: Icon, label, value, limit, hint, index }: { href: string; icon: typeof Users; label: string; value: number | string; limit?: number | null; hint?: string; index: number }) {
+function StatTile({ href, icon: Icon, label, value, limit, hint, index, delta }: { delta?: Delta | null; href: string; icon: typeof Users; label: string; value: number | string; limit?: number | null; hint?: string; index: number }) {
   const pct = limit && typeof value === "number" ? Math.min(100, Math.round((value / limit) * 100)) : null;
   return (
     <Link href={href} className={cn("group motion-safe:animate-rise min-w-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring")} style={{ animationDelay: `${120 + index * 70}ms` }}>
@@ -69,6 +71,7 @@ function StatTile({ href, icon: Icon, label, value, limit, hint, index }: { href
           {limit ? <span className="text-base font-medium text-muted-foreground"> / {limit}</span> : null}
         </p>
         <p className="mt-0.5 text-[13px] text-muted-foreground">{label}</p>
+        {delta && <DeltaBadge delta={delta} />}
         {pct !== null && (
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-muted" aria-hidden>
             <div className={cn("h-full rounded-full", pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-primary")} style={{ width: `${Math.max(pct, 3)}%` }} />
@@ -79,6 +82,80 @@ function StatTile({ href, icon: Icon, label, value, limit, hint, index }: { href
     </Link>
   );
 }
+
+interface Delta { current: number; previous: number; range: number; upIsGood?: boolean }
+
+/** Change vs the previous period of the same length. Text stays in ink colors; the icon carries direction. */
+function DeltaBadge({ delta }: { delta: Delta }) {
+  const diff = delta.current - delta.previous;
+  const Icon = diff > 0 ? TrendingUp : diff < 0 ? TrendingDown : Minus;
+  const good = diff === 0 ? null : (diff > 0) === (delta.upIsGood ?? true);
+  return (
+    <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+      <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-px font-medium",
+        good === null ? "bg-surface-muted text-secondary-foreground" : good ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger")}>
+        <Icon className="size-3" aria-hidden />
+        {diff > 0 ? "+" : ""}{diff}
+      </span>
+      <span>vs previous {delta.range} days</span>
+    </p>
+  );
+}
+
+function ListCard({ title, subtitle, action, empty, delay, children }: { title: string; subtitle?: string; action?: { href: string; label: string }; empty?: string | null; delay: number; children?: React.ReactNode }) {
+  return (
+    <Card className="motion-safe:animate-rise flex h-full min-w-0 flex-col p-5 sm:p-6" style={{ animationDelay: `${delay}ms` }}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {action && <Link href={action.href} className="shrink-0 text-sm font-medium text-primary hover:underline">{action.label}</Link>}
+      </div>
+      {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
+      {empty ? <p className="mt-5 flex flex-1 items-center justify-center rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">{empty}</p> : <div className="mt-4 flex-1">{children}</div>}
+    </Card>
+  );
+}
+
+function HBars({ rows, total }: { rows: { label: string; value: number }[]; total: number }) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  return (
+    <ul className="grid gap-3.5">
+      {rows.map((r) => (
+        <li key={r.label} className="grid gap-1.5">
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="truncate">{r.label}</span>
+            <span className="font-medium tabular-nums">{r.value}<span className="ml-1 text-xs font-normal text-muted-foreground">{total ? Math.round((r.value / total) * 100) : 0}%</span></span>
+          </div>
+          <div className="h-2 rounded-full bg-primary-subtle" aria-hidden>
+            {r.value > 0 && <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (r.value / max) * 100)}%` }} />}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Meter({ label, used, limit, note }: { label: string; used: number; limit: number | null; note?: string }) {
+  const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const tone = pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-primary";
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex items-baseline justify-between gap-3 text-sm">
+        <span>{label}</span>
+        <span className="font-medium tabular-nums">{used}{limit !== null && <span className="font-normal text-muted-foreground"> / {limit}</span>}</span>
+      </div>
+      <div className="h-2 rounded-full bg-primary-subtle" role="meter" aria-label={label} aria-valuenow={used} aria-valuemin={0} aria-valuemax={limit ?? used}>
+        {limit !== null && used > 0 && <div className={cn("h-full rounded-full", tone)} style={{ width: `${Math.max(4, pct)}%` }} />}
+      </div>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
+    </div>
+  );
+}
+
+const fmtHours = (h: number) => (h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : h < 48 ? `${Math.round(h * 10) / 10} h` : `${Math.round(h / 24)} days`);
+const fmtWhen = (d: Date, now: Date) => {
+  const h = (d.getTime() - now.getTime()) / 3_600_000;
+  return h < 24 ? `in ${Math.max(1, Math.round(h))} h` : `in ${Math.round(h / 24)} days`;
+};
 
 interface Step { title: string; body: string; done: boolean; href?: string; cta?: string }
 
@@ -219,59 +296,25 @@ function ChartCard({ title, subtitle, children, delay }: { title: string; subtit
   );
 }
 
-function RoleBreakdown({ roles, total, href }: { roles: { name: string; count: number }[]; total: number; href: string }) {
-  const max = Math.max(1, ...roles.map((r) => r.count));
-  return (
-    <Card className="motion-safe:animate-rise p-5 [animation-delay:340ms] sm:p-6">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-semibold">Team by role</h2>
-        <Link href={href} className="text-sm font-medium text-primary hover:underline">Manage</Link>
-      </div>
-      <p className="mt-0.5 text-sm text-muted-foreground">{total} active {total === 1 ? "member" : "members"}</p>
-      <ul className="mt-5 grid gap-3.5">
-        {roles.map((r) => (
-          <li key={r.name} className="grid gap-1.5">
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="truncate">{r.name}</span>
-              <span className="font-medium tabular-nums">{r.count}<span className="ml-1 text-xs font-normal text-muted-foreground">{Math.round((r.count / Math.max(total, 1)) * 100)}%</span></span>
-            </div>
-            <div className="h-2 rounded-full bg-primary-subtle" aria-hidden>
-              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (r.count / max) * 100)}%` }} />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
 function InvitationSummary({ inv, range, href }: { inv: TeamStats["invitations"]; range: number; href: string }) {
   const rows = [
     { label: "Accepted", value: inv.accepted, icon: CircleCheck, tone: "text-success" },
-    { label: "Still open", value: inv.sent - inv.accepted - inv.expired - inv.revoked, icon: Clock3, tone: "text-primary" },
+    { label: "Still open", value: Math.max(0, inv.sent - inv.accepted - inv.expired - inv.revoked), icon: Clock3, tone: "text-primary" },
     { label: "Expired", value: inv.expired, icon: CircleAlert, tone: "text-warning" },
     { label: "Revoked", value: inv.revoked, icon: CircleX, tone: "text-muted-foreground" },
   ];
   return (
-    <Card className="motion-safe:animate-rise p-5 [animation-delay:400ms] sm:p-6">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-semibold">Invitations</h2>
-        <Link href={href} className="text-sm font-medium text-primary hover:underline">View</Link>
-      </div>
-      <p className="mt-0.5 text-sm text-muted-foreground">{inv.sent} sent in the last {range} days</p>
-      {inv.sent === 0 ? (
-        <p className="mt-5 rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">No invitations sent in this period.</p>
-      ) : (
-        <ul className="mt-5 grid grid-cols-2 gap-3">
-          {rows.map((r) => (
-            <li key={r.label} className="rounded-lg border border-border p-3">
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><r.icon className={cn("size-3.5", r.tone)} aria-hidden />{r.label}</p>
-              <p className="mt-1 text-xl font-semibold">{r.value}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
+    <ListCard title="Invitations" subtitle={`${inv.sent} sent in the last ${range} days`} action={{ href, label: "View" }} delay={500}
+      empty={inv.sent === 0 ? "No invitations sent in this period." : null}>
+      <ul className="grid grid-cols-2 gap-3">
+        {rows.map((r) => (
+          <li key={r.label} className="rounded-lg border border-border p-3">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><r.icon className={cn("size-3.5", r.tone)} aria-hidden />{r.label}</p>
+            <p className="mt-1 text-xl font-semibold">{r.value}</p>
+          </li>
+        ))}
+      </ul>
+    </ListCard>
   );
 }
 
@@ -284,101 +327,214 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
   const canInvite = can(ctx, "organization.members.invite");
   const canReadAudit = can(ctx, "organization.audit.read");
   const canBilling = can(ctx, "billing.read");
-  const [counts, { license }, activity, dash] = await Promise.all([
+  const [counts, { license, usage }, feed, dash] = await Promise.all([
     canSeeMembers ? getOverviewCounts(ctx) : null,
     getLicenseOverview(ctx.organizationId),
     canReadAudit ? listRecentActivity(ctx, 6) : null,
     getDashboard(ctx, range),
   ]);
+  const now = new Date();
   const ent = license?.entitlements;
-  const team = dash.team;
+  const { team, activity } = dash;
   const planLabel = licenseLabel(license);
   const trialLeft = license?.state === "trial" ? daysLeft(license.trialEndsAt) : null;
+  const membersHref = `${base}/settings/members`;
 
   const actions = [
-    ...(canInvite ? [{ href: `${base}/settings/members`, label: "Invite people", icon: UserPlus }] : []),
+    ...(canInvite ? [{ href: membersHref, label: "Invite people", icon: UserPlus }] : []),
     ...(canSeeMembers ? [{ href: `${base}/settings/roles`, label: "Roles & permissions", icon: ShieldCheck }] : []),
     ...(canBilling ? [{ href: `${base}/settings/billing`, label: "Billing & plan", icon: CreditCard }] : []),
   ];
 
   const steps: Step[] = [{ title: "Create your workspace", body: "", done: true }];
-  if (canInvite && counts) {
-    steps.push({ title: "Invite a teammate", body: "Create a join link and share it. It expires after 7 days.", done: counts.members > 1 || counts.pending > 0, href: `${base}/settings/members`, cta: "Invite" });
-  }
-  if (can(ctx, "organization.roles.manage") && counts && ent?.customRoles) {
-    steps.push({ title: "Create a custom role", body: "Give people exactly the access they need.", done: counts.customRoles > 0, href: `${base}/settings/roles`, cta: "Create" });
-  }
-  if (can(ctx, "billing.manage")) {
-    steps.push({ title: "Choose a plan", body: "Your free trial keeps everything open until it ends.", done: license?.source === "paddle", href: `${base}/settings/billing`, cta: "See plans" });
-  }
+  if (canInvite && counts) steps.push({ title: "Invite a teammate", body: "Create a join link and share it. It expires after 7 days.", done: counts.members > 1 || counts.pending > 0, href: membersHref, cta: "Invite" });
+  if (can(ctx, "organization.roles.manage") && counts && ent?.customRoles) steps.push({ title: "Create a custom role", body: "Give people exactly the access they need.", done: counts.customRoles > 0, href: `${base}/settings/roles`, cta: "Create" });
+  if (can(ctx, "billing.manage")) steps.push({ title: "Choose a plan", body: "Your free trial keeps everything open until it ends.", done: license?.source === "paddle", href: `${base}/settings/billing`, cta: "See plans" });
   const showChecklist = steps.length > 1 && steps.some((s) => !s.done);
+
   const acceptance = team && team.invitations.sent > 0 ? Math.round((team.invitations.accepted / team.invitations.sent) * 100) : null;
+  const busiestDay = activity?.byDay.reduce((best, d) => (d.value > best.value ? d : best), { day: "", value: 0 });
+  const fmtDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+
+  const widgets: WidgetDef[] = [
+    { id: "kpis", label: "Key numbers" },
+    ...(team || activity ? [{ id: "trends", label: "Trend charts" }] : []),
+    ...(activity ? [{ id: "heatmap", label: "When your team works" }, { id: "areas", label: "Changes by area" }, { id: "people", label: "Most active people" }] : []),
+    ...(team ? [{ id: "roles", label: "Team by role" }, { id: "joined", label: "Recently joined" }, { id: "invites", label: "Invitations" }, { id: "expiring", label: "Expiring invitations" }] : []),
+    { id: "usage", label: "Plan usage" },
+    ...(feed ? [{ id: "feed", label: "Recent activity" }] : []),
+    ...(showChecklist ? [{ id: "setup", label: "Setup checklist" }] : []),
+    { id: "next", label: "Coming next" },
+  ];
 
   return (
     <div className="grid gap-6">
       <Hero firstName={user.name.split(" ")[0] || "there"} orgName={ctx.organization.name} roleName={ctx.roleName} actions={actions} />
 
-      {(team || dash.activityByDay) && <RangeFilter base={base} range={range} timezone={dash.timezone} />}
+      <DashboardLayout storageKey={`aoient-dashboard-hidden:${ctx.organization.slug}`} widgets={widgets}
+        exportHref={team || activity ? `${base}/dashboard-export?range=${range}` : null}
+        filter={team || activity ? <RangeFilter base={base} range={range} timezone={dash.timezone} /> : null}>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {team && counts && (
-          <>
-            <StatTile index={0} href={`${base}/settings/members`} icon={Users} label="Active members" value={team.activeMembers}
-              limit={ent ? ent.maxMembers : null}
-              hint={team.joinedInRange > 0 ? `+${team.joinedInRange} joined in ${range} days` : `No one joined in ${range} days`} />
-            <StatTile index={1} href={`${base}/settings/members`} icon={MailPlus} label="Pending invitations" value={team.invitations.pending}
-              hint={team.invitations.expiringSoon > 0 ? `${team.invitations.expiringSoon} expire within 48 h` : "None expiring soon"} />
-            <StatTile index={2} href={`${base}/settings/members`} icon={CircleCheck} label="Invites accepted" value={acceptance === null ? "—" : `${acceptance}%`}
-              hint={team.invitations.sent > 0 ? `${team.invitations.accepted} of ${team.invitations.sent} sent in ${range} days` : `None sent in ${range} days`} />
-          </>
+        <Widget id="kpis">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {team && (
+              <>
+                <StatTile index={0} href={membersHref} icon={Users} label="Active members" value={team.activeMembers}
+                  limit={ent ? ent.maxMembers : null} delta={{ current: team.joinedInRange, previous: team.joinedPrevRange, range }}
+                  hint={`${team.joinedInRange} joined, ${team.joinedPrevRange} in the ${range} days before`} />
+                <StatTile index={1} href={membersHref} icon={MailPlus} label="Pending invitations" value={team.invitations.pending}
+                  hint={team.invitations.expiringSoon > 0 ? `${team.invitations.expiringSoon} expire within 48 h` : "None expiring soon"} />
+                <StatTile index={2} href={membersHref} icon={CircleCheck} label="Invites accepted" value={acceptance === null ? "—" : `${acceptance}%`}
+                  hint={team.invitations.sent > 0 ? `${team.invitations.accepted} of ${team.invitations.sent} sent (${team.sentPrevRange} sent the ${range} days before)` : `None sent in ${range} days`} />
+              </>
+            )}
+            <StatTile index={3} href={canBilling ? `${base}/settings/billing` : base} icon={Sparkles} label={license ? `${license.planName} plan` : "Plan"}
+              value={trialLeft !== null ? `${trialLeft} d` : planLabel.text.split(" · ")[0]}
+              hint={trialLeft !== null
+                ? (license?.source === "paddle" ? "Free trial left, then billing starts" : "Free trial left")
+                : license?.state === "active" ? `Paid ${license.billingInterval === "yearly" ? "yearly" : "monthly"} subscription` : planLabel.text} />
+            {activity && (
+              <StatTile index={4} href={base} icon={Activity} label="Changes recorded" value={activity.total}
+                delta={{ current: activity.total, previous: activity.totalPrevRange, range }}
+                hint={`${(activity.total / range).toFixed(1)} per day on average (${activity.totalPrevRange} the ${range} days before)`} />
+            )}
+            {activity && (
+              <StatTile index={5} href={base} icon={CalendarDays} label="Busiest day" value={busiestDay && busiestDay.value > 0 ? busiestDay.value : "—"}
+                hint={busiestDay && busiestDay.value > 0 ? `${fmtDay(busiestDay.day)}` : "No changes in this period"} />
+            )}
+            {team && (
+              <StatTile index={6} href={membersHref} icon={Timer} label="Time to accept" value={team.medianAcceptHours === null ? "—" : fmtHours(team.medianAcceptHours)}
+                hint={team.medianAcceptHours === null ? `No invites accepted in ${range} days` : "Median, invitation to joining"} />
+            )}
+            {team && (
+              <StatTile index={7} href={membersHref} icon={ShieldCheck} label="Owners & admins" value={team.adminMembers}
+                limit={ent ? ent.maxAdminSeats : null}
+                hint={team.suspendedMembers > 0 ? `${team.suspendedMembers} suspended member${team.suspendedMembers === 1 ? "" : "s"}` : "No suspended members"} />
+            )}
+          </div>
+        </Widget>
+
+        {(team || activity) && (
+          <Widget id="trends">
+            <div className="grid gap-6 lg:grid-cols-2">
+              {team && (
+                <ChartCard title="Team size" subtitle="Current active members, by the day they joined" delay={220}>
+                  <TimeSeriesChart data={team.teamByDay} kind="area" valueLabel="Members" unit={["member", "members"]} />
+                </ChartCard>
+              )}
+              {activity && (
+                <ChartCard title="Workspace activity" subtitle={`${activity.total} recorded changes in ${range} days`} delay={280}>
+                  <TimeSeriesChart data={activity.byDay} kind="bar" valueLabel="Changes" unit={["change", "changes"]} />
+                </ChartCard>
+              )}
+            </div>
+          </Widget>
         )}
-        <StatTile index={3} href={canBilling ? `${base}/settings/billing` : base} icon={Sparkles} label={license ? `${license.planName} plan` : "Plan"}
-          value={trialLeft !== null ? `${trialLeft} d` : planLabel.text.split(" · ")[0]}
-          hint={trialLeft !== null
-            ? (license?.source === "paddle" ? "Free trial left, then billing starts" : "Free trial left")
-            : license?.state === "active" ? `Paid ${license.billingInterval === "yearly" ? "yearly" : "monthly"} subscription` : planLabel.text} />
-      </div>
 
-      {(team || dash.activityByDay) && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        {activity && (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Widget id="heatmap" className="lg:col-span-2">
+              <ListCard title="When your team works" subtitle={`Changes by weekday and hour · ${dash.timezone.replaceAll("_", " ")}`} delay={300}>
+                <ActivityHeatmap grid={activity.heatmap} timezone={dash.timezone} />
+              </ListCard>
+            </Widget>
+            <Widget id="areas">
+              <ListCard title="Changes by area" subtitle={`Last ${range} days`} delay={340} empty={activity.total === 0 ? "No changes in this period." : null}>
+                <HBars rows={activity.byArea.map((a) => ({ label: a.area, value: a.count }))} total={activity.total} />
+              </ListCard>
+            </Widget>
+          </div>
+        )}
+
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {team && (
-            <ChartCard title="Team size" subtitle="Current active members, by the day they joined" delay={220}>
-              <TimeSeriesChart data={team.teamByDay} kind="area" valueLabel="Members" unit={["member", "members"]} />
-            </ChartCard>
+            <Widget id="roles">
+              <ListCard title="Team by role" subtitle={`${team.activeMembers} active ${team.activeMembers === 1 ? "member" : "members"}`} action={{ href: `${base}/settings/roles`, label: "Manage" }} delay={360}>
+                <HBars rows={team.roles.map((r) => ({ label: r.name, value: r.count }))} total={team.activeMembers} />
+              </ListCard>
+            </Widget>
           )}
-          {dash.activityByDay && (
-            <ChartCard title="Workspace activity" subtitle={`${dash.activityByDay.reduce((a, d) => a + d.value, 0)} recorded changes in ${range} days`} delay={280}>
-              <TimeSeriesChart data={dash.activityByDay} kind="bar" valueLabel="Changes" unit={["change", "changes"]} />
-            </ChartCard>
+          <Widget id="usage">
+            <ListCard title="Plan usage" subtitle={license ? `${license.planName} limits, checked on every change` : "No active plan"} action={canBilling ? { href: `${base}/settings/billing`, label: "Billing" } : undefined} delay={400}>
+              {ent ? (
+                <div className="grid gap-4">
+                  <Meter label="Users (members + pending)" used={usage.activeMembers + usage.pendingInvitations} limit={ent.maxMembers} />
+                  <Meter label="Admin seats" used={usage.adminSeats} limit={ent.maxAdminSeats} />
+                  <Meter label="Custom roles" used={usage.customRoles} limit={ent.customRoles ? null : 0} note={ent.customRoles ? "Unlimited on this plan" : `Not included in ${license?.planName}`} />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">This workspace is read-only until a plan is active.</p>
+              )}
+            </ListCard>
+          </Widget>
+          {activity && (
+            <Widget id="people">
+              <ListCard title="Most active people" subtitle={`Recorded changes in ${range} days`} delay={440} empty={activity.topPeople.length === 0 ? "No changes in this period." : null}>
+                <ol className="grid gap-3">
+                  {activity.topPeople.map((p, i) => (
+                    <li key={p.name} className="flex items-center gap-3">
+                      <span className="w-4 text-xs font-medium text-muted-foreground tabular-nums">{i + 1}</span>
+                      <Avatar name={p.name} size="sm" />
+                      <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+                      <span className="text-sm font-medium tabular-nums">{p.count}</span>
+                    </li>
+                  ))}
+                </ol>
+              </ListCard>
+            </Widget>
+          )}
+          {team && (
+            <Widget id="joined">
+              <ListCard title="Recently joined" action={{ href: membersHref, label: "All members" }} delay={480}>
+                <ul className="grid gap-3">
+                  {team.recentlyJoined.map((m) => (
+                    <li key={m.id} className="flex items-center gap-3">
+                      <Avatar name={m.name} size="sm" />
+                      <span className="grid min-w-0 flex-1">
+                        <span className="truncate text-sm font-medium">{m.name}</span>
+                        <span className="truncate text-xs text-muted-foreground">{m.roleName}</span>
+                      </span>
+                      <time dateTime={m.joinedAt.toISOString()} className="shrink-0 text-xs text-muted-foreground">{timeAgo(m.joinedAt, now)}</time>
+                    </li>
+                  ))}
+                </ul>
+              </ListCard>
+            </Widget>
+          )}
+          {team && (
+            <Widget id="invites">
+              <InvitationSummary inv={team.invitations} range={range} href={membersHref} />
+            </Widget>
+          )}
+          {team && (
+            <Widget id="expiring">
+              <ListCard title="Expiring invitations" subtitle="Pending links that stop working within 3 days" action={{ href: membersHref, label: "Renew" }} delay={520}
+                empty={team.expiringInvites.length === 0 ? "Nothing is about to expire." : null}>
+                <ul className="grid gap-3">
+                  {team.expiringInvites.map((i) => (
+                    <li key={i.id} className="flex items-center gap-3">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-warning-subtle text-warning"><Hourglass className="size-3.5" aria-hidden /></span>
+                      <span className="grid min-w-0 flex-1">
+                        <span className="truncate text-sm font-medium">{i.email}</span>
+                        <span className="truncate text-xs text-muted-foreground">{i.roleName}</span>
+                      </span>
+                      <span className="shrink-0 text-xs font-medium text-secondary-foreground">{fmtWhen(i.expiresAt, now)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </ListCard>
+            </Widget>
           )}
         </div>
-      )}
 
-      {team && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <RoleBreakdown roles={team.roles} total={team.activeMembers} href={`${base}/settings/roles`} />
-          <InvitationSummary inv={team.invitations} range={range} href={`${base}/settings/members`} />
+        <div className="grid gap-6 lg:grid-cols-5">
+          {feed && <Widget id="feed" className="lg:col-span-3"><ActivityFeed items={feed} /></Widget>}
+          <div className={cn("grid content-start gap-6", feed ? "lg:col-span-2" : "lg:col-span-5")}>
+            {showChecklist && <Widget id="setup"><SetupChecklist steps={steps} /></Widget>}
+            <Widget id="next"><ComingNext /></Widget>
+          </div>
         </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="grid content-start gap-6 lg:col-span-3">
-          {activity && <ActivityFeed items={activity} />}
-          {!activity && <ComingNext />}
-        </div>
-        <div className="grid content-start gap-6 lg:col-span-2">
-          {showChecklist && <SetupChecklist steps={steps} />}
-          {activity && <ComingNext />}
-          {!showChecklist && (
-            <Card className="motion-safe:animate-rise p-5 [animation-delay:480ms] sm:p-6">
-              <h2 className="text-base font-semibold">Your access</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                You&apos;re <span className="font-medium text-foreground">{ctx.roleName}</span> in {ctx.organization.name}. What you can see and change is checked on the server for every request.
-              </p>
-            </Card>
-          )}
-        </div>
-      </div>
+      </DashboardLayout>
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input, NativeSelect } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -48,48 +49,46 @@ function MemberFilters() {
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <Input aria-label="Search members" placeholder="Search by name or email" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
       </div>
-      <NativeSelect
+      <Select
         aria-label="Filter by status"
         className="sm:w-44"
         value={params.get("status") ?? ""}
-        onChange={(e) => {
+        onValueChange={(v) => {
           const next = new URLSearchParams(params);
-          if (e.target.value) next.set("status", e.target.value); else next.delete("status");
+          if (v) next.set("status", v); else next.delete("status");
           router.replace(`${pathname}?${next}`);
         }}
-      >
-        <option value="">All statuses</option>
-        <option value="active">Active</option>
-        <option value="suspended">Suspended</option>
-      </NativeSelect>
+        options={[{ value: "", label: "All statuses" }, { value: "active", label: "Active" }, { value: "suspended", label: "Suspended" }]}
+      />
     </div>
   );
 }
 
 function RoleCell({ slug, member, roles }: { slug: string; member: MemberVM; roles: { id: string; name: string }[] }) {
   const [pending, startTransition] = useTransition();
+  const [value, setValue] = useState(member.role.id);
   if (!member.canManage) return <span className="text-sm text-secondary-foreground">{member.role.name}</span>;
   const options = roles.some((r) => r.id === member.role.id) ? roles : [member.role, ...roles];
   return (
-    <NativeSelect
+    <Select
       aria-label={`Role for ${member.name}`}
-      className="h-8 w-full max-w-48 text-[13px]"
-      defaultValue={member.role.id}
+      size="sm"
+      className="w-full max-w-48"
+      value={value}
       disabled={pending}
-      onChange={(e) => {
-        const roleId = e.target.value;
+      onValueChange={(roleId) => {
+        setValue(roleId);
         startTransition(async () => {
           const res = await updateMemberAction(slug, member.id, { roleId });
           if (res.ok) toast.success(`${member.name} is now ${options.find((r) => r.id === roleId)?.name}`);
           else {
             toast.error(res.error.message);
-            e.target.value = member.role.id;
+            setValue(member.role.id);
           }
         });
       }}
-    >
-      {options.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-    </NativeSelect>
+      options={options.map((r) => ({ value: r.id, label: r.name }))}
+    />
   );
 }
 

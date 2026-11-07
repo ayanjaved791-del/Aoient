@@ -23,8 +23,17 @@ describe("dashboard", () => {
     expect(d.team!.teamByDay).toHaveLength(30);
     expect(d.team!.teamByDay[0].value).toBe(1); // only the member who joined 40 days ago
     expect(d.team!.teamByDay.at(-1)!.value).toBe(3);
-    expect(d.activityByDay).toHaveLength(30);
-    expect(d.activityByDay!.reduce((s, x) => s + x.value, 0)).toBeGreaterThanOrEqual(4); // created + 2 invites + revoke
+    expect(d.activity!.byDay).toHaveLength(30);
+    expect(d.activity!.total).toBe(4); // created + 2 invites + revoke
+    expect(d.activity!.byDay.reduce((s, x) => s + x.value, 0)).toBe(4);
+    expect(d.activity!.heatmap.flat().reduce((s, x) => s + x, 0)).toBe(4);
+    expect(d.activity!.byArea).toEqual([
+      { area: "Team", count: 3 }, { area: "Roles & access", count: 0 }, { area: "Organization", count: 1 }, { area: "Billing", count: 0 },
+    ]);
+    expect(d.activity!.topPeople).toEqual([{ name: a.user.name, count: 4 }]);
+    expect(d.team).toMatchObject({ adminMembers: 1, suspendedMembers: 0, joinedPrevRange: 1, sentPrevRange: 0, medianAcceptHours: null });
+    expect(d.team!.recentlyJoined).toHaveLength(3);
+    expect(d.team!.expiringInvites).toEqual([]);
   });
 
   it("never mixes in another organization's data", async () => {
@@ -36,14 +45,16 @@ describe("dashboard", () => {
     const d = await getDashboard(a.ctx, 90);
     expect(d.team).toMatchObject({ activeMembers: 1, roles: [{ name: "Owner", count: 1 }] });
     expect(d.team!.invitations).toMatchObject({ pending: 0, sent: 0 });
-    expect(d.activityByDay!.reduce((s, x) => s + x.value, 0)).toBe(1); // A's "organization created" only
+    expect(d.activity!.total).toBe(1); // A's "organization created" only
+    expect(d.activity!.topPeople.map((p) => p.name)).toEqual([a.user.name]);
+    expect(d.team!.recentlyJoined.map((m) => m.email)).toEqual([a.user.email]);
   });
 
   it("hides blocks the member's role can't see", async () => {
     const a = await createOrgWithOwner("dash-a");
     const employee = await addMember(a.org.id, "employee");
     const d = await getDashboard(employee.ctx, 7);
-    expect(d.activityByDay).toBeNull();
+    expect(d.activity).toBeNull();
     expect(d.team === null).toBe(!employee.ctx.permissions.has("organization.members.read"));
   });
 

@@ -9,7 +9,8 @@ import { createOrganizationSchema } from "@/lib/validation/organization";
 import { CURRENCIES, timezones } from "@/lib/formatting/options";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Input, NativeSelect } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateOrganizationAction } from "./actions";
@@ -58,10 +59,10 @@ export function GeneralSettingsForm({ slug, initial, readOnly }: { slug: string;
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id="timezone" label="Time zone" error={errors.timezone?.message}>
-                <NativeSelect {...form.register("timezone")}>{tzList.map((tz) => <option key={tz} value={tz}>{tz.replaceAll("_", " ")}</option>)}</NativeSelect>
+                <FormSelect control={form.control} name="timezone" disabled={readOnly} searchable options={tzList.map((tz) => ({ value: tz, label: tz.replaceAll("_", " ") }))} />
               </Field>
               <Field id="currency" label="Default currency" error={errors.currency?.message}>
-                <NativeSelect {...form.register("currency")}>{currencies.map((c) => <option key={c} value={c}>{c}</option>)}</NativeSelect>
+                <FormSelect control={form.control} name="currency" disabled={readOnly} searchable options={currencies.map((c) => ({ value: c, label: c }))} />
               </Field>
             </div>
           </fieldset>

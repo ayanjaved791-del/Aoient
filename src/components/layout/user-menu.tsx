@@ -25,7 +25,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <Avatar name={name} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="grid gap-0.5 font-normal">
+        <DropdownMenuLabel className="grid gap-0.5 pb-1.5 font-normal normal-case tracking-normal">
           <span className="truncate text-sm font-medium text-foreground">{name}</span>
           <span className="truncate text-xs text-muted-foreground">{email}</span>
         </DropdownMenuLabel>
