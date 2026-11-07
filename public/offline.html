@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline · Aoient</title>
+<meta name="theme-color" content="#101828">
+<style>
+  :root { color-scheme: light dark; --bg: #f8fafc; --card: #fff; --fg: #101828; --muted: #667085; --border: #e4e7ec; --primary: #635bff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0b0f19; --card: #111827; --fg: #f2f4f7; --muted: #98a2b3; --border: #253041; --primary: #7a73ff; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--fg);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { width: 100%; max-width: 380px; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px 24px; }
+  img { width: 56px; height: 56px; border-radius: 14px; }
+  h1 { font-size: 20px; margin: 16px 0 6px; }
+  p { margin: 0; color: var(--muted); }
+  button { margin-top: 20px; height: 40px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <img src="/icons/icon-192.png" alt="">
+  <h1>You're offline</h1>
+  <p>Aoient needs an internet connection to load your workspace. Your data is safe; reconnect and try again.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+<script>addEventListener("online", function () { location.reload(); });</script>
+</body>
+</html>

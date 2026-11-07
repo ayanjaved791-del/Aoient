@@ -3,6 +3,8 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Building2, CreditCard, LogOut, Moon, Sun } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { HowToDialog, InstallMenuItem } from "@/components/pwa/install-app";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/avatar";
 import {
@@ -12,6 +14,7 @@ import {
 export function UserMenu({ name, email }: { name: string; email: string }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const [installHelp, setInstallHelp] = useState<null | { ios: boolean }>(null);
 
   async function signOut() {
     await getSupabaseBrowserClient().auth.signOut();
@@ -20,6 +23,8 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
   }
 
   return (
+    <>
+    <HowToDialog open={installHelp !== null} onOpenChange={(o) => !o && setInstallHelp(null)} ios={installHelp?.ios ?? false} />
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-full" aria-label="Account menu">
         <Avatar name={name} />
@@ -36,6 +41,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <DropdownMenuItem asChild>
           <Link href="/pricing"><CreditCard />Plans &amp; pricing</Link>
         </DropdownMenuItem>
+        <InstallMenuItem onNeedHelp={(ios) => setInstallHelp({ ios })} />
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Theme</DropdownMenuLabel>
         {([["light", Sun, "Light"], ["dark", Moon, "Dark"]] as const).map(([value, Icon, label]) => (
@@ -47,5 +53,6 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <DropdownMenuItem onSelect={signOut}><LogOut />Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   );
 }

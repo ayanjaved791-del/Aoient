@@ -40,7 +40,7 @@ export function LandingHeader() {
           <Suspense fallback={<HeaderAccountFallback />}>
             <HeaderAccount />
           </Suspense>
-          <MobileMenu extra={[{ href: "/sign-in", label: "Sign in" }]} />
+          <MobileMenu extra={[{ href: "/download", label: "Get the app" }, { href: "/sign-in", label: "Sign in" }]} />
         </div>
       </div>
     </header>
@@ -511,6 +511,7 @@ export function LandingFooter() {
             <li><Link href="/sign-up" className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">Create account</Link></li>
             <li><Link href="/sign-in" className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">Sign in</Link></li>
             <li><Link href="/forgot-password" className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">Reset password</Link></li>
+            <li><Link href="/download" className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-black dark:hover:text-white">Download the app</Link></li>
           </ul>
         </nav>
       </div>
