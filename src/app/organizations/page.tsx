@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { ArrowRight, Building2, CreditCard, Plus, Sparkles, UserPlus } from "lucide-react";
 import { TRIAL_DAYS } from "@/lib/billing/entitlements";
 import { cn } from "@/lib/utils";
@@ -20,9 +21,11 @@ const SETUP_STEPS = [
   { title: "Choose a plan", icon: CreditCard },
 ];
 
-async function OrganizationList() {
-  const user = await requireUserOrRedirect("/organizations");
+async function OrganizationList({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
+  const [user, sp] = await Promise.all([requireUserOrRedirect("/organizations"), searchParams]);
   const orgs = await listUserOrganizations(user.id);
+  // People in a single workspace (most employees) go straight to it after signing in.
+  if (orgs.length === 1 && sp.all !== "1") redirect(`/${orgs[0].slug}`);
 
   if (orgs.length === 0) {
     const firstName = user.name.split(" ")[0];
@@ -85,10 +88,10 @@ async function OrganizationList() {
   );
 }
 
-export default function OrganizationsPage() {
+export default function OrganizationsPage(props: { searchParams: Promise<{ all?: string }> }) {
   return (
     <Suspense fallback={<div className="grid gap-4"><Skeleton className="h-8 w-60" /><Skeleton className="h-40 w-full" /></div>}>
-      <OrganizationList />
+      <OrganizationList {...props} />
     </Suspense>
   );
 }

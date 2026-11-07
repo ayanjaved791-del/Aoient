@@ -10,6 +10,8 @@ export interface SessionUser {
   name: string;
   email: string;
   emailVerified: boolean;
+  /** Signed in with a temporary password an admin set: must choose their own first. */
+  mustChangePassword: boolean;
 }
 
 /**
@@ -24,8 +26,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const userId = data?.claims?.sub;
   if (error || !isUuid(userId)) return null;
 
-  const [profile] = await getDb()<{ name: string; email: string; email_verified: boolean; status: string }[]>`
-    select name, email, email_verified, status from profile where id = ${userId}`.catch((e: { code?: string }) => {
+  const [profile] = await getDb()<{ name: string; email: string; email_verified: boolean; status: string; must_change_password: boolean }[]>`
+    select name, email, email_verified, status, must_change_password from profile where id = ${userId}`.catch((e: { code?: string }) => {
     if (e?.code === "42P01") {
       throw new Error(
         "Aoient's tables are missing in the database the server connects to (DATABASE_URL, or POSTGRES_URL on Vercel). " +
@@ -35,7 +37,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     throw e;
   });
   if (!profile || profile.status !== "active") return null;
-  return { id: userId, name: profile.name, email: profile.email, emailVerified: profile.email_verified };
+  return { id: userId, name: profile.name, email: profile.email, emailVerified: profile.email_verified, mustChangePassword: profile.must_change_password };
 }
 
 /** For route handlers / server actions: throws 401. */
@@ -49,5 +51,7 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireUserOrRedirect(returnTo?: string): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect(returnTo ? `/sign-in?next=${encodeURIComponent(returnTo)}` : "/sign-in");
+  // A login an admin created starts with a temporary password: choose your own first.
+  if (user.mustChangePassword) redirect(`/account?setup=password${returnTo ? `&next=${encodeURIComponent(returnTo)}` : ""}`);
   return user;
 }

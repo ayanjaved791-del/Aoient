@@ -6,6 +6,7 @@ import { getPageOrgContext } from "@/server/tenancy/page-context";
 import { can } from "@/server/tenancy/context";
 import { getMyEmployeeId, getPeopleStats, listEmployees, listUnlinkedMembers } from "@/server/people/employees";
 import { listDepartments } from "@/server/people/departments";
+import { listGrantableRoles } from "@/server/people/accounts";
 import { whoIsOut } from "@/server/people/leave";
 import { PageHeader } from "@/components/layout/page-header";
 import { PermissionDenied } from "@/components/layout/permission-denied";
@@ -51,7 +52,7 @@ async function Directory({ params, searchParams }: Props) {
   const departmentId = typeof sp.dept === "string" ? sp.dept : undefined;
   const status = sp.status === "archived" || sp.status === "all" ? sp.status : "active";
   const canCreate = can(ctx, "people.employee.create");
-  const [employees, departments, stats, out, myId, everyone, members] = await Promise.all([
+  const [employees, departments, stats, out, myId, everyone, members, loginRoles] = await Promise.all([
     listEmployees(ctx, { query, departmentId, status }),
     listDepartments(ctx),
     getPeopleStats(ctx),
@@ -59,13 +60,15 @@ async function Directory({ params, searchParams }: Props) {
     getMyEmployeeId(ctx),
     canCreate ? listEmployees(ctx, { status: "active" }) : null,
     canCreate ? listUnlinkedMembers(ctx) : null,
+    canCreate && can(ctx, "people.employee.update") ? listGrantableRoles(ctx) : null,
   ]);
   const filtered = Boolean(query || departmentId || status !== "active");
 
   const addButton = canCreate ? (
     <EmployeeDialog slug={ctx.organization.slug} trigger={<Button><UserPlus />Add employee</Button>}
       departments={departments} managers={(everyone ?? []).map((e) => ({ id: e.id, name: e.fullName }))} members={members}
-      canSensitive={can(ctx, "people.employee.sensitive.read")} defaultCurrency={ctx.organization.currency} />
+      canSensitive={can(ctx, "people.employee.sensitive.read")} defaultCurrency={ctx.organization.currency}
+      loginRoles={loginRoles} organizationName={ctx.organization.name} />
   ) : undefined;
 
   return (

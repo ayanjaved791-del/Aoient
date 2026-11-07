@@ -54,6 +54,12 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     case "member.invited":
       text = `invited ${str(m.email) ?? "someone"}${str(m.role) ? ` as ${m.role}` : ""}`;
       break;
+    case "member.login_created":
+      text = `created a login for ${str(m.name) ?? subject}${str(m.role) ? ` as ${m.role}` : ""}`;
+      break;
+    case "member.password_reset":
+      text = `set a temporary password for ${subject}`;
+      break;
     case "member.invitation_revoked":
       text = "revoked an invitation";
       break;

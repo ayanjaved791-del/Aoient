@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Building2, CreditCard, LogOut, Moon, Sun } from "lucide-react";
+import { Building2, CreditCard, LogOut, Moon, Sun, UserCog } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { HowToDialog, InstallMenuItem } from "@/components/pwa/install-app";
@@ -36,7 +36,10 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/organizations"><Building2 />All organizations</Link>
+          <Link href="/account"><UserCog />Account settings</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/organizations?all=1"><Building2 />All organizations</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/pricing"><CreditCard />Plans &amp; pricing</Link>

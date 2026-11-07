@@ -11,6 +11,7 @@ import { runAction } from "@/server/actions/run";
 import { createEmployee, setEmployeeArchived, updateEmployee } from "@/server/people/employees";
 import { createDepartment, deleteDepartment, updateDepartment } from "@/server/people/departments";
 import { cancelLeave, decideLeave, requestLeave } from "@/server/people/leave";
+import { createEmployeeLogin, resetEmployeePassword } from "@/server/people/accounts";
 
 async function ctxFor(slug: string) {
   const user = await requireUser();
@@ -44,4 +45,26 @@ export async function decideLeaveAction(slug: string, id: string, input: unknown
 }
 export async function cancelLeaveAction(slug: string, id: string) {
   return runAction(async () => done(await cancelLeave(await ctxFor(slug), String(id))));
+}
+
+export async function createEmployeeLoginAction(slug: string, employeeId: string, input: unknown) {
+  return runAction(async () => done(await createEmployeeLogin(await ctxFor(slug), String(employeeId), input)));
+}
+export async function resetEmployeePasswordAction(slug: string, employeeId: string, input: unknown) {
+  return runAction(async () => done(await resetEmployeePassword(await ctxFor(slug), String(employeeId), input)));
+}
+
+/** Add employee, and optionally create their login in the same step. The employee is kept even if the login fails. */
+export async function createEmployeeWithLoginAction(slug: string, input: unknown, login: unknown) {
+  return runAction(async () => {
+    const ctx = await ctxFor(slug);
+    const { id } = await createEmployee(ctx, input);
+    if (!login) return done({ id, login: null as null | { email: string } | { error: string } });
+    try {
+      const created = await createEmployeeLogin(ctx, id, login);
+      return done({ id, login: created as { email: string } | { error: string } });
+    } catch (e) {
+      return done({ id, login: { error: e instanceof Error ? e.message : "The login couldn't be created." } });
+    }
+  });
 }

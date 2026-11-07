@@ -18,7 +18,7 @@ async function Form() {
 export default function NewOrganizationPage() {
   return (
     <div className="grid gap-6">
-      <Link href="/organizations" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/organizations?all=1" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" aria-hidden />All organizations
       </Link>
       <div className="grid gap-1">

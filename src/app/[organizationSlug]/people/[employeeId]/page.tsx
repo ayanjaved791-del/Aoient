@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Briefcase, Building2, CalendarDays, Lock, Mail, MapPin, Pencil, Phone, UserRound, Users } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Briefcase, Clock, KeyRound, Building2, CalendarDays, Lock, Mail, MapPin, Pencil, Phone, UserRound, Users } from "lucide-react";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
 import { can } from "@/server/tenancy/context";
 import { NotFoundError, ForbiddenError } from "@/lib/errors";
 import { getEmployee, listEmployees, listUnlinkedMembers } from "@/server/people/employees";
 import { listDepartments } from "@/server/people/departments";
 import { listLeaveForEmployee } from "@/server/people/leave";
+import { getEmployeeLogin, listGrantableRoles } from "@/server/people/accounts";
+import { CreateLoginDialog, ResetPasswordDialog } from "@/modules/people/login-ui";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,11 +50,14 @@ async function Profile({ params }: { params: Promise<{ organizationSlug: string;
   }
   const canEdit = can(ctx, "people.employee.update");
   const canSensitiveEdit = can(ctx, "people.employee.sensitive.read");
-  const [leave, departments, everyone, members] = await Promise.all([
+  const canCreateLogin = !e.memberId && e.status === "active" && canEdit && can(ctx, "organization.members.invite");
+  const [leave, departments, everyone, members, login, roles] = await Promise.all([
     listLeaveForEmployee(ctx, e.id),
     canEdit ? listDepartments(ctx) : null,
     canEdit ? listEmployees(ctx, { status: "active" }) : null,
     canEdit && can(ctx, "people.employee.create") ? listUnlinkedMembers(ctx, e.id) : null,
+    e.memberId && (can(ctx, "organization.members.read") || e.isSelf) ? getEmployeeLogin(ctx, e.id) : null,
+    canCreateLogin ? listGrantableRoles(ctx) : null,
   ]);
   const s = e.sensitive;
   const initial: EmployeeFormValues = {
@@ -125,6 +130,34 @@ async function Profile({ params }: { params: Promise<{ organizationSlug: string;
           )}
         </Card>
       </div>
+
+      {(login || canCreateLogin) && (
+        <Card className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="size-4 text-primary" aria-hidden />Aoient login</h2>
+              {login ? (
+                <div className="mt-3 grid gap-2 text-sm">
+                  <p><span className="text-muted-foreground">Signs in as </span><span className="font-medium">{login.email}</span><span className="text-muted-foreground"> · {login.roleName}{login.memberStatus === "suspended" ? " · suspended" : ""}</span></p>
+                  {login.mustChangePassword ? (
+                    <p className="flex items-center gap-1.5 text-warning"><Clock className="size-3.5" aria-hidden />Temporary password: they&apos;ll choose their own at next sign-in.</p>
+                  ) : (
+                    <p className="flex items-center gap-1.5 text-success"><BadgeCheck className="size-3.5" aria-hidden />{login.passwordChangedAt ? `Their own password, set ${login.passwordChangedAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}.` : "Uses their own password."} Nobody else can see it.</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">When they change their name or email in Account settings, it updates here and in Members automatically.</p>
+                </div>
+              ) : (
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground">Give {e.fullName} an email and temporary password to sign in with. They&apos;ll pick their own password the first time, so only they know it.</p>
+              )}
+            </div>
+            {login?.canResetPassword && <ResetPasswordDialog slug={ctx.organization.slug} employeeId={e.id} name={e.fullName} email={login.email} organizationName={ctx.organization.name} />}
+            {canCreateLogin && roles && roles.length > 0 && (
+              <CreateLoginDialog slug={ctx.organization.slug} employeeId={e.id} name={e.fullName} defaultEmail={e.workEmail ?? ""} roles={roles} organizationName={ctx.organization.name}
+                trigger={<Button><KeyRound />Create login</Button>} />
+            )}
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">

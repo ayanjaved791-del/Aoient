@@ -7,6 +7,8 @@ export type AuditAction =
   | "organization.created"
   | "organization.updated"
   | "member.invited"
+  | "member.login_created"
+  | "member.password_reset"
   | "member.invitation_revoked"
   | "member.joined"
   | "member.role_changed"

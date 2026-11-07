@@ -10,7 +10,9 @@ import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CURRENCIES } from "@/lib/formatting/options";
-import { createEmployeeAction, updateEmployeeAction } from "./actions";
+import { createEmployeeWithLoginAction, updateEmployeeAction } from "./actions";
+import { CredentialsPanel, generatePassword, PasswordInput } from "./login-ui";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface EmployeeFormValues {
   fullName: string; workEmail: string; phone: string; jobTitle: string; employeeCode: string;
@@ -34,10 +36,12 @@ type Opt = { id: string; name: string; email?: string };
  * viewer's role can see them; the server checks that again.
  */
 export function EmployeeDialog({
-  slug, trigger, employeeId, initial = EMPTY_EMPLOYEE, departments, managers, members, canSensitive, defaultCurrency,
+  slug, trigger, employeeId, initial = EMPTY_EMPLOYEE, departments, managers, members, canSensitive, defaultCurrency, loginRoles = null, organizationName = "",
 }: {
   slug: string; trigger: ReactNode; employeeId?: string; initial?: EmployeeFormValues;
   departments: Opt[]; managers: Opt[]; members: Opt[] | null; canSensitive: boolean; defaultCurrency: string;
+  /** Roles the viewer may grant; when set (new employees only), the form can also create their login. */
+  loginRoles?: { id: string; name: string; description: string | null }[] | null; organizationName?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -45,6 +49,11 @@ export function EmployeeDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [withLogin, setWithLogin] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginRole, setLoginRole] = useState("");
+  const [created, setCreated] = useState<null | { id: string; email: string; password: string; name: string }>(null);
+  const canLogin = !employeeId && Boolean(loginRoles?.length);
   const set = (k: keyof EmployeeFormValues) => (val: string) => setV((s) => ({ ...s, [k]: val }));
   const text = (k: keyof EmployeeFormValues) => ({ value: v[k], onChange: (e: { target: { value: string } }) => set(k)(e.target.value) });
 
@@ -56,25 +65,60 @@ export function EmployeeDialog({
     const payload = canSensitive
       ? { ...basic, dateOfBirth, personalEmail, homeAddress, emergencyContactName, emergencyContactPhone, salaryAmount, salaryCurrency: salaryAmount ? salaryCurrency : "", salaryPeriod: salaryAmount ? salaryPeriod : null }
       : basic;
+    if (withLogin && !v.workEmail.trim()) return setErrors({ workEmail: "Enter the email they'll sign in with" });
     setSaving(true);
-    const res = employeeId ? await updateEmployeeAction(slug, employeeId, payload) : await createEmployeeAction(slug, payload);
+    if (employeeId) {
+      const res = await updateEmployeeAction(slug, employeeId, payload);
+      setSaving(false);
+      if (!res.ok) {
+        if (res.error.fields) setErrors(Object.fromEntries(Object.entries(res.error.fields).map(([k, m]) => [k, m[0]])));
+        setFormError(res.error.message);
+        return;
+      }
+      toast.success("Employee updated");
+      setOpen(false);
+      return;
+    }
+    const login = withLogin ? { email: v.workEmail, password: loginPassword, roleId: loginRole } : null;
+    const res = await createEmployeeWithLoginAction(slug, payload, login);
     setSaving(false);
     if (!res.ok) {
       if (res.error.fields) setErrors(Object.fromEntries(Object.entries(res.error.fields).map(([k, m]) => [k, m[0]])));
       setFormError(res.error.message);
       return;
     }
-    toast.success(employeeId ? "Employee updated" : `${v.fullName} added to People`);
+    const { id, login: result } = res.data;
+    if (result && "email" in result) {
+      toast.success(`${v.fullName} added with a login`);
+      setCreated({ id, email: result.email, password: loginPassword, name: v.fullName });
+      return;
+    }
+    if (result && "error" in result) toast.warning(`${v.fullName} was added, but the login wasn't created: ${result.error}`, { duration: 9000 });
+    else toast.success(`${v.fullName} added to People`);
     setOpen(false);
-    if (!employeeId && res.data && typeof res.data === "object" && "id" in res.data) router.push(`/${slug}/people/${(res.data as { id: string }).id}`);
-    else if (!employeeId) setV({ ...EMPTY_EMPLOYEE, salaryCurrency: defaultCurrency });
+    router.push(`/${slug}/people/${id}`);
   }
 
   const none = { value: "", label: "None" };
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setV({ ...initial, salaryCurrency: initial.salaryCurrency || defaultCurrency }); setErrors({}); setFormError(null); } }}>
+    <Dialog open={open} onOpenChange={(o) => {
+      setOpen(o);
+      if (o) {
+        setV({ ...initial, salaryCurrency: initial.salaryCurrency || defaultCurrency }); setErrors({}); setFormError(null);
+        setCreated(null); setWithLogin(false); setLoginPassword(generatePassword());
+        setLoginRole(loginRoles?.find((r) => r.name === "Employee")?.id ?? loginRoles?.[0]?.id ?? "");
+      } else if (created) router.push(`/${slug}/people/${created.id}`);
+    }}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl scroll-thin">
+        {created ? (
+          <>
+            <DialogHeader><DialogTitle>{created.name} can sign in now</DialogTitle><DialogDescription>Give them these details. They&apos;ll choose their own password at first sign-in.</DialogDescription></DialogHeader>
+            <CredentialsPanel name={created.name} email={created.email} password={created.password} organizationName={organizationName} />
+            <DialogFooter><Button onClick={() => { setOpen(false); router.push(`/${slug}/people/${created.id}`); }}>Open profile</Button></DialogFooter>
+          </>
+        ) : (
+        <>
         <DialogHeader>
           <DialogTitle>{employeeId ? "Edit employee" : "Add employee"}</DialogTitle>
           <DialogDescription>Work details are visible to everyone who can view People. Private details are only for HR and the person themselves.</DialogDescription>
@@ -127,11 +171,35 @@ export function EmployeeDialog({
             </fieldset>
           )}
 
+          {canLogin && (
+            <div className={`grid gap-4 rounded-xl border p-4 ${withLogin ? "border-primary/40 bg-primary-subtle/40" : "border-border"}`}>
+              <label className="flex items-start gap-3">
+                <Checkbox checked={withLogin} onCheckedChange={(c) => setWithLogin(c === true)} className="mt-0.5" />
+                <span className="grid gap-0.5">
+                  <span className="text-sm font-medium">Create an Aoient login for them</span>
+                  <span className="text-xs text-muted-foreground">They sign in with their work email and a temporary password, then choose their own.</span>
+                </span>
+              </label>
+              {withLogin && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field id="emp-login-password" label="Temporary password" hint="Sign-in email: the work email above." error={errors.password}>
+                    <PasswordInput id="emp-login-password" value={loginPassword} onChange={setLoginPassword} />
+                  </Field>
+                  <Field id="emp-login-role" label="Role in the workspace" error={errors.roleId}>
+                    <Select value={loginRole} onValueChange={setLoginRole} options={(loginRoles ?? []).map((r) => ({ value: r.id, label: r.name, description: r.description }))} />
+                  </Field>
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>{employeeId ? "Save changes" : "Add employee"}</Button>
+            <Button type="submit" loading={saving}>{employeeId ? "Save changes" : withLogin ? "Add employee & create login" : "Add employee"}</Button>
           </DialogFooter>
         </form>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );

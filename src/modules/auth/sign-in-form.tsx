@@ -20,7 +20,7 @@ type Values = z.infer<typeof signInSchema>;
 export function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = safeNextPath(params.get("next"));
+  const next = safeNextPath(params.get("next"), "/organizations");
   const [error, setError] = useState<{ message: string; unverifiedEmail?: string } | null>(null);
   const form = useForm<Values>({ resolver: zodResolver(signInSchema), defaultValues: { email: "", password: "" } });
   const { errors, isSubmitting } = form.formState;
