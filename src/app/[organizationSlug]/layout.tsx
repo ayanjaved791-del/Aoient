@@ -14,6 +14,7 @@ import { LicenseBanner, licenseLabel } from "@/modules/billing/license-view";
 import { TRIAL_DAYS, daysLeft } from "@/lib/billing/entitlements";
 import { cn } from "@/lib/utils";
 import { AssistantPanel } from "@/modules/assistant/assistant-panel";
+import { LiveSync } from "@/components/live/live-sync";
 import { assistantScope, suggestionsFor } from "@/server/assistant/answer";
 
 /** Only pages the member can open are linked; each page still re-checks on the server. */
@@ -120,6 +121,7 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
         </header>
         {(seesPlan || readOnly) && <LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} />}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+        <LiveSync slug={ctx.organization.slug} />
         <AssistantPanel slug={ctx.organization.slug} organizationName={ctx.organization.name} roleName={ctx.roleName}
           suggestions={suggestionsFor(ctx).slice(0, 6)} fullAccess={assistantScope(ctx).team} />
       </div>
