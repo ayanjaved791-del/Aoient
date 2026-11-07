@@ -34,6 +34,8 @@ const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Enter your current password"),
   password: z.string().min(10, "Use at least 10 characters").max(128, "Use 128 characters or fewer"),
   confirmPassword: z.string(),
+  /** Turnstile token, needed when bot protection is on in Supabase. */
+  captchaToken: z.string().max(4096).optional(),
 }).refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" })
   .refine((v) => v.password !== v.currentPassword, { path: ["password"], message: "Choose a password different from the current one" });
 
@@ -48,7 +50,8 @@ export async function changePassword(user: SessionUser, input: unknown): Promise
   if (!supabase) throw new ConflictError("Sign-in isn't configured on this server.");
   // Confirm the current password with a throwaway client so this session's cookies aren't touched.
   const probe = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  const check = await probe.auth.signInWithPassword({ email: user.email, password: data.currentPassword });
+  const check = await probe.auth.signInWithPassword({ email: user.email, password: data.currentPassword, options: { captchaToken: data.captchaToken } });
+  if (check.error?.code === "captcha_failed") throw new ValidationError("The security check didn't pass. Complete it again and retry.");
   if (check.error) throw new ValidationError("Your current password isn't right.", { currentPassword: ["Your current password isn't right"] });
   await probe.auth.signOut({ scope: "local" }).catch(() => undefined);
   const { error } = await supabase.auth.updateUser({ password: data.password });

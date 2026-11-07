@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
 import { SupabaseMissingNotice } from "./supabase-missing-notice";
 import { OAuthButtons } from "./oauth-buttons";
+import { CaptchaBox, useCaptcha } from "@/components/captcha/turnstile";
 
 type Values = z.infer<typeof signUpSchema>;
 
@@ -27,6 +28,7 @@ export function SignUpForm() {
     defaultValues: { name: "", email: params.get("email") ?? "", password: "", confirmPassword: "" },
   });
   const { errors, isSubmitting } = form.formState;
+  const captcha = useCaptcha();
 
   if (!isSupabaseConfigured) return <SupabaseMissingNotice />;
 
@@ -39,8 +41,10 @@ export function SignUpForm() {
       options: {
         data: { name: values.name },
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`,
+        captchaToken: captcha.token,
       },
     });
+    captcha.reset();
     if (error) {
       setServerError(describeAuthError(error, "We couldn't create your account."));
       return;
@@ -70,7 +74,8 @@ export function SignUpForm() {
       <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>
         <Input type="password" autoComplete="new-password" {...form.register("confirmPassword")} />
       </Field>
-      <Button type="submit" loading={isSubmitting} className="w-full">Create account</Button>
+      <CaptchaBox captcha={captcha} />
+      <Button type="submit" loading={isSubmitting} disabled={!captcha.ready} className="w-full">Create account</Button>
     </form>
   );
 }

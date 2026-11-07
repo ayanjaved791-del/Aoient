@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { CaptchaBox, useCaptcha } from "@/components/captcha/turnstile";
 
 export function VerifyEmailPanel() {
   const params = useSearchParams();
@@ -18,6 +19,7 @@ export function VerifyEmailPanel() {
   const linkError = params.get("error");
   const [email, setEmail] = useState(knownEmail);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const captcha = useCaptcha();
 
   async function resend(e?: FormEvent) {
     e?.preventDefault();
@@ -26,8 +28,9 @@ export function VerifyEmailPanel() {
     const { error } = await getSupabaseBrowserClient().auth.resend({
       type: "signup",
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`, captchaToken: captcha.token },
     });
+    captcha.reset();
     setStatus(error ? "error" : "sent");
   }
 
@@ -57,7 +60,8 @@ export function VerifyEmailPanel() {
               <Input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
           )}
-          <Button type="submit" variant="secondary" loading={status === "sending"} disabled={status === "sent" || !email.trim()}>
+          <CaptchaBox captcha={captcha} />
+          <Button type="submit" variant="secondary" loading={status === "sending"} disabled={status === "sent" || !email.trim() || !captcha.ready}>
             Resend verification email
           </Button>
         </form>

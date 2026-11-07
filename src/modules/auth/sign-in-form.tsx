@@ -15,6 +15,7 @@ import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
 import { SupabaseMissingNotice } from "./supabase-missing-notice";
 import { OAuthButtons } from "./oauth-buttons";
+import { CaptchaBox, useCaptcha } from "@/components/captcha/turnstile";
 
 type Values = z.infer<typeof signInSchema>;
 
@@ -24,13 +25,15 @@ export function SignInForm() {
   const next = safeNextPath(params.get("next"), "/organizations");
   const [error, setError] = useState<{ message: string; unverifiedEmail?: string } | null>(null);
   const form = useForm<Values>({ resolver: zodResolver(signInSchema), defaultValues: { email: "", password: "" } });
+  const captcha = useCaptcha();
   const { errors, isSubmitting } = form.formState;
 
   if (!isSupabaseConfigured) return <SupabaseMissingNotice />;
 
   async function onSubmit(values: Values) {
     setError(null);
-    const { error } = await getSupabaseBrowserClient().auth.signInWithPassword({ email: values.email, password: values.password });
+    const { error } = await getSupabaseBrowserClient().auth.signInWithPassword({ email: values.email, password: values.password, options: { captchaToken: captcha.token } });
+    captcha.reset();
     if (error) {
       setError({
         message: describeAuthError(error, "We couldn't sign you in."),
@@ -68,7 +71,8 @@ export function SignInForm() {
       <div className="-mt-1 flex justify-end">
         <Link href="/forgot-password" className="text-[13px] font-medium text-primary hover:underline">Forgot password?</Link>
       </div>
-      <Button type="submit" loading={isSubmitting} className="w-full">Sign in</Button>
+      <CaptchaBox captcha={captcha} />
+      <Button type="submit" loading={isSubmitting} disabled={!captcha.ready} className="w-full">Sign in</Button>
     </form>
   );
 }

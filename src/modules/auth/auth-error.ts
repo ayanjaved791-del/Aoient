@@ -21,6 +21,8 @@ export function describeAuthError(error: { status?: number; code?: string; messa
       return "Too many emails were sent. Wait a few minutes and try again.";
     case "over_request_rate_limit":
       return "Too many attempts. Wait a minute and try again.";
+    case "captcha_failed":
+      return "The security check didn't pass. Complete it again and retry.";
     case "same_password":
       return "Choose a password different from your current one.";
   }

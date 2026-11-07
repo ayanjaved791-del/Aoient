@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { CaptchaBox, useCaptcha } from "@/components/captcha/turnstile";
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, KeyRound } from "lucide-react";
 import { toast } from "sonner";
@@ -19,10 +20,12 @@ export function PasswordForm({ setup, next }: { setup: boolean; next: string }) 
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const captcha = useCaptcha();
   async function submit(e: FormEvent) {
     e.preventDefault();
     setErrors({}); setFormError(null); setSaving(true);
-    const res = await changePasswordAction(v);
+    const res = await changePasswordAction({ ...v, captchaToken: captcha.token });
+    captcha.reset();
     setSaving(false);
     if (!res.ok) { setErrors(toErrors(res.error.fields)); if (!res.error.fields) setFormError(res.error.message); return; }
     toast.success("Password updated. Only you know it now.");
@@ -42,11 +45,12 @@ export function PasswordForm({ setup, next }: { setup: boolean; next: string }) 
       <Field id="confirm-password" label="Confirm new password" error={errors.confirmPassword}>
         <Input type={type} autoComplete="new-password" value={v.confirmPassword} onChange={(e) => setV({ ...v, confirmPassword: e.target.value })} />
       </Field>
+      <CaptchaBox captcha={captcha} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => setShow((s) => !s)} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           {show ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}{show ? "Hide passwords" : "Show passwords"}
         </button>
-        <Button type="submit" loading={saving}><KeyRound />{setup ? "Set my password" : "Update password"}</Button>
+        <Button type="submit" loading={saving} disabled={!captcha.ready}><KeyRound />{setup ? "Set my password" : "Update password"}</Button>
       </div>
     </form>
   );
