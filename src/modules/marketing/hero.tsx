@@ -201,7 +201,7 @@ function ProductPreview() {
         </div>
       </div>
       <figcaption className="relative mt-5 text-xs text-neutral-500">
-        Preview with sample data. People, CRM, Projects, Time and Finance are in development and will be released one by one.
+        Preview with sample data. People is live; CRM, Projects, Time and Finance are in development and will be released one by one.
       </figcaption>
     </figure>
   );

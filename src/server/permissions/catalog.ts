@@ -29,7 +29,7 @@ export type ModuleKey =
 export const MODULES: Record<ModuleKey, { label: string; released: boolean }> = {
   organization: { label: "Organization & access", released: true },
   billing: { label: "Billing & subscription", released: true },
-  people: { label: "People", released: false },
+  people: { label: "People", released: true },
   crm: { label: "CRM", released: false },
   projects: { label: "Projects", released: false },
   time: { label: "Time", released: false },
@@ -126,6 +126,24 @@ export const PERMISSIONS = [
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
+
+/**
+ * Permissions in a released module whose feature isn't built yet. They can be
+ * granted ahead of time, but the UI marks them "coming soon" and never implies
+ * they do anything today.
+ */
+export const NOT_YET_AVAILABLE: ReadonlySet<string> = new Set([
+  "people.attendance.manage",
+  "people.onboarding.manage",
+  "people.payroll.read",
+  "people.payroll.manage",
+]);
+
+/** True when the feature behind a permission exists in the product today. */
+export function isPermissionLive(key: string): boolean {
+  const p = PERMISSIONS.find((x) => x.key === key);
+  return Boolean(p && MODULES[p.module].released && !NOT_YET_AVAILABLE.has(key));
+}
 
 export const ALL_PERMISSION_KEYS: readonly PermissionKey[] = PERMISSIONS.map((p) => p.key);
 

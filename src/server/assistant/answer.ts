@@ -1,7 +1,7 @@
 import "server-only";
 import { getDb } from "@/server/database/client";
 import { can, type OrgContext } from "@/server/tenancy/context";
-import { MODULES, PERMISSIONS } from "@/server/permissions/catalog";
+import { isPermissionLive, MODULES, PERMISSIONS } from "@/server/permissions/catalog";
 import { listMembers, type MemberRow } from "@/server/organizations/organizations";
 import { listPendingInvitations } from "@/server/organizations/invitations";
 import { listRoles } from "@/server/organizations/roles";
@@ -11,6 +11,9 @@ import { getDashboard, type DashboardRange } from "@/server/dashboard/dashboard"
 import { daysLeft } from "@/lib/billing/entitlements";
 import { timeAgo } from "@/lib/activity";
 import { parseQuestion, type Intent } from "@/lib/assistant/intents";
+import { getPeopleStats } from "@/server/people/employees";
+import { listLeave, whoIsOut } from "@/server/people/leave";
+import { listDepartments } from "@/server/people/departments";
 
 export interface AssistantAnswer {
   intent: Intent;
@@ -53,6 +56,8 @@ export function suggestionsFor(ctx: OrgContext): string[] {
   if (s.billing) out.push("How many days are left on our plan?", "Are we close to our limits?");
   if (s.audit) out.push("What happened today?", "Who is most active this month?");
   if (s.roles) out.push("What can a Project Manager do?");
+  if (can(ctx, "people.employee.read")) out.push("Who is on leave today?");
+  if (can(ctx, "people.leave.approve")) out.push("Which leave requests are pending?");
   out.push("How do I install the app?");
   return [...new Set(out)];
 }
@@ -120,7 +125,7 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
         if (!s.roles) return denied(p.intent, ctx, "what other roles can do");
         const role = (await listRoles(ctx)).find((r) => r.name === p.role);
         if (role) {
-          const released = PERMISSIONS.filter((x) => role.permissions.includes(x.key) && MODULES[x.module].released);
+          const released = PERMISSIONS.filter((x) => role.permissions.includes(x.key) && isPermissionLive(x.key));
           const later = role.permissions.length - released.length;
           return {
             intent: p.intent,
@@ -131,7 +136,7 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
           };
         }
       }
-      const mine = PERMISSIONS.filter((x) => ctx.permissions.has(x.key) && MODULES[x.module].released);
+      const mine = PERMISSIONS.filter((x) => ctx.permissions.has(x.key) && isPermissionLive(x.key));
       return {
         intent: p.intent,
         text: mine.length
@@ -324,6 +329,49 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
         intent: p.intent,
         text: top.length ? `Most active in the last ${d.range} days:` : `No changes were recorded in the last ${d.range} days.`,
         items: top.map((t, i) => ({ title: `${i + 1}. ${t.name}`, meta: plural(t.count, "change") })),
+      };
+    }
+
+    case "people_count": {
+      if (!s.team && !can(ctx, "people.department.manage")) return denied(p.intent, ctx, "staff numbers");
+      const [stats, depts] = await Promise.all([getPeopleStats(ctx), listDepartments(ctx)]);
+      return {
+        intent: p.intent,
+        text: `People has ${plural(stats.headcount, "active employee")} in ${plural(stats.departments, "department")}.`,
+        stats: depts.map((d) => ({ label: d.name, value: String(d.employeeCount) })),
+        links: [{ href: `${base}/people`, label: "Open People" }],
+      };
+    }
+
+    case "on_leave": {
+      if (!can(ctx, "people.employee.read")) return denied(p.intent, ctx, "who is on leave");
+      const out = await whoIsOut(ctx);
+      return {
+        intent: p.intent,
+        text: out.length ? `${plural(out.length, "person is", "people are")} on leave today:` : "No one is on leave today.",
+        items: out.map((o) => ({ title: o.name, subtitle: `${o.type} leave`, meta: `until ${fmtDate(new Date(`${o.until}T12:00:00Z`))}` })),
+        links: [{ href: `${base}/people`, label: "Open People" }],
+      };
+    }
+
+    case "leave_pending": {
+      if (!can(ctx, "people.leave.approve")) {
+        const mine = await listLeave(ctx, { scope: "mine" });
+        const open = mine.filter((l) => l.status === "pending");
+        return {
+          intent: p.intent,
+          restricted: true,
+          text: open.length ? `You have ${plural(open.length, "leave request")} waiting for approval.` : "You have no leave requests waiting.",
+          items: open.map((l) => ({ title: `${l.type} leave · ${l.days} d`, meta: l.startDate })),
+          links: [{ href: `${base}/people/leave`, label: "Open Leave" }],
+        };
+      }
+      const pending = await listLeave(ctx, { scope: "team", status: "pending" });
+      return {
+        intent: p.intent,
+        text: pending.length ? `${plural(pending.length, "leave request is", "leave requests are")} waiting for review:` : "No leave requests are waiting.",
+        items: pending.map((l) => ({ title: l.employee.name, subtitle: `${l.type} leave · ${l.days} ${l.days === 1 ? "day" : "days"}`, meta: l.startDate })),
+        links: [{ href: `${base}/people/leave?tab=team`, label: "Review requests" }],
       };
     }
 

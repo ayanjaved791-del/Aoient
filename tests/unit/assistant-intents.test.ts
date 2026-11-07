@@ -27,6 +27,10 @@ describe("assistant intents", () => {
     ["How do I invite someone?", "howto_invite"],
     ["app install kaise karein", "howto_install"],
     ["who is ali@example.com", "member_lookup"],
+    ["Who is on leave today?", "on_leave"],
+    ["aaj chutti par kaun hai", "on_leave"],
+    ["Which leave requests are pending?", "leave_pending"],
+    ["how many employees do we have", "people_count"],
     ["blah blah", "unknown"],
   ])("%s → %s", (q, expected) => {
     expect(intent(q)).toBe(expected);

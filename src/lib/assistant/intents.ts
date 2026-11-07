@@ -26,6 +26,9 @@ export type Intent =
   | "activity"
   | "top_people"
   | "workspace"
+  | "on_leave"
+  | "leave_pending"
+  | "people_count"
   | "howto_invite"
   | "howto_role"
   | "howto_install"
@@ -104,6 +107,9 @@ const RULES: Rule[] = [
   { intent: "usage", weight: 3, any: [/\b(usage|limit|limits|seats|seat|quota|capacity|kitni jagah)\b/] },
   { intent: "top_people", weight: 3, any: [/\b(most active|top|busiest people|who did the most|sab se zyada)\b/] },
   { intent: "activity", weight: 2, any: [/\b(activity|changes|happened|history|audit|log|logs|events|kya hua|recent changes|what changed)\b/] },
+  { intent: "on_leave", weight: 4, any: [/\b(on leave|who is out|who's out|out today|absent|chutti par|chhutti par|chutti pe|leave par)\b/] },
+  { intent: "leave_pending", weight: 4, any: [/\b(pending|waiting|baqi)\b.*\b(leave|chutti|chhutti)\b/, /\b(leave|chutti|chhutti)\b.*\b(requests?|pending|approve|approval)\b/] },
+  { intent: "people_count", weight: 4, any: [/\bhow many\b.*\b(employees|staff)\b/, /\b(kitne|kitnay)\b.*\b(employees|staff|mulazim)\b/, /\b(headcount|employee count|staff count)\b/, /\bdepartments?\b/] },
   { intent: "workspace", weight: 2, any: [/\b(workspace|organization|organisation|company|timezone|time zone|currency|url|slug)\b/] },
 ];
 

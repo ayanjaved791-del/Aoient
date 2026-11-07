@@ -28,8 +28,16 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ...(can(ctx, "organization.read") ? [{ href: `${base}/settings/general`, label: "General", icon: "general" as const }] : []),
     ...(can(ctx, "billing.read") ? [{ href: `${base}/settings/billing`, label: "Billing & plan", icon: "billing" as const }] : []),
   ];
+  const people: SidebarGroup["links"] = [
+    ...(can(ctx, "people.employee.read") ? [
+      { href: `${base}/people`, label: "Directory", icon: "people" as const, exact: true },
+      { href: `${base}/people/departments`, label: "Departments", icon: "departments" as const },
+    ] : []),
+    ...(can(ctx, "people.leave.request") || can(ctx, "people.leave.approve") ? [{ href: `${base}/people/leave`, label: "Leave", icon: "leave" as const }] : []),
+  ];
   return [
     { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
+    ...(people.length ? [{ label: "People", links: people }] : []),
     ...(team.length ? [{ label: "Team", links: team }] : []),
     ...(org.length ? [{ label: "Organization", links: org }] : []),
   ];

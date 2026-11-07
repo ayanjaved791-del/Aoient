@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import {
-  Activity, ArrowRight, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
+  Activity, ArrowRight, Contact, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
 } from "lucide-react";
 import { getOverviewCounts } from "@/server/organizations/views";
 import { DASHBOARD_RANGES, getDashboard, parseRange, type DashboardRange, type TeamStats } from "@/server/dashboard/dashboard";
@@ -11,6 +11,8 @@ import { ActivityHeatmap } from "@/modules/dashboard/activity-heatmap";
 import { licenseLabel } from "@/modules/billing/license-view";
 import { daysLeft } from "@/lib/billing/entitlements";
 import { getLicenseOverview } from "@/server/billing/license";
+import { getPeopleStats } from "@/server/people/employees";
+import { whoIsOut } from "@/server/people/leave";
 import { listRecentActivity } from "@/server/audit/activity";
 import { can } from "@/server/tenancy/context";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
@@ -21,7 +23,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard };
+const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact };
 
 function Hero({ firstName, orgName, roleName, actions }: { firstName: string; orgName: string; roleName: string; actions: { href: string; label: string; icon: typeof Users }[] }) {
   return (
@@ -256,7 +258,7 @@ function ComingNext() {
         <Badge className="ml-auto">Not available yet</Badge>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        This release covers your organization, team access, roles and billing. People, CRM, Projects, Time and Finance arrive in the next milestones.
+        Live today: your organization, team access, roles, billing and People (directory, departments and leave). CRM, Projects, Time and Finance arrive in the next milestones.
       </p>
     </Card>
   );
@@ -327,11 +329,14 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
   const canInvite = can(ctx, "organization.members.invite");
   const canReadAudit = can(ctx, "organization.audit.read");
   const canBilling = can(ctx, "billing.read");
-  const [counts, { license, usage }, feed, dash] = await Promise.all([
+  const canPeople = can(ctx, "people.employee.read");
+  const [counts, { license, usage }, feed, dash, peopleStats, out] = await Promise.all([
     canSeeMembers ? getOverviewCounts(ctx) : null,
     getLicenseOverview(ctx.organizationId),
     canReadAudit ? listRecentActivity(ctx, 6) : null,
     getDashboard(ctx, range),
+    canPeople ? getPeopleStats(ctx) : null,
+    canPeople ? whoIsOut(ctx) : null,
   ]);
   const now = new Date();
   const ent = license?.entitlements;
@@ -361,6 +366,7 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
     ...(team || activity ? [{ id: "trends", label: "Trend charts" }] : []),
     ...(activity ? [{ id: "heatmap", label: "When your team works" }, { id: "areas", label: "Changes by area" }, { id: "people", label: "Most active people" }] : []),
     ...(team ? [{ id: "roles", label: "Team by role" }, { id: "joined", label: "Recently joined" }, { id: "invites", label: "Invitations" }, { id: "expiring", label: "Expiring invitations" }] : []),
+    ...(peopleStats ? [{ id: "people", label: "People today" }] : []),
     { id: "usage", label: "Plan usage" },
     ...(feed ? [{ id: "feed", label: "Recent activity" }] : []),
     ...(showChecklist ? [{ id: "setup", label: "Setup checklist" }] : []),
@@ -451,6 +457,27 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
             <Widget id="roles">
               <ListCard title="Team by role" subtitle={`${team.activeMembers} active ${team.activeMembers === 1 ? "member" : "members"}`} action={{ href: `${base}/settings/roles`, label: "Manage" }} delay={360}>
                 <HBars rows={team.roles.map((r) => ({ label: r.name, value: r.count }))} total={team.activeMembers} />
+              </ListCard>
+            </Widget>
+          )}
+          {peopleStats && out && (
+            <Widget id="people">
+              <ListCard title="People today" subtitle={`${peopleStats.headcount} active · ${peopleStats.departments} departments`} action={{ href: `${base}/people`, label: "Open" }} delay={380}>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-border p-3"><p className="text-xs text-muted-foreground">On leave today</p><p className="mt-1 text-xl font-semibold">{peopleStats.onLeaveToday}</p></div>
+                  {peopleStats.pendingLeave !== null ? (
+                    <Link href={`${base}/people/leave?tab=team`} className="rounded-lg border border-border p-3 hover:border-primary/40"><p className="text-xs text-muted-foreground">Leave to review</p><p className="mt-1 text-xl font-semibold">{peopleStats.pendingLeave}</p></Link>
+                  ) : (
+                    <div className="rounded-lg border border-border p-3"><p className="text-xs text-muted-foreground">Started this month</p><p className="mt-1 text-xl font-semibold">{peopleStats.joinedThisMonth}</p></div>
+                  )}
+                </div>
+                {out.length > 0 && (
+                  <ul className="mt-3 grid gap-2">
+                    {out.slice(0, 4).map((o) => (
+                      <li key={o.id} className="flex items-center gap-2 text-sm"><Avatar name={o.name} size="sm" /><span className="truncate">{o.name}</span><span className="ml-auto text-xs text-muted-foreground">{o.type} leave</span></li>
+                    ))}
+                  </ul>
+                )}
               </ListCard>
             </Widget>
           )}

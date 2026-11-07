@@ -49,7 +49,7 @@ export function LandingHeader() {
 
 const MODULES: { key: ModuleKey; name: string; body: string; live?: boolean }[] = [
   { key: "organization", name: "Organization & access", body: "Workspaces, members, invitations, roles and the audit log.", live: true },
-  { key: "people", name: "People", body: "Employee directory, departments, managers and time off." },
+  { key: "people", name: "People", body: "Employee directory, departments, managers, private HR details and leave requests with approvals.", live: true },
   { key: "crm", name: "CRM", body: "Leads, contacts, companies and a deal pipeline." },
   { key: "projects", name: "Projects", body: "Projects, tasks, milestones and boards — created straight from won deals." },
   { key: "time", name: "Time", body: "Timers, timesheets, approvals and billable hours." },
@@ -358,7 +358,7 @@ export function StepsSection() {
 const FAQ = [
   {
     q: "What can I use today?",
-    a: "Accounts with email verification, organizations, member invitations, owner/admin/member and custom roles, the audit log and the /api/v1 organization API. The business modules (People, CRM, Projects and the rest) are in development and are released one at a time.",
+    a: "Accounts with email verification, organizations, member invitations, owner/admin/member and custom roles, the audit log and the /api/v1 organization API. People is live too: employee directory, departments, managers, private HR details and leave with approvals. CRM, Projects and the other modules are in development and are released one at a time.",
   },
   {
     q: "Who is Aoient for?",

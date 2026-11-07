@@ -3,7 +3,7 @@ import { assertCustomRoles, assertWritable } from "@/server/billing/license";
 import { getDb, transaction, type Db } from "@/server/database/client";
 import { recordAudit } from "@/server/audit/audit";
 import { assertPermission, type OrgContext } from "@/server/tenancy/context";
-import { isPermissionKey, MODULES, PERMISSIONS, type PermissionKey } from "@/server/permissions/catalog";
+import { isPermissionKey, isPermissionLive, MODULES, PERMISSIONS, type PermissionKey } from "@/server/permissions/catalog";
 import { isSubsetOf, type RoleDescriptor } from "@/server/permissions/evaluator";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
 import { isUuid } from "@/lib/ids";
@@ -75,7 +75,7 @@ export function permissionCatalogForUi() {
     module,
     label: meta.label,
     released: meta.released,
-    permissions: PERMISSIONS.filter((p) => p.module === module).map((p) => ({ key: p.key, description: p.description })),
+    permissions: PERMISSIONS.filter((p) => p.module === module).map((p) => ({ key: p.key, description: p.description, live: isPermissionLive(p.key) })),
   }));
 }
 

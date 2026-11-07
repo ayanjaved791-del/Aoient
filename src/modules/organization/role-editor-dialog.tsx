@@ -14,7 +14,7 @@ export interface CatalogGroup {
   module: string;
   label: string;
   released: boolean;
-  permissions: { key: string; description: string }[];
+  permissions: { key: string; description: string; live: boolean }[];
 }
 
 export function RoleEditorDialog({
@@ -105,7 +105,7 @@ export function RoleEditorDialog({
                       <li key={p.key} className="flex items-start gap-2.5 rounded px-2 py-1.5">
                         <Checkbox id={id} checked={selected.has(p.key)} disabled={disabled} onCheckedChange={(v) => toggle(p.key, v === true)} className="mt-0.5" />
                         <label htmlFor={id} className={disabled ? "grid cursor-not-allowed opacity-60" : "grid cursor-pointer"}>
-                          <span className="text-[13px] text-foreground">{p.description}</span>
+                          <span className="text-[13px] text-foreground">{p.description}{group.released && !p.live && <span className="ml-1.5 rounded-full border border-dashed border-border px-1.5 text-[10px] text-muted-foreground">coming soon</span>}</span>
                           <span className="font-mono text-[11px] text-muted-foreground">{p.key}{disabled && " · not in your role"}</span>
                         </label>
                       </li>

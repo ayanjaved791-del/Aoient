@@ -17,7 +17,18 @@ export type AuditAction =
   | "role.created"
   | "role.updated"
   | "role.deleted"
-  | "billing.license_updated";
+  | "billing.license_updated"
+  | "people.employee_created"
+  | "people.employee_updated"
+  | "people.employee_archived"
+  | "people.employee_restored"
+  | "people.department_created"
+  | "people.department_updated"
+  | "people.department_deleted"
+  | "people.leave_requested"
+  | "people.leave_approved"
+  | "people.leave_rejected"
+  | "people.leave_cancelled";
 
 export interface AuditEvent {
   organizationId: string | null;

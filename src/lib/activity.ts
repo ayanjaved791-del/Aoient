@@ -14,7 +14,7 @@ export interface ActivityRow {
   createdAt: Date;
 }
 
-export type ActivityKind = "organization" | "member" | "role" | "billing";
+export type ActivityKind = "organization" | "member" | "role" | "billing" | "people";
 
 export interface ActivityItem {
   id: string;
@@ -31,7 +31,9 @@ export function describeActivity(row: ActivityRow): ActivityItem {
   const m = row.metadata ?? {};
   const actor = row.actorName ?? (row.source === "webhook" ? "Paddle" : row.source === "system" ? "Aoient" : "Someone");
   const subject = row.subjectName ?? "a member";
-  const kind: ActivityKind = row.action.startsWith("role.")
+  const kind: ActivityKind = row.action.startsWith("people.")
+    ? "people"
+    : row.action.startsWith("role.")
     ? "role"
     : row.action.startsWith("billing.")
       ? "billing"
@@ -88,6 +90,41 @@ export function describeActivity(row: ActivityRow): ActivityItem {
       text = `updated the subscription: ${plan} plan${status ? ` (${status.replace("_", " ")})` : ""}`;
       break;
     }
+    case "people.employee_created":
+      text = `added ${str(m.name) ?? "an employee"} to People`;
+      break;
+    case "people.employee_updated": {
+      const fields = Array.isArray(m.fields) ? (m.fields as unknown[]).filter((f): f is string => typeof f === "string") : [];
+      text = `updated ${str(m.name) ?? "an employee"}'s ${fields.length ? fields.map((f) => f.replace(/([A-Z])/g, " $1").toLowerCase()).join(", ") : "record"}`;
+      break;
+    }
+    case "people.employee_archived":
+      text = `archived ${str(m.name) ?? "an employee"}`;
+      break;
+    case "people.employee_restored":
+      text = `restored ${str(m.name) ?? "an employee"}`;
+      break;
+    case "people.department_created":
+      text = `created the ${str(m.name) ?? "new"} department`;
+      break;
+    case "people.department_updated":
+      text = `updated the ${str(m.name) ?? ""} department`.replace("the  department", "a department");
+      break;
+    case "people.department_deleted":
+      text = `deleted the ${str(m.name) ?? ""} department`.replace("the  department", "a department");
+      break;
+    case "people.leave_requested":
+      text = `requested ${str(m.type) ?? ""} leave${typeof m.days === "number" ? ` (${m.days} day${m.days === 1 ? "" : "s"})` : ""}`.replace("  ", " ");
+      break;
+    case "people.leave_approved":
+      text = `approved ${str(m.name) ? `${m.name}'s` : "a"} leave request`;
+      break;
+    case "people.leave_rejected":
+      text = `declined ${str(m.name) ? `${m.name}'s` : "a"} leave request`;
+      break;
+    case "people.leave_cancelled":
+      text = "cancelled a leave request";
+      break;
     default:
       text = row.action.replace(/[._]/g, " ");
   }
