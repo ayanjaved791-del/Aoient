@@ -32,8 +32,9 @@ export async function GET() {
     }
   }
 
-  const ready = body.database === "connected" && Object.values(body.tables).every(Boolean);
-  if (body.database === "not configured") body.hint = "Set DATABASE_URL (or connect Supabase in Vercel, which sets POSTGRES_URL).";
+  const ready = isSupabaseConfigured && body.database === "connected" && Object.values(body.tables).every(Boolean);
+  if (!isSupabaseConfigured) body.hint = "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or connect Supabase in Vercel) and redeploy.";
+  else if (body.database === "not configured") body.hint = "Set DATABASE_URL (or connect Supabase in Vercel, which sets POSTGRES_URL).";
   else if (body.database === "unreachable") body.hint = "The database URL is set but the server can't connect. Check the password and that the Supabase project is running.";
   else if (!ready) body.hint = "Run supabase/setup.sql in the Supabase SQL Editor of the project this site uses.";
 

@@ -18,7 +18,7 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="landing min-h-dvh bg-white text-black dark:bg-black dark:text-white">
+    <div className="landing min-h-dvh overflow-x-clip bg-white text-black dark:bg-black dark:text-white">
       <LandingEffects />
       <LandingHeader />
       <main>
