@@ -12,6 +12,7 @@ import { createOrganization, leaveOrganization, removeMember, updateMember, upda
 import { acceptInvitation, createInvitation, renewInvitation, revokeInvitation } from "@/server/organizations/invitations";
 import { createCustomRole, deleteCustomRole, updateCustomRole } from "@/server/organizations/roles";
 import { createBillingPortalUrl } from "@/server/billing/paddle-portal";
+import { syncMyLicense } from "@/server/billing/paddle-sync";
 
 async function ctxFor(slug: string) {
   const user = await requireUser();
@@ -110,4 +111,12 @@ export async function acceptInvitationAction(token: string) {
 
 export async function openBillingPortalAction(slug: string) {
   return runAction(async () => ({ url: await createBillingPortalUrl(await ctxFor(slug)) }));
+}
+
+export async function syncPaddleLicenseAction(slug: string) {
+  return runAction(async () => {
+    const result = await syncMyLicense(await ctxFor(slug));
+    refresh();
+    return result;
+  });
 }

@@ -4,8 +4,8 @@
  * (with the secret PADDLE_API_KEY) whether it was really paid, and only shows it
  * to the customer whose email it was billed to.
  *
- * This confirms a payment for display. It does NOT activate a plan: that only
- * happens through Paddle's signed webhook (see paddle-webhook.ts).
+ * This confirms a payment for display. Activation reads the subscription
+ * itself from Paddle (paddle-sync.ts) or arrives by signed webhook.
  *
  * No `server-only` import so unit tests can run it; it is only imported by
  * server components.
@@ -49,6 +49,8 @@ export interface PaidTransaction {
   trial: { days: number; firstChargeAt: string | null } | null;
   /** From checkout custom_data: only a hint for linking; callers must verify membership. */
   organizationId: string | null;
+  /** The subscription this checkout created, for the server-side license sync. */
+  subscriptionId: string | null;
 }
 
 const TXN_ID = /^txn_[a-z0-9]{10,64}$/;
@@ -69,6 +71,7 @@ export function formatMinor(amount: string | undefined, currency: string): strin
 interface PaddleTransaction {
   id: string;
   status: string;
+  subscription_id?: string | null;
   currency_code: string;
   custom_data?: { aoientPlan?: string; interval?: string; organizationId?: unknown } | null;
   invoice_number?: string | null;
@@ -159,6 +162,7 @@ export async function lookupTransaction(
       lineItems,
       trial: trialInfo(txn),
       organizationId: typeof txn.custom_data?.organizationId === "string" ? txn.custom_data.organizationId : null,
+      subscriptionId: txn.subscription_id ?? null,
     },
   };
 }

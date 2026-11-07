@@ -3,7 +3,8 @@ import { Suspense } from "react";
 import { requireUserOrRedirect } from "@/server/auth/session";
 import { lookupTransaction } from "@/server/billing/paddle-transactions";
 import { PaymentSuccess } from "@/modules/billing/payment-success";
-import { resolveOrgContext } from "@/server/tenancy/context";
+import { can, resolveOrgContext } from "@/server/tenancy/context";
+import { syncLicenseFromPaddle } from "@/server/billing/paddle-sync";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = { title: "Payment successful" };
@@ -18,9 +19,16 @@ async function ConfirmedPayment({ searchParams }: { searchParams: Promise<{ txn?
   // Link to the workspace the plan is for, but only if this user belongs to it.
   let workspace: { name: string; slug: string } | null = null;
   if (result.kind === "paid" && result.details.organizationId) {
-    workspace = await resolveOrgContext(user.id, { id: result.details.organizationId })
-      .then((ctx) => ({ name: ctx.organization.name, slug: ctx.organization.slug }))
-      .catch(() => null);
+    const ctx = await resolveOrgContext(user.id, { id: result.details.organizationId }).catch(() => null);
+    if (ctx) {
+      workspace = { name: ctx.organization.name, slug: ctx.organization.slug };
+      // Activate now instead of waiting for the webhook: the subscription is read
+      // from Paddle's API (secret key) and must carry this workspace's signed
+      // checkout token. Idempotent, so reloading the page is harmless.
+      if (can(ctx, "billing.manage")) {
+        await syncLicenseFromPaddle(ctx.organizationId, { subscriptionId: result.details.subscriptionId });
+      }
+    }
   }
   return <PaymentSuccess result={result} firstName={user.name.split(" ")[0] ?? ""} retryHref={here} workspace={workspace} />;
 }

@@ -8,7 +8,9 @@ import { planForPriceId } from "@/lib/billing/plans";
 import { verifyCheckout } from "./checkout-token";
 
 /**
- * Paddle webhooks are the ONLY way a paid license is granted or changed.
+ * Paid licenses come only from Paddle itself: its signed webhooks, or (see
+ * paddle-sync.ts) a server-side read of the subscription from Paddle's API
+ * with the secret API key. Never from the browser.
  *
  * 1. The signature proves the request came from Paddle (HMAC-SHA256 of
  *    "ts:body" with PADDLE_WEBHOOK_SECRET, timestamp within 5 minutes).
@@ -46,7 +48,7 @@ export function verifyPaddleSignature(
   return signatures.some((sig) => safeEqual(sig, expected));
 }
 
-interface PaddleSubscription {
+export interface PaddleSubscription {
   id: string;
   status: string;
   customer_id?: string;
@@ -55,6 +57,7 @@ interface PaddleSubscription {
   current_billing_period?: { ends_at?: string } | null;
   canceled_at?: string | null;
   scheduled_change?: { action?: string; effective_at?: string } | null;
+  updated_at?: string;
 }
 
 export interface PaddleEvent {
@@ -95,6 +98,26 @@ export async function processPaddleEvent(event: PaddleEvent): Promise<WebhookOut
       return outcome;
     };
 
+    const { outcome, organizationId } = await applySubscription(tx, sub, occurredAt, { source: "webhook", event: event.event_type });
+    return finish(outcome, organizationId);
+  });
+}
+
+export type ApplyOutcome = Exclude<WebhookOutcome, "duplicate" | "ignored_event_type">;
+
+/**
+ * Writes a Paddle subscription onto the organization's license, inside the
+ * caller's transaction. Shared by the webhook and the API sync so both follow
+ * exactly the same rules (price → plan, signed organization binding, one live
+ * subscription per organization, stale updates ignored).
+ */
+export async function applySubscription(
+  tx: Db,
+  sub: PaddleSubscription,
+  occurredAt: Date,
+  via: { source: "webhook" | "system"; event: string },
+): Promise<{ outcome: ApplyOutcome; organizationId: string | null }> {
+  const finish = async (outcome: ApplyOutcome, organizationId: string | null = null) => ({ outcome, organizationId });
     const mapped = planForPriceId(sub.items?.[0]?.price?.id);
     if (!mapped || !STATUSES.has(sub.status)) return finish("ignored_unknown_price");
 
@@ -140,13 +163,12 @@ export async function processPaddleEvent(event: PaddleEvent): Promise<WebhookOut
       organizationId,
       actorUserId: null,
       action: "billing.license_updated",
-      source: "webhook",
+      source: via.source,
       targetType: "subscription",
       targetId: sub.id,
-      metadata: { event: event.event_type, plan: mapped.plan, interval: mapped.interval, status: sub.status },
+      metadata: { event: via.event, plan: mapped.plan, interval: mapped.interval, status: sub.status },
     });
-    return finish("applied", organizationId);
-  });
+  return finish("applied", organizationId);
 }
 
 async function resolveOrganization(tx: Db, sub: PaddleSubscription): Promise<string | null> {

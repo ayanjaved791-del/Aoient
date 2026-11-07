@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ManageSubscriptionButton } from "./manage-subscription-button";
+import { SyncPaddleButton } from "./sync-paddle-button";
 
 const fmtDate = (d: Date | null) => (d ? d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—");
 
@@ -107,6 +108,7 @@ export function LicenseView({
               <Button asChild><Link href={`/pricing?org=${slug}`}><CreditCard className="size-4" aria-hidden />{license?.state === "trial" ? "Choose a plan" : "Buy a plan"}</Link></Button>
             )}
             {canManage && license?.source === "paddle" && <ManageSubscriptionButton slug={slug} />}
+            {canManage && <SyncPaddleButton slug={slug} label={license?.source === "paddle" ? "Refresh from Paddle" : "Already paid? Sync with Paddle"} />}
             {!canManage && <p className="text-sm text-muted-foreground">Only members whose role includes billing management can change the plan.</p>}
           </div>
         </CardContent>
