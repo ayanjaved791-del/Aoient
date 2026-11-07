@@ -10,7 +10,7 @@
  * No `server-only` import so unit tests can run it; it is only imported by
  * server components.
  */
-import { PLANS } from "@/lib/billing/plans";
+import { PLANS, priceFor } from "@/lib/billing/plans";
 
 export type TransactionLookup =
   | { kind: "not-configured" }
@@ -51,6 +51,12 @@ export interface PaidTransaction {
   organizationId: string | null;
   /** The subscription this checkout created, for the server-side license sync. */
   subscriptionId: string | null;
+  /** The plan's recurring price from Paddle, e.g. { amount: "$29.00", per: "month" }. */
+  price: { amount: string; per: string } | null;
+  /** The next charge Paddle will take: after the trial, or at the end of this period. */
+  nextPayment: { amount: string; date: string } | null;
+  /** Paddle sandbox (test money) or production. */
+  environment: "sandbox" | "production";
 }
 
 const TXN_ID = /^txn_[a-z0-9]{10,64}$/;
@@ -80,7 +86,15 @@ interface PaddleTransaction {
     totals?: { grand_total?: string; total?: string; tax?: string; subtotal?: string };
     line_items?: { quantity?: number; totals?: { total?: string }; product?: { name?: string } | null }[];
   };
-  items?: { price?: { name?: string | null; trial_period?: { interval?: string; frequency?: number } | null } }[];
+  items?: {
+    quantity?: number;
+    price?: {
+      name?: string | null;
+      trial_period?: { interval?: string; frequency?: number } | null;
+      billing_cycle?: { interval?: string; frequency?: number } | null;
+      unit_price?: { amount?: string; currency_code?: string } | null;
+    };
+  }[];
   customer?: { email?: string; name?: string | null } | null;
   address?: { first_line?: string | null; second_line?: string | null; city?: string | null; postal_code?: string | null; region?: string | null; country_code?: string | null } | null;
   business?: { name?: string | null; tax_identifier?: string | null } | null;
@@ -163,8 +177,28 @@ export async function lookupTransaction(
       trial: trialInfo(txn),
       organizationId: typeof txn.custom_data?.organizationId === "string" ? txn.custom_data.organizationId : null,
       subscriptionId: txn.subscription_id ?? null,
+      ...priceInfo(txn, plan, interval),
+      environment: env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "production" : "sandbox",
     },
   };
+}
+
+/**
+ * The recurring price comes from Paddle's own price object (what will really be
+ * charged); our plan table is only a fallback when Paddle doesn't send it.
+ */
+function priceInfo(txn: PaddleTransaction, plan: (typeof PLANS)[number] | undefined, interval: "monthly" | "yearly" | null): Pick<PaidTransaction, "price" | "nextPayment"> {
+  const item = txn.items?.[0];
+  const unit = item?.price?.unit_price;
+  const cycle = item?.price?.billing_cycle;
+  const per = cycle?.interval ? `${cycle.frequency && cycle.frequency > 1 ? `${cycle.frequency} ` : ""}${cycle.interval}${cycle.frequency && cycle.frequency > 1 ? "s" : ""}` : interval === "yearly" ? "year" : interval === "monthly" ? "month" : null;
+  let amount: string | null = null;
+  if (unit?.amount) amount = formatMinor(String(Number(unit.amount) * (item?.quantity ?? 1)), unit.currency_code ?? txn.currency_code);
+  else if (plan && interval) amount = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(priceFor(plan, interval).amount);
+  const price = amount && per ? { amount, per } : null;
+  const trial = trialInfo(txn);
+  const nextDate = trial?.firstChargeAt ?? txn.billing_period?.ends_at ?? null;
+  return { price, nextPayment: price && nextDate ? { amount: price.amount, date: nextDate } : null };
 }
 
 function titleCase(s: string) {

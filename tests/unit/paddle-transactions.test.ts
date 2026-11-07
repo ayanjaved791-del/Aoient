@@ -79,6 +79,18 @@ describe("free-trial checkouts", () => {
     const r = await lookupTransaction(TXN, "owner@example.com", { env: ENV, fetchImpl: paddleReturns(200, txn) });
     expect(r).toMatchObject({ kind: "paid", details: { total: "$0.00", trial: { days: 14, firstChargeAt: "2026-11-21T10:00:00Z" }, organizationId: "org-1" } });
   });
+  it("shows Paddle's real recurring price and the next charge, in sandbox or live", async () => {
+    const txn = paidTxn({
+      details: { totals: { grand_total: "0", tax: "0", subtotal: "0" } },
+      items: [{ quantity: 1, price: { name: "Medisea Monthly", trial_period: { interval: "day", frequency: 14 }, billing_cycle: { interval: "month", frequency: 1 }, unit_price: { amount: "2900", currency_code: "USD" } } }],
+      billing_period: { starts_at: "2026-11-07T10:00:00Z", ends_at: "2026-11-21T10:00:00Z" },
+      custom_data: { aoientPlan: "medisea", interval: "monthly" },
+    });
+    const sandbox = await lookupTransaction(TXN, "owner@example.com", { env: ENV, fetchImpl: paddleReturns(200, txn) });
+    expect(sandbox).toMatchObject({ kind: "paid", details: { price: { amount: "$29.00", per: "month" }, nextPayment: { amount: "$29.00", date: "2026-11-21T10:00:00Z" }, environment: "sandbox" } });
+    const live = await lookupTransaction(TXN, "owner@example.com", { env: { ...ENV, NEXT_PUBLIC_PADDLE_ENVIRONMENT: "production" }, fetchImpl: paddleReturns(200, txn) });
+    expect(live).toMatchObject({ kind: "paid", details: { price: { amount: "$29.00", per: "month" }, environment: "production" } });
+  });
   it("a charged payment is not a trial", async () => {
     const r = await lookupTransaction(TXN, "owner@example.com", { env: ENV, fetchImpl: paddleReturns(200, paidTxn()) });
     expect(r).toMatchObject({ kind: "paid", details: { trial: null } });

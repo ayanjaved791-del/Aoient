@@ -31,7 +31,7 @@ const fmtShort = (iso: string) => new Date(iso).toLocaleDateString("en-US", { ye
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) : "—";
 
-export async function buildReceiptPdf(t: PaidTransaction, opts: { generatedAt?: Date } = {}): Promise<Uint8Array> {
+export async function buildReceiptPdf(t: PaidTransaction, opts: { generatedAt?: Date; siteHost?: string } = {}): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const receiptNo = t.invoiceNumber ?? t.id.slice(-10).toUpperCase();
   doc.setTitle(`Aoient receipt ${receiptNo}`);
@@ -70,13 +70,21 @@ export async function buildReceiptPdf(t: PaidTransaction, opts: { generatedAt?: 
 
   // ── Amount + PAID ──
   let y = A4.h - bandH - 54;
-  p.text("Amount paid", M, y, { size: 10, color: C.muted });
+  p.text(t.trial ? "Due today" : "Amount paid", M, y, { size: 10, color: C.muted });
   p.text(t.total, M, y - 34, { font: bold, size: 30 });
   const amountW = bold.widthOfTextAtSize(p.safe(t.total, bold), 30);
-  pill(page, M + amountW + 14, y - 30, "PAID", bold);
+  pill(page, M + amountW + 14, y - 30, t.trial ? "TRIAL STARTED" : "PAID", bold);
+  if (t.environment === "sandbox") {
+    // Sandbox receipts are clearly marked so they can't pass for a real payment.
+    const label = "TEST MODE - NO REAL MONEY";
+    const w = bold.widthOfTextAtSize(label, 8) + label.length * 0.6 + 20;
+    page.drawRectangle({ x: A4.w - M - w, y: A4.h - 128, width: w, height: 18, color: C.orange, opacity: 0.95 });
+    p.text(label, A4.w - M - 9, A4.h - 122, { font: bold, size: 8, color: C.white, align: "right", spacing: 0.6 });
+  }
+  const priceText = t.price ? `${t.price.amount} / ${t.price.per}` : null;
   const summary = t.trial
-    ? `${t.planName} plan · ${t.trial.days}-day free trial${t.trial.firstChargeAt ? ` · first payment ${fmtDate(t.trial.firstChargeAt)}` : ""}`
-    : `${t.planName} plan${t.interval ? ` · ${t.interval === "yearly" ? "Yearly" : "Monthly"}` : ""} · paid ${fmtDate(t.billedAt)}`;
+    ? `${t.planName} plan${priceText ? ` (${priceText})` : ""} · ${t.trial.days}-day free trial${t.nextPayment ? ` · first payment ${t.nextPayment.amount} on ${fmtDate(t.nextPayment.date)}` : ""}`
+    : `${t.planName} plan${priceText ? ` · ${priceText}` : t.interval ? ` · ${t.interval === "yearly" ? "Yearly" : "Monthly"}` : ""} · paid ${fmtDate(t.billedAt)}`;
   p.text(summary, M, y - 56, {
     size: 10,
     color: C.muted,
@@ -93,6 +101,10 @@ export async function buildReceiptPdf(t: PaidTransaction, opts: { generatedAt?: 
     ["Date paid", fmtDate(t.billedAt)],
     ["Payment method", t.paymentMethod ?? "—"],
     ...(t.period ? ([["Billing period", `${fmtShort(t.period.startsAt)} – ${fmtShort(t.period.endsAt)}`]] as [string, string][]) : []),
+    ...(priceText ? ([["Plan price", priceText]] as [string, string][]) : []),
+    ...(t.trial ? ([["Free trial", `${t.trial.days} days`]] as [string, string][]) : []),
+    ...(t.nextPayment ? ([[t.trial ? "First payment" : "Next payment", `${t.nextPayment.amount} on ${fmtShort(t.nextPayment.date)}`]] as [string, string][]) : []),
+    ["Mode", t.environment === "sandbox" ? "Sandbox (test)" : "Live"],
   ];
   const boxH = Math.max(billed.length * 15 + 40, details.length * 17 + 40);
   card(page, M, y - boxH, colW, boxH);
@@ -142,7 +154,7 @@ export async function buildReceiptPdf(t: PaidTransaction, opts: { generatedAt?: 
   });
   y -= rows.length * 20 + 6;
   page.drawRectangle({ x: tx - 12, y: y - 10, width: 220 + 12, height: 30, color: C.greenSubtle });
-  p.text("Amount paid", tx, y, { font: bold, size: 11, color: C.green });
+  p.text(t.trial ? "Due today" : "Amount paid", tx, y, { font: bold, size: 11, color: C.green });
   p.text(`${t.total} ${t.currency}`, M + tableW - 14, y, { font: bold, size: 11, color: C.green, align: "right" });
 
   // ── Merchant of record note ──
@@ -165,7 +177,7 @@ export async function buildReceiptPdf(t: PaidTransaction, opts: { generatedAt?: 
   p.text("Thank you for choosing Aoient.", M, 50, { font: bold, size: 10 });
   p.text(`Transaction ${t.id}`, M, 36, { font: mono, size: 7.5, color: C.muted });
   p.text(`Generated ${fmtDate((opts.generatedAt ?? new Date()).toISOString())}`, A4.w - M, 50, { size: 8.5, color: C.muted, align: "right" });
-  p.text("aoient.com", A4.w - M, 36, { size: 8.5, color: C.violet, align: "right" });
+  p.text(opts.siteHost ?? "Aoient", A4.w - M, 36, { size: 8.5, color: C.violet, align: "right" });
 
   return doc.save();
 }

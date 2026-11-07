@@ -62,26 +62,52 @@ function Paid({ details, firstName, workspace }: { details: PaidTransaction; fir
   const trial = details.trial;
   const firstCharge = trial?.firstChargeAt ? new Date(trial.firstChargeAt) : null;
   const coveredUntil = firstCharge && details.interval ? addInterval(firstCharge, details.interval) : null;
-  const nextPrice = plan && details.interval ? `$${priceFor(plan, details.interval).amount}` : null;
-  const rows: [string, ReactNode][] = [
-    ["Plan", <span key="plan">{details.planName}{details.interval && <span className="text-muted-foreground"> · {details.interval}</span>}</span>],
-    ...(trial
-      ? ([
-          ["Due today", <span key="due" className="font-semibold">{details.total}</span>],
-          ["Free trial", `${trial.days} days`],
-          ...(firstCharge ? ([["First payment", `${nextPrice ? `${nextPrice} on ` : ""}${longDate(firstCharge)}`]] as [string, ReactNode][]) : []),
-          ...(coveredUntil ? ([["Covered until", longDate(coveredUntil)]] as [string, ReactNode][]) : []),
-        ] as [string, ReactNode][])
-      : ([
-          ["Amount paid", <span key="amount" className="font-semibold">{details.total}</span>],
-          ["Tax included", details.tax],
-        ] as [string, ReactNode][])),
-    ...(details.paymentMethod ? ([["Payment method", details.paymentMethod]] as [string, ReactNode][]) : []),
-    ...(details.invoiceNumber ? ([["Invoice", details.invoiceNumber]] as [string, ReactNode][]) : []),
-    ...(details.billedAt
-      ? ([["Date", new Date(details.billedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })]] as [string, ReactNode][])
+  const priceLabel = details.price ? `${details.price.amount} / ${details.price.per}` : plan && details.interval ? `$${priceFor(plan, details.interval).amount} / ${priceFor(plan, details.interval).per}` : null;
+  type Row = [string, ReactNode];
+  const groups: { title: string; rows: Row[] }[] = [
+    {
+      title: "Plan",
+      rows: [
+        ["Plan", <span key="plan">{details.planName}{details.interval && <span className="text-muted-foreground"> · {details.interval}</span>}</span>],
+        ...(priceLabel ? ([["Price", <span key="price" className="font-medium">{priceLabel}</span>]] as Row[]) : []),
+        ...(trial ? ([["Free trial", `${trial.days} days`]] as Row[]) : []),
+        ...(details.period ? ([["Billing period", `${longDate(details.period.startsAt)} – ${longDate(details.period.endsAt)}`]] as Row[]) : []),
+        ...(coveredUntil ? ([["Covered until", longDate(coveredUntil)]] as Row[]) : []),
+      ],
+    },
+    {
+      title: "Payment",
+      rows: [
+        ...details.lineItems.map((li) => [`${li.name}${li.quantity > 1 ? ` × ${li.quantity}` : ""}`, li.amount] as Row),
+        ["Subtotal", details.subtotal],
+        ["Tax", details.tax],
+        [trial ? "Due today" : "Total paid", <span key="total" className="text-base font-semibold">{details.total} <span className="text-xs font-normal text-muted-foreground">{details.currency}</span></span>],
+        ...(details.paymentMethod ? ([["Payment method", details.paymentMethod]] as Row[]) : []),
+        ...(details.billedAt ? ([["Date", longDate(details.billedAt)]] as Row[]) : []),
+      ],
+    },
+    ...(details.nextPayment
+      ? [{ title: "Next payment", rows: [[trial ? "First charge" : "Renews", <span key="next"><span className="font-medium">{details.nextPayment.amount}</span> on {longDate(details.nextPayment.date)}</span>]] as Row[] }]
       : []),
-    ["Transaction ID", <code key="txn" className="break-all text-xs">{details.id}</code>],
+    ...(details.customerName || details.address || details.business
+      ? [{
+          title: "Billed to",
+          rows: [
+            ...(details.customerName ? ([["Name", details.customerName]] as Row[]) : []),
+            ["Email", details.email],
+            ...(details.business ? ([["Business", `${details.business.name}${details.business.taxId ? ` · Tax ID ${details.business.taxId}` : ""}`]] as Row[]) : []),
+            ...(details.address ? ([["Address", details.address]] as Row[]) : []),
+          ] as Row[],
+        }]
+      : []),
+    {
+      title: "Reference",
+      rows: [
+        ...(details.invoiceNumber ? ([["Invoice", details.invoiceNumber]] as Row[]) : []),
+        ["Transaction ID", <code key="txn" className="break-all text-xs">{details.id}</code>],
+        ["Mode", details.environment === "sandbox" ? <span key="mode" className="rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-medium text-warning">Sandbox · test payment, no real money</span> : "Live payment"],
+      ],
+    },
   ];
 
   return (
@@ -134,14 +160,19 @@ function Paid({ details, firstName, workspace }: { details: PaidTransaction; fir
           <h2 className="text-sm font-semibold">Receipt</h2>
           <span className="ml-auto text-xs text-muted-foreground">Confirmed by Paddle</span>
         </div>
-        <dl className="divide-y divide-border text-sm">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex items-start justify-between gap-6 px-5 py-3 sm:px-6">
-              <dt className="shrink-0 text-muted-foreground">{label}</dt>
-              <dd className="min-w-0 text-right">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        {groups.map((g) => (
+          <div key={g.title} className="border-b border-border last:border-b-0">
+            <h3 className="bg-surface-muted/50 px-5 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:px-6">{g.title}</h3>
+            <dl className="divide-y divide-border text-sm">
+              {g.rows.map(([label, value]) => (
+                <div key={label} className="flex items-start justify-between gap-6 px-5 py-2.5 sm:px-6">
+                  <dt className="shrink-0 text-muted-foreground">{label}</dt>
+                  <dd className="min-w-0 text-right [overflow-wrap:anywhere]">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
         <div className="flex flex-wrap items-center gap-3 bg-surface-muted px-5 py-4 sm:px-6">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary"><FileText className="size-5" aria-hidden /></span>
           <div className="min-w-[12rem] flex-1">

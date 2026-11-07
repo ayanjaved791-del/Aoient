@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { getSessionUser } from "@/server/auth/session";
 import { lookupTransaction } from "@/server/billing/paddle-transactions";
 import { buildReceiptPdf } from "@/server/billing/receipt-pdf";
+import { resolveAppUrl } from "@/lib/app-url";
 
 /**
  * GET /checkout/success/receipt?txn=… → PDF receipt.
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     return new Response(status === 503 ? "We couldn't confirm this payment with Paddle right now." : "Receipt not found.", { status });
   }
 
-  const pdf = await buildReceiptPdf(result.details);
+  const pdf = await buildReceiptPdf(result.details, { siteHost: new URL(resolveAppUrl()).host });
   const name = `aoient-receipt-${(result.details.invoiceNumber ?? result.details.id).replace(/[^A-Za-z0-9_-]/g, "")}.pdf`;
   return new Response(Buffer.from(pdf), {
     headers: {
