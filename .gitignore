@@ -43,3 +43,7 @@ next-env.d.ts
 
 
 .e2e-server.log
+
+# desktop app
+/desktop/node_modules
+/desktop/dist

@@ -1,0 +1,61 @@
+{
+  "name": "aoient-desktop",
+  "productName": "Aoient",
+  "version": "1.0.0",
+  "description": "Aoient desktop app for Windows, macOS and Linux.",
+  "homepage": "https://aoient.vercel.app",
+  "author": "Aoient",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "desktopName": "aoient.desktop",
+  "aoient": {
+    "appUrl": "https://aoient.vercel.app"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never",
+    "release": "electron-builder --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
+  "devDependencies": {
+    "electron": "44.9.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.aoient.desktop",
+    "productName": "Aoient",
+    "copyright": "Copyright © Aoient",
+    "artifactName": "Aoient-${version}-${os}-${arch}.${ext}",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "offline.html", "build/icon.png", "package.json"],
+    "protocols": [{ "name": "Aoient", "schemes": ["aoient"] }],
+    "publish": [{ "provider": "github", "owner": "ayanjaved791-del", "repo": "Aoient", "releaseType": "release" }],
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": { "title": "Aoient" },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "shortcutName": "Aoient",
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [{ "target": "AppImage", "arch": ["x64"] }, { "target": "deb", "arch": ["x64"] }],
+      "category": "Office",
+      "executableName": "aoient",
+      "syncDesktopName": true,
+      "maintainer": "Aoient",
+      "synopsis": "Aoient business workspace"
+    }
+  }
+}

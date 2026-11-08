@@ -5,6 +5,7 @@ import { isGoogleAuthEnabled } from "@/lib/supabase/config";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
+import { DESKTOP_APP_PARAM, DESKTOP_APP_VALUE, isDesktopUserAgent } from "@/lib/desktop";
 
 function GoogleMark() {
   return (
@@ -21,25 +22,44 @@ function GoogleMark() {
 export function OAuthButtons({ next }: { next: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inBrowser, setInBrowser] = useState(false);
   if (!isGoogleAuthEnabled) return null;
 
   async function google() {
     setError(null);
     setBusy(true);
-    const { error } = await getSupabaseBrowserClient().auth.signInWithOAuth({
+    // Google doesn't allow sign-in inside desktop apps' own windows, so the
+    // desktop app sends it to the system browser and gets it back by link.
+    const desktop = isDesktopUserAgent(navigator.userAgent);
+    const back = new URL("/auth/callback", window.location.origin);
+    back.searchParams.set("next", next);
+    if (desktop) back.searchParams.set(DESKTOP_APP_PARAM, DESKTOP_APP_VALUE);
+    const { data, error } = await getSupabaseBrowserClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { redirectTo: back.toString(), skipBrowserRedirect: desktop },
     });
-    // On success the browser is already navigating to Google.
     if (error) {
       setBusy(false);
       setError(describeAuthError(error, "Google sign-in isn't available right now."));
+      return;
     }
+    if (desktop && data.url) {
+      // The app opens this in the browser instead of loading it here.
+      window.location.assign(data.url);
+      setBusy(false);
+      setInBrowser(true);
+    }
+    // In a normal browser, the page is already on its way to Google.
   }
 
   return (
     <div className="grid gap-4">
       {error && <Alert tone="danger" title={error} />}
+      {inBrowser && (
+        <Alert tone="info" title="Continue in your browser">
+          We opened Google sign-in in your web browser. Finish there and you&apos;ll come straight back to the app.
+        </Alert>
+      )}
       <Button type="button" variant="secondary" className="w-full" loading={busy} onClick={google}>
         {!busy && <GoogleMark />}Continue with Google
       </Button>

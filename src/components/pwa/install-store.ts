@@ -1,5 +1,6 @@
 "use client";
 import { useSyncExternalStore } from "react";
+import { isDesktopUserAgent } from "@/lib/desktop";
 
 /** Chrome/Edge/Samsung fire this when the app can be installed; Safari and Firefox never do. */
 interface BeforeInstallPromptEvent extends Event {
@@ -23,6 +24,8 @@ const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
 function isStandalone() {
+  // The Aoient desktop app is already an installed app.
+  if (isDesktopUserAgent(navigator.userAgent)) return true;
   return window.matchMedia("(display-mode: standalone)").matches
     || window.matchMedia("(display-mode: window-controls-overlay)").matches
     || (navigator as Navigator & { standalone?: boolean }).standalone === true;

@@ -1,0 +1,86 @@
+# Builds the Aoient desktop app for Windows, macOS and Linux and publishes the
+# installers as a GitHub Release (tag v<version> from desktop/package.json).
+#
+# Runs when desktop/ changes on main or the development branch, or by hand
+# from the Actions tab. To ship a new version, raise "version" in
+# desktop/package.json; a run for a version that is already released only
+# re-uploads missing files.
+name: Desktop app
+
+on:
+  push:
+    branches: [main, claude/magical-mendel-3scq52]
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+          - os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Build installers
+        run: npx electron-builder ${{ matrix.target }} --publish never
+        # No paid signing certificates: macOS gets a free ad-hoc signature
+        # (mac.identity "-") and Windows is unsigned, so the first launch
+        # shows the system's "unknown publisher" warning.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+            desktop/dist/*.blockmap
+            desktop/dist/latest*.yml
+
+  # One job publishes everything, so parallel builds never race to create the release.
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./desktop/package.json').version")
+          TAG="v$VERSION"
+          ls -la out
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/* --clobber
+          else
+            gh release create "$TAG" out/* --target "$GITHUB_SHA" --title "Aoient desktop $VERSION" \
+              --notes "Aoient for Windows, macOS and Linux. Download from https://aoient.vercel.app/download"
+          fi

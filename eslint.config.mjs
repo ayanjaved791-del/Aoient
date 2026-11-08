@@ -12,7 +12,16 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Electron desktop shell: plain Node/CommonJS, built separately.
+    "desktop/node_modules/**",
+    "desktop/dist/**",
   ]),
+  // The Electron shell is plain CommonJS for Node, which loads it directly.
+  {
+    files: ["desktop/**/*.js"],
+    languageOptions: { sourceType: "commonjs" },
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline · Aoient</title>
+<style>
+  :root { color-scheme: light dark; --bg: #ffffff; --fg: #0a0a0a; --muted: #6b6b6b; --border: #e5e5e5; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0a0a0a; --fg: #f5f5f5; --muted: #a3a3a3; --border: #262626; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--fg);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { width: 100%; max-width: 360px; text-align: center; }
+  img { width: 56px; height: 56px; }
+  h1 { font-size: 22px; letter-spacing: -0.02em; margin: 18px 0 6px; }
+  p { margin: 0; color: var(--muted); }
+  button { margin-top: 22px; height: 40px; padding: 0 20px; border: 0; border-radius: 8px; background: var(--fg); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
+  small { display: block; margin-top: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <img src="build/icon.png" alt="">
+  <h1>You're offline</h1>
+  <p>Aoient needs an internet connection to load your workspace. Your data is safe on our servers.</p>
+  <button type="button" id="retry">Try again</button>
+  <small>We'll reconnect automatically when you're back online.</small>
+</main>
+<script>
+  var target = new URLSearchParams(location.search).get("retry") || "";
+  function retry() { if (/^https?:\/\//.test(target)) location.href = target; }
+  document.getElementById("retry").addEventListener("click", retry);
+  addEventListener("online", retry);
+</script>
+</body>
+</html>
