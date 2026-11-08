@@ -300,7 +300,7 @@
 .reveal-ready .reveal[data-reveal="right"] { transform: translateX(48px); }
 .reveal-ready .reveal[data-reveal="blur"] { transform: translateY(16px); filter: blur(14px); }
 .reveal-ready .reveal[data-reveal="flip"] { transform: perspective(1000px) rotateX(22deg) translateY(36px); transform-origin: 50% 0; }
-.reveal-ready .reveal.is-visible { opacity: 1; transform: none; filter: none; }
+.reveal-ready .reveal[data-shown] { opacity: 1; transform: none; filter: none; }
 
 /* Word / letter reveals */
 .words .w { display: inline-block; white-space: pre; }
@@ -308,7 +308,7 @@
   transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1), transform 800ms cubic-bezier(0.22, 1, 0.36, 1), filter 800ms cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: calc(var(--d, 0ms) + var(--i, 0) * var(--step, 60ms));
 }
-.reveal-ready .words:not(.is-visible) .w { opacity: 0; transform: translateY(0.55em) rotate(4deg); filter: blur(8px); }
+.reveal-ready .words:not([data-shown]) .w { opacity: 0; transform: translateY(0.55em) rotate(4deg); filter: blur(8px); }
 .words-load .w { animation: word-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--d, 0ms) + var(--i, 0) * var(--step, 70ms)); }
 @keyframes word-in {
   from { opacity: 0; transform: translateY(0.45em) rotate(3deg); filter: blur(10px); }
@@ -317,7 +317,7 @@
 
 /* Children appear one after another once the parent is visible */
 .reveal-ready .stagger > * { transition: opacity 700ms ease-out, transform 700ms cubic-bezier(0.22, 1, 0.36, 1); }
-.reveal-ready .stagger:not(.is-visible) > * { opacity: 0; transform: translateX(-10px); }
+.reveal-ready .stagger:not([data-shown]) > * { opacity: 0; transform: translateX(-10px); }
 .stagger > :nth-child(2) { transition-delay: 70ms; } .stagger > :nth-child(3) { transition-delay: 140ms; }
 .stagger > :nth-child(4) { transition-delay: 210ms; } .stagger > :nth-child(5) { transition-delay: 280ms; }
 .stagger > :nth-child(6) { transition-delay: 350ms; } .stagger > :nth-child(7) { transition-delay: 420ms; }
@@ -325,7 +325,7 @@
 
 /* Lines that draw themselves */
 .reveal-ready .draw { transform-origin: left; transition: transform 1400ms cubic-bezier(0.65, 0, 0.35, 1) 200ms; }
-.reveal-ready .draw:not(.is-visible) { transform: scaleX(0); }
+.reveal-ready .draw:not([data-shown]) { transform: scaleX(0); }
 
 /* 3D tilt and magnetic buttons (pointer driven, see landing-effects.tsx) */
 [data-tilt] {
@@ -471,8 +471,8 @@
 }
 
 /* "Built on" logos: each drops in from above, one after another, with a small bounce. */
-.reveal-ready .logo-rain:not(.is-visible) .logo-drop { opacity: 0; transform: translateY(-120px); }
-.logo-rain.is-visible .logo-drop { animation: logo-fall 0.8s cubic-bezier(0.3, 1.5, 0.55, 1) calc(0.15s + var(--i, 0) * 0.16s) both; }
+.reveal-ready .logo-rain:not([data-shown]) .logo-drop { opacity: 0; transform: translateY(-120px); }
+.logo-rain[data-shown] .logo-drop { animation: logo-fall 0.8s cubic-bezier(0.3, 1.5, 0.55, 1) calc(0.15s + var(--i, 0) * 0.16s) both; }
 @keyframes logo-fall {
   0% { opacity: 0; transform: translateY(-120px) rotate(-12deg); }
   25% { opacity: 1; }

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { Building2, Check, Rocket, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   PLANS,
   priceFor,
@@ -11,8 +11,6 @@ import {
 } from "@/lib/billing/plans";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const ICONS = { medisea: Sparkles, indiana: Rocket, pacfic_deepdive: Building2 } as const;
 
 /**
  * Plan picker. Public: visitors see the same plans; "Buy now" sends them to
@@ -25,132 +23,105 @@ export function PricingPage({ user, orgSlug }: { user: { name: string; email: st
 
   return (
     <div>
-      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-4xl font-semibold tracking-tighter sm:text-6xl">Choose your plan</h1>
-          <p className="mt-3 text-muted-foreground">
-            One platform for your people, customers, projects and time. Prices in USD; taxes are calculated at checkout.
-          </p>
-        </div>
-
-        <div className="mt-8 flex justify-center">
-          <div role="radiogroup" aria-label="Billing period" className="relative inline-grid grid-cols-2 rounded-full border border-border bg-surface p-1">
-            <span
-              aria-hidden
-              className={cn(
-                "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-navy shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-primary",
-                interval === "yearly" && "translate-x-full",
-              )}
-            />
-            {(["monthly", "yearly"] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={interval === value}
-                onClick={() => setBillingInterval(value)}
+      <section className="border-b border-neutral-200 dark:border-neutral-900">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 pb-12 pt-14 sm:px-6 sm:pt-20 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <nav aria-label="Breadcrumb" className="animate-fade-up text-sm text-neutral-500">
+              <Link href="/" className="hover:text-black dark:hover:text-white">Aoient</Link>
+              <span className="mx-2">/</span>
+              <span className="text-black dark:text-white">Pricing</span>
+            </nav>
+            <h1 className="animate-fade-up mt-5 max-w-2xl text-balance text-4xl font-bold tracking-tighter sm:text-6xl" style={{ animationDelay: "60ms" }}>Pick a plan. Change it any time.</h1>
+            <p className="animate-fade-up mt-4 max-w-xl text-lg text-neutral-600 dark:text-neutral-400" style={{ animationDelay: "120ms" }}>
+              Prices in USD. Taxes are worked out at checkout by Paddle.
+            </p>
+          </div>
+          <div className="animate-fade-up shrink-0" style={{ animationDelay: "180ms" }}>
+            <div role="radiogroup" aria-label="Billing period" className="relative inline-grid grid-cols-2 rounded-lg border border-neutral-300 bg-white p-1 dark:border-neutral-700 dark:bg-black">
+              <span
+                aria-hidden
                 className={cn(
-                  "relative z-10 rounded-full px-5 py-1.5 text-sm font-medium uppercase tracking-wide transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  interval === value ? "text-white" : "text-muted-foreground hover:text-foreground",
+                  "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-md bg-black transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-white",
+                  interval === "yearly" && "translate-x-full",
                 )}
-              >
-                {value}
-              </button>
-            ))}
+              />
+              {(["monthly", "yearly"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={interval === value}
+                  onClick={() => setBillingInterval(value)}
+                  className={cn(
+                    "relative z-10 rounded-md px-6 py-2 text-sm font-semibold capitalize transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    interval === value ? "text-white dark:text-black" : "text-neutral-500 hover:text-black dark:hover:text-white",
+                  )}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-neutral-500">Yearly: save {saving}%, {freeMonths} months free.</p>
           </div>
         </div>
+      </section>
 
-        <ul className="mt-10 grid gap-6 md:grid-cols-3 md:items-stretch">
+      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <ul className="grid gap-4 md:grid-cols-3 md:items-stretch">
           {PLANS.map((plan, index) => {
-            const Icon = ICONS[plan.id];
             const price = priceFor(plan, interval);
             const featured = plan.featured;
             return (
-              <li key={plan.id} className="animate-rise-in flex flex-col" style={{ animationDelay: `${120 + index * 120}ms` }}>
-                <p key={interval} className="animate-fade-up mb-3 h-10 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {interval === "yearly" ? (
-                    <>Save {saving}%<br />{freeMonths} months free</>
-                  ) : (
-                    <>Billed monthly<br />Cancel anytime</>
-                  )}
-                </p>
+              <li key={plan.id} className="animate-rise-in flex flex-col" style={{ animationDelay: `${120 + index * 100}ms` }}>
                 <article
                   aria-labelledby={`plan-${plan.id}`}
                   className={cn(
-                    "group relative isolate flex flex-1 flex-col overflow-hidden rounded-xl border p-6 shadow-xs transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-2 focus-within:-translate-y-2",
-                    featured
-                      ? "border-navy bg-navy text-white hover:shadow-[0_24px_48px_-12px_rgba(99,91,255,0.45)] md:scale-[1.03] md:hover:scale-[1.05] dark:border-primary dark:bg-primary-subtle"
-                      : "border-border bg-surface hover:border-primary/50 hover:shadow-[0_20px_40px_-16px_rgba(16,24,40,0.25)]",
+                    "flex flex-1 flex-col rounded-2xl border p-7 transition-transform duration-300 hover:-translate-y-1",
+                    featured ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black" : "border-neutral-200 bg-white dark:border-neutral-800 dark:bg-black",
                   )}
                 >
-                  {featured && (
-                    <span
-                      aria-hidden
-                      className="animate-glow-pulse pointer-events-none absolute -z-10 -left-16 -top-16 size-48 rounded-full bg-primary/40 blur-3xl"
-                    />
-                  )}
-                  <div
-                    className={cn(
-                      "absolute right-0 top-0 rounded-bl-xl px-4 py-2 text-right",
-                      featured ? "bg-white text-navy dark:bg-primary dark:text-white" : "bg-navy text-white dark:bg-primary",
-                    )}
-                  >
-                    <span key={interval} className="animate-price-pop block">
-                      <span className="text-2xl font-semibold tabular-nums">${price.amount.toLocaleString("en-US")}</span>
-                      <span className="block text-[11px] font-medium opacity-80">per {price.per}</span>
-                    </span>
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 id={`plan-${plan.id}`} className="text-xl font-bold">{plan.name}</h2>
+                    {featured && <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-black dark:bg-black dark:text-white">Most popular</span>}
                   </div>
-
-                  <span
-                    className={cn(
-                      "relative flex size-11 items-center justify-center rounded-lg border transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110",
-                      featured ? "border-white/20 bg-white/10" : "border-border bg-background text-primary",
-                    )}
-                  >
-                    <Icon className="size-5" aria-hidden />
-                  </span>
-                  <h2 id={`plan-${plan.id}`} className="mt-4 text-xl font-semibold">
-                    {plan.name}
-                    {featured && (
-                      <span className="ml-2 align-middle rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">Most popular</span>
-                    )}
-                  </h2>
-                  <p className={cn("mt-1 text-sm", featured ? "text-white/75" : "text-muted-foreground")}>{plan.tagline}</p>
-                  {interval === "yearly" && (
-                    <p className={cn("animate-fade-up mt-1 text-xs", featured ? "text-white/75" : "text-muted-foreground")}>
-                      ${(price.amount / 12).toFixed(2)}/month, billed yearly
-                    </p>
-                  )}
-
-                  <ul className="mt-6 grid flex-1 content-start gap-3 text-sm">
-                    {plan.features.map((f, i) => (
-                      <li key={f} className="animate-fade-up flex gap-2.5" style={{ animationDelay: `${360 + index * 120 + i * 45}ms` }}>
-                        <Check className={cn("mt-0.5 size-4 shrink-0", featured ? "text-white" : "text-success")} aria-hidden />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-
+                  <p className={cn("mt-1 text-sm", featured ? "text-white/70 dark:text-black/60" : "text-neutral-500")}>{plan.tagline}</p>
+                  <p key={interval} className="animate-price-pop mt-7 flex items-baseline gap-1.5">
+                    <span className="text-5xl font-bold tracking-tight tabular-nums">${price.amount.toLocaleString("en-US")}</span>
+                    <span className={cn("text-sm", featured ? "text-white/70 dark:text-black/60" : "text-neutral-500")}>/ {price.per}</span>
+                  </p>
+                  <p className={cn("mt-1 h-4 text-xs", featured ? "text-white/70 dark:text-black/60" : "text-neutral-500")}>
+                    {interval === "yearly" ? `$${(price.amount / 12).toFixed(2)} a month, billed yearly` : "Billed monthly, cancel any time"}
+                  </p>
                   <Button
                     asChild
-                    className={cn("relative mt-8 w-full transition-transform active:scale-[0.98]", featured && "bg-white text-navy hover:bg-white/90 dark:bg-primary dark:text-white dark:hover:bg-primary-hover")}
+                    className={cn(
+                      "mt-6 w-full rounded-lg transition-transform active:scale-[0.98]",
+                      featured
+                        ? "bg-white text-black hover:bg-neutral-200 dark:bg-black dark:text-white dark:hover:bg-neutral-800"
+                        : "bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200",
+                    )}
                   >
                     <Link href={buyHref(plan.id, interval, orgSlug, Boolean(user))} aria-label={`Buy ${plan.name}, ${interval}`}>
                       Buy now
                     </Link>
                   </Button>
+                  <ul className={cn("mt-7 grid flex-1 content-start gap-3 border-t pt-6 text-sm", featured ? "border-white/15 dark:border-black/15" : "border-neutral-200 dark:border-neutral-800")}>
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex gap-2.5">
+                        <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </article>
               </li>
             );
           })}
         </ul>
 
-        <p className="mt-10 text-center text-sm text-muted-foreground">
-          Need more than 40 users or custom security? Enterprise plans are tailored to your team, with pricing on request.
-        </p>
-        <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-muted-foreground">
+        <p className="mt-8 text-sm text-neutral-500">
           {user ? `Signed in as ${user.email}. ` : "Every new workspace starts with a 14-day free trial, no card needed. "}
-          Prices and limits are provisional and may change before launch.
+          Need more than 40 users? Enterprise plans are tailored to your team. Prices and limits are provisional and may change before launch.
         </p>
       </main>
     </div>

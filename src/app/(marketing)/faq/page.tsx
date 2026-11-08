@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { CtaSection, FaqSection, PageHero } from "@/modules/marketing/sections";
+import { FaqBrowser } from "@/modules/marketing/faq-browser";
+import { InnerHero, SlimCta } from "@/modules/marketing/inner";
 
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Straight answers about Aoient: what works today, the free trial, plans and limits, billing, cancelling and data security.",
+  description: "Straight answers about Aoient: what works today, how your team signs in, the free trial, plans and limits, billing, cancelling and data security.",
 };
 
 export default function FaqPage() {
   return (
     <>
-      <PageHero eyebrow="FAQ" title="Everything you might ask" body="What works today, how the trial and plans work, and how your data is protected. Still unsure? Start the free trial, no card needed." />
-      <FaqSection />
-      <CtaSection />
+      <InnerHero crumb="FAQ" title="Questions, answered plainly" faces={["curly", "spiky", "bob"]}
+        body="What works today, how your team signs in, how the trial and plans work, and how your data is protected. Search, or pick a topic." />
+      <FaqBrowser />
+      <SlimCta title="Still deciding?" body="The easiest answer is to try it: 14 days free, no card needed." />
     </>
   );
 }

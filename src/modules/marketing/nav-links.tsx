@@ -21,7 +21,7 @@ export function NavLinks() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative rounded-full px-3 py-1.5 text-sm transition-colors after:absolute after:inset-x-3 after:bottom-0.5 after:h-px after:origin-left after:bg-gradient-to-r after:from-violet-500 after:to-orange-400 after:transition-transform after:duration-300 hover:after:scale-x-100",
+              "relative rounded-full px-3 py-1.5 text-sm transition-colors after:absolute after:inset-x-3 after:bottom-0.5 after:h-px after:origin-left after:bg-black dark:after:bg-white after:transition-transform after:duration-300 hover:after:scale-x-100",
               active
                 ? "bg-neutral-100 font-medium text-black after:scale-x-100 dark:bg-neutral-900 dark:text-white"
                 : "text-neutral-600 after:scale-x-0 hover:bg-neutral-100 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white",

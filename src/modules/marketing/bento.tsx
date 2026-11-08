@@ -52,7 +52,7 @@ function Tile({
 
 const card = "rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-black";
 
-function Directory() {
+export function Directory() {
   const rows = [
     ["Laila Shah", "Head nurse", "Nursing", "In"],
     ["Wasi Khan", "Nurse", "Nursing", "On leave"],
@@ -76,7 +76,7 @@ function Directory() {
   );
 }
 
-function RoleViews() {
+export function RoleViews() {
   return (
     <div className="grid w-full gap-2">
       {[
@@ -93,7 +93,7 @@ function RoleViews() {
   );
 }
 
-function LiveSync() {
+export function LiveSync() {
   return (
     <div className="relative w-full">
       <div className={cn(card, "flex items-center justify-between px-4 py-3 text-sm")}>
@@ -112,7 +112,7 @@ function LiveSync() {
   );
 }
 
-function Permissions() {
+export function Permissions() {
   const perms: [string, boolean][] = [["View people", true], ["Approve leave", true], ["See salaries", false], ["Manage billing", false]];
   return (
     <ul className={cn(card, "w-full divide-y divide-neutral-100 text-sm dark:divide-neutral-900")}>
@@ -128,7 +128,7 @@ function Permissions() {
   );
 }
 
-function Assistant() {
+export function Assistant() {
   return (
     <div className="grid w-full gap-2 text-sm">
       <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-black px-4 py-2.5 text-white dark:bg-white dark:text-black">Who is on leave today?</p>
@@ -137,7 +137,7 @@ function Assistant() {
   );
 }
 
-function Isolation() {
+export function Isolation() {
   return (
     <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3 text-sm">
       <div className="rounded-xl border border-white/20 p-4 dark:border-black/20">
@@ -153,7 +153,7 @@ function Isolation() {
   );
 }
 
-function Logins() {
+export function Logins() {
   return (
     <div className={cn(card, "grid w-full gap-2 p-4 text-sm")}>
       <div className="flex justify-between gap-3"><span className="text-neutral-500">Email</span><span className="truncate font-medium">wasi@acme.co</span></div>
@@ -163,7 +163,7 @@ function Logins() {
   );
 }
 
-function Install() {
+export function Install() {
   return (
     <div className="flex w-full items-end justify-center gap-3">
       <div className={cn(card, "h-28 w-44 p-2")}><div className="h-full rounded-md bg-neutral-100 dark:bg-neutral-900" /></div>
@@ -172,7 +172,7 @@ function Install() {
   );
 }
 
-function AuditFeed() {
+export function AuditFeed() {
   return (
     <ul className="grid w-full gap-1.5 font-mono text-xs">
       {["member.invited", "role.updated", "leave.approved", "employee.created"].map((a, i) => (
@@ -184,7 +184,7 @@ function AuditFeed() {
   );
 }
 
-function Plans() {
+export function Plans() {
   const plan = PLANS.find((p) => p.featured) ?? PLANS[0];
   const yearly = priceFor(plan, "yearly");
   const monthly = priceFor(plan, "monthly");

@@ -20,15 +20,21 @@ export function LandingEffects() {
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
+            entry.target.setAttribute("data-shown", "");
             observer.unobserve(entry.target);
           }
         }
       },
       { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
     );
-    root.classList.add("reveal-ready");
-    document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw, .logo-rain)").forEach((el) => observer.observe(el));
+    // Start once the page has hydrated and the browser is idle: React first
+    // compares the server HTML, so touching these elements earlier is a mismatch.
+    const startReveal = () => {
+      root.classList.add("reveal-ready");
+      document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw, .logo-rain)").forEach((el) => observer.observe(el));
+    };
+    const idleId = "requestIdleCallback" in window ? window.requestIdleCallback(startReveal, { timeout: 600 }) : null;
+    const timeoutId = idleId === null ? window.setTimeout(startReveal, 200) : null;
 
     let frame = 0;
     const hero = document.querySelector<HTMLElement>("[data-hero]");
@@ -42,8 +48,8 @@ export function LandingEffects() {
         // Set on <html> (inherited), never on React-rendered elements, so hydration never sees a changed style.
         if (hero && !reduced) root.style.setProperty("--hs", String(Math.max(0, 1 - window.scrollY / 420)));
         // At the very bottom nothing more can scroll into view, so show whatever is left.
-        if (max > 0 && window.scrollY >= max - 4) {
-          document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw, .logo-rain):not(.is-visible)").forEach((el) => el.classList.add("is-visible"));
+        if (max > 0 && window.scrollY >= max - 4 && root.classList.contains("reveal-ready")) {
+          document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw, .logo-rain):not([data-shown])").forEach((el) => el.setAttribute("data-shown", ""));
         }
       });
     }
@@ -107,6 +113,8 @@ export function LandingEffects() {
     document.documentElement.addEventListener("pointerleave", onLeave);
 
     return () => {
+      if (idleId !== null) window.cancelIdleCallback(idleId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
       observer.disconnect();
       cancelAnimationFrame(frame);
       root.classList.remove("reveal-ready");
