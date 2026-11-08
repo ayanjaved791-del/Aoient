@@ -2,6 +2,11 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Face, Sparkle, Squiggle, type FaceStyle } from "./doodles";
+import { WaveIntro } from "./wave-intro";
+import type { CSSProperties } from "react";
+
+/** Wave timing for an element: when the front reaches it, and when it comes back. */
+const t = (w: number, f: number) => ({ "--w": `${w}s`, "--f": `${f}s` }) as CSSProperties;
 
 const ROLES: { face: FaceStyle; role: string; sees: string }[] = [
   { face: "bob", role: "Owner", sees: "everything" },
@@ -16,25 +21,29 @@ export function HomeHero() {
   return (
     <section data-hero className="relative overflow-hidden">
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-16 text-center sm:px-6 sm:pt-24">
-        <p className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
+        <WaveIntro>
+        <p style={t(0.55, 1.95)} className="wash-block animate-fade-up inline-flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
           <span className="size-1.5 rounded-full bg-black dark:bg-white" />
           Early access · People, roles and dashboards are live
         </p>
 
-        <h1 className="animate-fade-up mx-auto mt-6 max-w-4xl text-balance text-[2.6rem] font-bold leading-[1.05] tracking-tighter text-black sm:text-6xl lg:text-7xl dark:text-white" style={{ animationDelay: "60ms" }}>
-          Your whole business.
+        <h1 className="mx-auto mt-6 max-w-4xl text-balance text-[2.6rem] font-bold leading-[1.05] tracking-tighter text-black sm:text-6xl lg:text-7xl dark:text-white">
+          <span className="wash-word inline-block" style={t(0.3, 1.15)}>Your</span>{" "}
+          <span className="wash-word inline-block" style={t(0.5, 1.32)}>whole</span>{" "}
+          <span className="wash-word inline-block" style={t(0.7, 1.5)}>business.</span>
           <br />
-          <span className="relative inline-block">
-            One quiet place.
+          <span className="wash-word inline-block" style={t(0.36, 1.22)}>One</span>{" "}
+          <span className="wash-word relative inline-block" style={t(0.6, 1.42)}>
+            quiet place.
             <Squiggle className="absolute -bottom-3 left-1/2 w-40 -translate-x-1/2 sm:-bottom-4 sm:w-56" />
           </span>
         </h1>
 
-        <p className="animate-fade-up mx-auto mt-8 max-w-xl text-pretty text-lg text-neutral-600 sm:text-xl dark:text-neutral-400" style={{ animationDelay: "140ms" }}>
+        <p className="wash-block animate-fade-up mx-auto mt-8 max-w-xl text-pretty text-lg text-neutral-600 sm:text-xl dark:text-neutral-400" style={{ animationDelay: "140ms", ...t(0.42, 1.9) }}>
           People, leave, roles and dashboards in one workspace, where everyone sees exactly what their role allows.
         </p>
 
-        <div className="animate-fade-up mt-9 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "220ms" }}>
+        <div className="wash-block animate-fade-up mt-9 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "220ms", ...t(0.48, 2.0) }}>
           <Link
             href="/sign-up"
             className="group inline-flex h-11 items-center gap-2 rounded-lg bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
@@ -49,7 +58,8 @@ export function HomeHero() {
             See pricing
           </Link>
         </div>
-        <p className="animate-fade-up mt-3 text-xs text-neutral-500" style={{ animationDelay: "260ms" }}>14-day free trial · no card needed to start</p>
+        <p className="wash-block animate-fade-up mt-3 text-xs text-neutral-500" style={{ animationDelay: "260ms", ...t(0.52, 2.05) }}>14-day free trial · no card needed to start</p>
+        </WaveIntro>
 
         <ul className="animate-fade-up mx-auto mt-14 flex max-w-3xl flex-wrap items-end justify-center gap-x-6 gap-y-6 sm:gap-x-10" style={{ animationDelay: "320ms" }}>
           {ROLES.map((r, i) => (

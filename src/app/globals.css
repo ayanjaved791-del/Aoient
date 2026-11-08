@@ -441,3 +441,61 @@
   &::-webkit-scrollbar { width: 6px; height: 6px; }
   &::-webkit-scrollbar-thumb { border-width: 1px; }
 }
+
+/* ── Home hero wave intro (see modules/marketing/home/wave-intro.tsx) ──
+   The wave (60vw wide) crosses in 1.9s at a steady speed. Its front reaches
+   the text at about 0.3–0.9s and carries it right; each word drops back once
+   the wave's tail has passed it (1.1–1.6s); the rest returns around 2s. */
+.wave-sweep {
+  transform: translateX(-100%);
+  /* Linear so the timing of each word (set in hero.tsx) matches where the front is. */
+  animation: wave-sweep 1.9s linear forwards;
+}
+.wave-bob { animation: wave-bob 0.55s ease-in-out infinite alternate; }
+.wave-spray { opacity: 0; animation: wave-spray 0.7s ease-out 3; }
+
+/* --w: when the wave front reaches the element; --f: when the wave has passed it. */
+.wave-intro .wash-word {
+  animation:
+    wash 0.9s cubic-bezier(0.4, 0, 0.9, 0.6) var(--w, 0.5s) forwards,
+    fall-in 0.85s cubic-bezier(0.3, 1.45, 0.6, 1) var(--f, 1.4s) forwards;
+}
+.wave-intro .wash-block {
+  animation:
+    wash 0.9s cubic-bezier(0.4, 0, 0.9, 0.6) var(--w, 0.5s) forwards,
+    rise-back 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--f, 2s) forwards;
+}
+
+@keyframes wave-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(calc(100vw + 4%)); }
+}
+@keyframes wave-bob {
+  from { transform: translateY(-1.2%) scaleY(1.01); }
+  to { transform: translateY(1.2%) scaleY(0.99); }
+}
+@keyframes wave-spray {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--sx, 60px), var(--sy, -30px)) scale(1); }
+}
+@keyframes wash {
+  0% { transform: none; opacity: 1; filter: none; }
+  25% { transform: translate(14vw, -2vh) rotate(4deg); opacity: 1; filter: none; }
+  70% { opacity: 0.9; }
+  100% { transform: translate(72vw, -4vh) rotate(14deg); opacity: 0; filter: blur(4px); }
+}
+@keyframes fall-in {
+  0% { transform: translateY(-110vh) rotate(-10deg); opacity: 1; filter: none; }
+  65% { transform: translateY(12px) rotate(1.5deg); opacity: 1; filter: none; }
+  82% { transform: translateY(-6px) rotate(-0.5deg); opacity: 1; filter: none; }
+  100% { transform: none; opacity: 1; filter: none; }
+}
+@keyframes rise-back {
+  from { transform: translateY(16px); opacity: 0; filter: none; }
+  to { transform: none; opacity: 1; filter: none; }
+}
+.wave-done .wash-word, .wave-done .wash-block { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .wave-intro .wash-word, .wave-intro .wash-block { animation: none; }
+}

@@ -39,7 +39,8 @@ export function LandingEffects() {
         root.style.setProperty("--progress", String(max > 0 ? window.scrollY / max : 0));
         if (window.scrollY > 8) root.setAttribute("data-scrolled", "");
         else root.removeAttribute("data-scrolled");
-        if (hero && !reduced) hero.style.setProperty("--hs", String(Math.max(0, 1 - window.scrollY / 420)));
+        // Set on <html> (inherited), never on React-rendered elements, so hydration never sees a changed style.
+        if (hero && !reduced) root.style.setProperty("--hs", String(Math.max(0, 1 - window.scrollY / 420)));
         // At the very bottom nothing more can scroll into view, so show whatever is left.
         if (max > 0 && window.scrollY >= max - 4) {
           document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw):not(.is-visible)").forEach((el) => el.classList.add("is-visible"));
@@ -91,10 +92,10 @@ export function LandingEffects() {
 
       if (hero && hero.contains(target)) {
         const r = hero.getBoundingClientRect();
-        hero.style.setProperty("--hx", `${event.clientX - r.left}px`);
-        hero.style.setProperty("--hy", `${event.clientY - r.top}px`);
-        hero.style.setProperty("--px", ((event.clientX - r.left) / r.width - 0.5).toFixed(3));
-        hero.style.setProperty("--py", ((event.clientY - r.top) / r.height - 0.5).toFixed(3));
+        root.style.setProperty("--hx", `${event.clientX - r.left}px`);
+        root.style.setProperty("--hy", `${event.clientY - r.top}px`);
+        root.style.setProperty("--px", ((event.clientX - r.left) / r.width - 0.5).toFixed(3));
+        root.style.setProperty("--py", ((event.clientY - r.top) / r.height - 0.5).toFixed(3));
       }
     }
     function onLeave() {
