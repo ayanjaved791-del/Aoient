@@ -17,7 +17,7 @@ Status of the controls in spec §22. "✅" means implemented **and** covered by 
 | CSRF | ✅ | Server Actions have built-in origin checks; `/api/v1` mutations require a same-origin `Origin`/`Sec-Fetch-Site`. Auth requests go directly from the browser to Supabase. |
 | Open redirects | ✅ | `safeNextPath` allows only same-site relative paths. |
 | Rate limiting | ✅ | Auth: Supabase Auth's built-in limits (configurable in the dashboard). App: invitations 30/h per user & 100/h per org, org creation 10/h, accept 20/h. |
-| Invitations | ✅ | 256-bit random token, stored hashed, 7-day expiry, single-use (atomic claim — concurrent accepts tested), bound to recipient email, revocable. |
+| Invitations | ✅ | 256-bit random token, stored hashed, 7-day expiry, single-use (atomic claim — concurrent accepts tested), bound to recipient email, revocable. Signed-in people also see open invitations for their own verified email and can join without the link; joining by id applies the same email check, and another person's invitation id reads as not found. |
 | Audit log | ✅ | Org/member/role/invitation changes, written in the same transaction; metadata keys resembling secrets are stripped. |
 | Security headers | ✅ | `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`; `X-Powered-By` removed. |
 | Data API lock-down | ✅ | RLS enabled on every `public` table with no policies; tests prove `anon`/`authenticated` read 0 rows and cannot write. |

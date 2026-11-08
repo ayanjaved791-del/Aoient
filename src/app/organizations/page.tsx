@@ -7,6 +7,8 @@ import { TRIAL_DAYS } from "@/lib/billing/entitlements";
 import { cn } from "@/lib/utils";
 import { requireUserOrRedirect } from "@/server/auth/session";
 import { listUserOrganizations } from "@/server/organizations/organizations";
+import { listMyInvitations } from "@/server/organizations/invitations";
+import { MyInvitations, type MyInvitationItem } from "@/modules/organization/my-invitations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,12 +25,36 @@ const SETUP_STEPS = [
 
 async function OrganizationList({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const [user, sp] = await Promise.all([requireUserOrRedirect("/organizations"), searchParams]);
-  const orgs = await listUserOrganizations(user.id);
-  // People in a single workspace (most employees) go straight to it after signing in.
-  if (orgs.length === 1 && sp.all !== "1") redirect(`/${orgs[0].slug}`);
+  const [orgs, invites] = await Promise.all([listUserOrganizations(user.id), listMyInvitations(user)]);
+  // People in a single workspace (most employees) go straight to it after
+  // signing in, unless another team is waiting for them to join.
+  if (orgs.length === 1 && invites.length === 0 && sp.all !== "1") redirect(`/${orgs[0].slug}`);
+
+  const inviteItems: MyInvitationItem[] = invites.map((i) => ({
+    id: i.id, organizationName: i.organizationName, roleName: i.roleName, inviterName: i.inviterName,
+    expiresLabel: i.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+  }));
+  const invitationsCard = inviteItems.length > 0 ? <MyInvitations email={user.email} invitations={inviteItems} /> : null;
 
   if (orgs.length === 0) {
     const firstName = user.name.split(" ")[0];
+    if (invitationsCard) {
+      return (
+        <div className="grid gap-8">
+          <div className="motion-safe:animate-rise grid gap-2 text-center">
+            <h1 className="text-3xl font-semibold tracking-tight">{firstName ? `Welcome, ${firstName}` : "Welcome"}. Your team is waiting</h1>
+            <p className="mx-auto max-w-lg text-sm text-muted-foreground">Join the workspace you were invited to. Only create a new one if you&apos;re starting a company of your own.</p>
+          </div>
+          {invitationsCard}
+          <details className="group rounded-xl border border-border bg-surface">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 text-sm font-medium sm:px-6">
+              <Plus className="size-4 text-muted-foreground" aria-hidden />Create my own workspace instead
+            </summary>
+            <div className="border-t border-border px-5 py-6 sm:px-6"><CreateOrganizationForm termsAccepted={await hasAcceptedCurrentTerms(user.id)} /></div>
+          </details>
+        </div>
+      );
+    }
     return (
       <div className="grid gap-8">
         <div className="motion-safe:animate-rise grid gap-2 text-center">
@@ -67,6 +93,7 @@ async function OrganizationList({ searchParams }: { searchParams: Promise<{ all?
         </div>
         <Button variant="secondary" asChild><Link href="/organizations/new"><Plus className="size-4" />New organization</Link></Button>
       </div>
+      {invitationsCard}
       <Card>
         <CardHeader className="sr-only"><CardTitle>Organizations</CardTitle><CardDescription>Workspaces you belong to</CardDescription></CardHeader>
         <ul className="divide-y divide-border">

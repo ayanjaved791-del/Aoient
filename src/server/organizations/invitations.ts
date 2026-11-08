@@ -181,24 +181,70 @@ export async function getInvitationPreview(token: string): Promise<InvitationPre
   return { state: "valid", organizationName: inv.org_name, roleName: inv.role_name, email: inv.email, inviterName: inv.inviter_name, expiresAt: inv.expires_at };
 }
 
-export async function acceptInvitation(
-  user: { id: string; email: string; emailVerified: boolean },
-  token: string,
+type InvitationUser = { id: string; email: string; emailVerified: boolean };
+
+export interface MyInvitation {
+  id: string;
+  organizationName: string;
+  roleName: string;
+  inviterName: string | null;
+  expiresAt: Date;
+}
+
+/**
+ * Open invitations addressed to the signed-in person's own verified email, so
+ * someone who signed up without clicking their link still finds their team.
+ * Nothing is shown for an unverified email: the address must be proven first.
+ */
+export async function listMyInvitations(user: InvitationUser): Promise<MyInvitation[]> {
+  if (!user.emailVerified || !user.email) return [];
+  const rows = await getDb()<{ id: string; org_name: string; role_name: string; inviter_name: string | null; expires_at: Date }[]>`
+    select i.id, o.name as org_name, r.name as role_name, p.name as inviter_name, i.expires_at
+    from invitation i
+    join organization o on o.id = i.organization_id
+    join role r on r.id = i.role_id
+    left join profile p on p.id = i.invited_by_id
+    where lower(i.email) = lower(${user.email})
+      and i.status = 'pending' and i.expires_at > now() and o.status = 'active'
+      and not exists (select 1 from organization_member m where m.organization_id = i.organization_id and m.user_id = ${user.id})
+    order by i.created_at desc
+    limit 20`;
+  return rows.map((r) => ({ id: r.id, organizationName: r.org_name, roleName: r.role_name, inviterName: r.inviter_name, expiresAt: r.expires_at }));
+}
+
+/** Accepts an invitation from its join link. */
+export async function acceptInvitation(user: InvitationUser, token: string): Promise<{ organizationSlug: string }> {
+  return acceptWhere(user, { tokenHash: hashToken(String(token)) });
+}
+
+/**
+ * Accepts one of the invitations listed by `listMyInvitations`. The id alone
+ * proves nothing: the same email check as the link applies, so a guessed or
+ * copied id for someone else's invitation is refused.
+ */
+export async function acceptMyInvitation(user: InvitationUser, invitationId: string): Promise<{ organizationSlug: string }> {
+  if (!isUuid(invitationId)) throw new NotFoundError("This invitation is invalid or has expired.");
+  return acceptWhere(user, { id: invitationId });
+}
+
+async function acceptWhere(
+  user: InvitationUser,
+  by: { tokenHash: string } | { id: string },
 ): Promise<{ organizationSlug: string }> {
   if (!user.emailVerified) throw new ForbiddenError("Verify your email address before accepting invitations.");
   await enforceRateLimit(`invite-accept:${user.id}`, { max: 20, windowSeconds: 3600 });
-  const tokenHash = hashToken(token);
 
   return transaction(async (tx) => {
     const [inv] = await tx<{ id: string; organization_id: string; email: string; role_id: string; slug: string; org_status: string }[]>`
       select i.id, i.organization_id, i.email, i.role_id, o.slug, o.status as org_status
       from invitation i join organization o on o.id = i.organization_id
-      where i.token_hash = ${tokenHash}`;
+      where ${"tokenHash" in by ? tx`i.token_hash = ${by.tokenHash}` : tx`i.id = ${by.id}`}`;
     if (!inv || inv.org_status !== "active") throw new NotFoundError("This invitation is invalid or has expired.");
     if (inv.email.toLowerCase() !== user.email.toLowerCase()) {
+      // By id, someone else's invitation looks exactly like a missing one.
+      if ("id" in by) throw new NotFoundError("This invitation is invalid or has expired.");
       throw new ForbiddenError("This invitation was sent to a different email address. Sign in with that address to accept it.");
     }
-
     // Atomic single-use claim: only one concurrent accept can flip pending → accepted.
     const claimed = await tx`
       update invitation set status = 'accepted', accepted_at = now(), updated_at = now()

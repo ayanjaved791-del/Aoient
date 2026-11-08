@@ -9,7 +9,7 @@ import { requireUser } from "@/server/auth/session";
 import { resolveOrgContext } from "@/server/tenancy/context";
 import { runAction } from "@/server/actions/run";
 import { createOrganization, leaveOrganization, removeMember, updateMember, updateOrganization } from "@/server/organizations/organizations";
-import { acceptInvitation, createInvitation, renewInvitation, revokeInvitation } from "@/server/organizations/invitations";
+import { acceptInvitation, acceptMyInvitation, createInvitation, renewInvitation, revokeInvitation } from "@/server/organizations/invitations";
 import { createCustomRole, deleteCustomRole, updateCustomRole } from "@/server/organizations/roles";
 import { createBillingPortalUrl } from "@/server/billing/paddle-portal";
 import { syncMyLicense } from "@/server/billing/paddle-sync";
@@ -108,6 +108,14 @@ export async function acceptInvitationAction(token: string) {
   return runAction(async () => {
     const user = await requireUser();
     return acceptInvitation(user, String(token));
+  });
+}
+
+/** Joins from the "invitations for you" list; the server re-checks the email. */
+export async function acceptMyInvitationAction(invitationId: string) {
+  return runAction(async () => {
+    const user = await requireUser();
+    return acceptMyInvitation(user, String(invitationId));
   });
 }
 
