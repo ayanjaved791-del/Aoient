@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FeatureBento } from "@/modules/marketing/bento";
 import { TechStack } from "@/modules/marketing/brand-logos";
-import { CtaSection, IntegrationMarquee, PageHero, SectionHeading, WorkflowSection } from "@/modules/marketing/sections";
+import { CtaSection, PageHero, WorkflowSection } from "@/modules/marketing/sections";
 
 export const metadata: Metadata = {
   title: "Features",
@@ -32,11 +32,6 @@ export default function FeaturesPage() {
       <WorkflowSection />
       <TechStack />
 
-      <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6">
-        <SectionHeading eyebrow="Integrations" title="Connect the tools you already use" body="These integrations are planned. None of them is connected yet, and we'll say so until they are." />
-      </section>
-      <IntegrationMarquee />
-      <div className="h-16" />
       <CtaSection />
     </>
   );
