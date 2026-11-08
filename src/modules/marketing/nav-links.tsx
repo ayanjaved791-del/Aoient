@@ -12,7 +12,7 @@ const isActive = (pathname: string, href: string) => pathname === href || pathna
 export function NavLinks() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
+    <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
       {NAV.map((item) => {
         const active = isActive(pathname, item.href);
         return (
@@ -43,7 +43,7 @@ export function MobileMenu({ extra }: { extra: { href: string; label: string }[]
     if (ref.current) ref.current.open = false;
   }, [pathname]);
   return (
-    <details ref={ref} className="group relative md:hidden">
+    <details ref={ref} className="group relative lg:hidden">
       <summary
         aria-label="Open menu"
         className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800 [&::-webkit-details-marker]:hidden"
