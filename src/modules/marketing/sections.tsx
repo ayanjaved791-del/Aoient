@@ -29,7 +29,7 @@ const delay = (ms: number) => ({ "--reveal-delay": `${ms}ms` }) as CSSProperties
 export function LandingHeader() {
   return (
     <header className="landing-header animate-fade-up sticky top-0 z-40 border-b border-neutral-200/70 bg-white/75 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-black/70">
-      <div aria-hidden className="scroll-progress absolute inset-x-0 -bottom-px h-0.5 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-orange-400" />
+      <div aria-hidden className="scroll-progress absolute inset-x-0 -bottom-px h-0.5 bg-black dark:bg-white" />
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link href="/" aria-label="Aoient home" className="group/logo rounded-md">
           <Logo className="[&_svg]:transition-transform [&_svg]:duration-700 group-hover/logo:[&_svg]:rotate-[360deg]" />
@@ -101,10 +101,9 @@ export function PageHero({ eyebrow, title, body, children }: { eyebrow: string; 
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgb(0_0_0/0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgb(0_0_0/0.05)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_0%,black,transparent)] dark:bg-[linear-gradient(to_right,rgb(255_255_255/0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgb(255_255_255/0.06)_1px,transparent_1px)]"
       />
-      <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[640px] -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-400/25 via-fuchsia-400/20 to-orange-300/25 blur-3xl motion-safe:animate-blob dark:from-violet-600/20 dark:via-fuchsia-600/15 dark:to-orange-500/15" />
       <div className="relative mx-auto max-w-3xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pt-28">
         <p className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-600 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-neutral-400">
-          <span className="size-1.5 rounded-full bg-gradient-to-r from-violet-500 to-orange-400" />
+          <span className="size-1.5 rounded-full bg-black dark:bg-white" />
           {eyebrow}
         </p>
         <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tighter sm:text-6xl">
@@ -144,7 +143,7 @@ export function SectionHeading({ eyebrow, title, body, invert }: { eyebrow: stri
           invert ? "border-white/15 text-neutral-300" : "border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-400",
         )}
       >
-        <span className="size-1.5 rounded-full bg-gradient-to-r from-violet-500 to-orange-400" />
+        <span className="size-1.5 rounded-full bg-black dark:bg-white" />
         {eyebrow}
       </p>
       <h2 className={cn("mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-5xl", invert ? "text-white" : "text-black dark:text-white")}>
@@ -181,14 +180,14 @@ export function WorkflowSection() {
         />
         <span
           aria-hidden
-          className="absolute left-[8%] right-[8%] top-7 hidden h-px bg-[linear-gradient(90deg,transparent,#a855f7,#f97316,transparent)] bg-[length:50%_100%] bg-no-repeat motion-safe:animate-beam lg:block"
+          className="absolute left-[8%] right-[8%] top-7 hidden h-px bg-[linear-gradient(90deg,transparent,#000,transparent)] dark:bg-[linear-gradient(90deg,transparent,#fff,transparent)] bg-[length:50%_100%] bg-no-repeat motion-safe:animate-beam lg:block"
         />
         {FLOW.map(({ key, title, body }, i) => (
           <li key={title} data-reveal="scale" className="reveal group relative flex gap-4 lg:flex-col lg:items-center lg:text-center" style={delay(200 + i * 120)}>
             <span className="relative shrink-0 rounded-[20px] bg-white p-0 transition-transform duration-500 group-hover:-translate-y-1.5 group-hover:rotate-3 dark:bg-black">
               <ModuleIcon module={key} size="lg" />
               <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-black text-[10px] font-semibold text-white dark:bg-white dark:text-black">
-                <span className="absolute inset-0 rounded-full bg-violet-500 motion-safe:animate-ping-slow" style={{ animationDelay: `${i * 0.5}s` }} />
+                <span className="absolute inset-0 rounded-full bg-neutral-400 motion-safe:animate-ping-slow" style={{ animationDelay: `${i * 0.5}s` }} />
                 <span className="relative">{i + 1}</span>
               </span>
             </span>

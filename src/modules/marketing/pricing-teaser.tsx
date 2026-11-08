@@ -14,7 +14,7 @@ export function PricingTeaser() {
           <span
             aria-hidden
             className={cn(
-              "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 shadow-md shadow-fuchsia-500/30 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-black dark:bg-white transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
               interval === "yearly" && "translate-x-full",
             )}
           />
@@ -27,7 +27,7 @@ export function PricingTeaser() {
               onClick={() => setInterval_(value)}
               className={cn(
                 "relative z-10 rounded-full px-5 py-1.5 text-sm font-medium capitalize transition-colors duration-300",
-                interval === value ? "text-white" : "text-neutral-500 hover:text-black dark:hover:text-white",
+                interval === value ? "text-white dark:text-black" : "text-neutral-500 hover:text-black dark:hover:text-white",
               )}
             >
               {value}
@@ -51,7 +51,7 @@ export function PricingTeaser() {
                 className={cn(
                   "flex h-full flex-col rounded-2xl border p-7 hover:-translate-y-1.5",
                   featured
-                    ? "spin-border border-transparent bg-black text-white [--card-bg:#0a0a0a] [--spot:255_255_255] motion-safe:animate-spin-border dark:[--card-bg:#fafafa] dark:[--spot:0_0_0] dark:text-black"
+                    ? "border-black bg-black text-white [--spot:255_255_255] dark:border-white dark:bg-white dark:[--spot:0_0_0] dark:text-black"
                     : "border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950",
                 )}
               >

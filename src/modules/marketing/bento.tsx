@@ -1,120 +1,126 @@
 import type { CSSProperties, ReactNode } from "react";
 import { PLANS, priceFor } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "./theme-toggle";
-import type { SimpleIcon } from "simple-icons";
-import { Check, Lock } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
-import { BrandTile, PLANNED_INTEGRATIONS } from "./brand-logos";
 
+/**
+ * Feature bento: black and white, no icons. Each tile shows a small typed
+ * illustration of the real feature. One column on phones, two on tablets and
+ * a six-column grid on desktop. "Live" means it works today.
+ */
 type Status = "live" | "soon";
 
-function StatusPill({ status }: { status: Status }) {
-  return status === "live" ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 px-2 py-0.5 text-[11px] font-medium text-black dark:border-neutral-700 dark:text-white">
-      <span className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgb(16_185_129/0.8)]" /> Live
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-neutral-300 px-2 py-0.5 text-[11px] font-medium text-neutral-500 dark:border-neutral-700">
-      In development
+function StatusPill({ status, dark }: { status: Status; dark?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        status === "live"
+          ? dark ? "border-white/25 text-white" : "border-neutral-300 text-black dark:border-neutral-700 dark:text-white"
+          : dark ? "border-dashed border-white/25 text-white/60" : "border-dashed border-neutral-300 text-neutral-500 dark:border-neutral-700",
+      )}
+    >
+      {status === "live" ? "Live" : "In development"}
     </span>
   );
 }
 
 function Tile({
-  title,
-  body,
-  status,
-  className,
-  delay = 0,
-  reveal = "flip",
-  children,
-}: {
-  reveal?: "flip" | "scale" | "left" | "right" | "blur";
-  title: string;
-  body: string;
-  status: Status;
-  className?: string;
-  delay?: number;
-  children: ReactNode;
-}) {
+  title, body, status, className, dark, compact, delay = 0, children,
+}: { title: string; body: string; status: Status; className?: string; dark?: boolean; compact?: boolean; delay?: number; children: ReactNode }) {
   return (
-    <li data-reveal={reveal} className={cn("reveal", className)} style={{ "--reveal-delay": `${delay}ms` } as CSSProperties}>
+    <li data-reveal="scale" className={cn("reveal min-w-0", className)} style={{ "--reveal-delay": `${delay}ms` } as CSSProperties}>
       <article
-        data-spotlight
-        data-tilt="5"
-        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white transition-[border-color,box-shadow] duration-500 hover:border-neutral-400 hover:shadow-[0_24px_48px_-24px_rgb(0_0_0/0.25)] dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-600"
+        className={cn(
+          "group flex h-full flex-col overflow-hidden rounded-2xl border transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5",
+          dark
+            ? "border-neutral-900 bg-black text-white hover:shadow-[0_24px_48px_-24px_rgb(0_0_0/0.6)] dark:border-neutral-700 dark:bg-white dark:text-black"
+            : "border-neutral-200 bg-[#f7f7f5] text-black hover:shadow-[0_24px_48px_-28px_rgb(0_0_0/0.25)] dark:border-neutral-800 dark:bg-neutral-950 dark:text-white",
+        )}
       >
-        <div aria-hidden className="relative flex min-h-44 flex-1 items-center justify-center overflow-hidden p-6">
-          {children}
+        <div className="flex items-start justify-between gap-3 p-6 pb-0">
+          <h3 className="text-lg font-semibold leading-snug tracking-tight">{title}</h3>
+          <StatusPill status={status} dark={dark} />
         </div>
-        <div className="border-t border-neutral-100 p-6 dark:border-neutral-900">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="font-semibold text-black dark:text-white">{title}</h3>
-            <StatusPill status={status} />
-          </div>
-          <p className="mt-1.5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{body}</p>
-        </div>
+        <p className={cn("px-6 pt-2 text-sm leading-relaxed", dark ? "text-white/65 dark:text-black/60" : "text-neutral-600 dark:text-neutral-400")}>{body}</p>
+        <div aria-hidden className={cn("mt-auto flex items-end overflow-hidden px-6 pb-6", compact ? "pt-5" : "min-h-40 pt-6")}>{children}</div>
       </article>
     </li>
   );
 }
 
-const INNER = PLANNED_INTEGRATIONS.slice(0, 4);
-const OUTER = PLANNED_INTEGRATIONS.slice(4, 12);
+/* ── Illustrations (typography and shapes only) ── */
 
-function Orbit() {
-  const ring = (icons: SimpleIcon[], size: number, duration: string, reverse = false) => (
-    <div
-      className="absolute rounded-full border border-dashed border-neutral-300 motion-safe:animate-orbit dark:border-neutral-700"
-      style={{ width: size, height: size, animationDuration: duration, animationDirection: reverse ? "reverse" : "normal" }}
-    >
-      {icons.map((icon, i) => {
-        const angle = (i / icons.length) * Math.PI * 2;
-        return (
-          <span
-            key={icon.slug}
-            className="absolute -ml-5 -mt-5 motion-safe:animate-orbit"
-            style={{
-              left: `${50 + 50 * Math.cos(angle)}%`,
-              top: `${50 + 50 * Math.sin(angle)}%`,
-              animationDuration: duration,
-              animationDirection: reverse ? "normal" : "reverse",
-            }}
-          >
-            <BrandTile icon={icon} />
-          </span>
-        );
-      })}
-    </div>
-  );
+const card = "rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-black";
+
+function Directory() {
+  const rows = [
+    ["Laila Shah", "Head nurse", "Nursing", "In"],
+    ["Wasi Khan", "Nurse", "Nursing", "On leave"],
+    ["Hina Noor", "Receptionist", "Front desk", "In"],
+    ["Omar Ali", "Accountant", "Finance", "In"],
+  ];
   return (
-    <div className="relative flex h-[280px] w-full scale-[0.8] items-center justify-center sm:h-[340px] sm:scale-100">
-      {ring(OUTER, 320, "80s", true)}
-      {ring(INNER, 180, "50s")}
-      <span className="relative flex size-16 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-[0_16px_40px_-12px_rgb(124_58_237/0.45)] dark:border-neutral-800 dark:bg-neutral-900">
-        <Logo withWordmark={false} className="[&_svg]:size-10" />
-      </span>
+    <div className={cn(card, "w-full overflow-hidden text-left")}>
+      <div className="grid grid-cols-[1.3fr_1fr_4.75rem] gap-3 border-b border-neutral-200 px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-neutral-500 sm:grid-cols-[1.3fr_1fr_1fr_4.75rem] dark:border-neutral-800">
+        <span>Name</span><span>Role</span><span className="hidden sm:block">Department</span><span>Today</span>
+      </div>
+      {rows.map(([n, r, d, s], i) => (
+        <div key={n} className="grid grid-cols-[1.3fr_1fr_4.75rem] items-center gap-3 border-b border-neutral-100 px-4 py-2.5 text-sm last:border-0 sm:grid-cols-[1.3fr_1fr_1fr_4.75rem] dark:border-neutral-900" style={{ animationDelay: `${i * 80}ms` }}>
+          <span className="truncate font-medium">{n}</span>
+          <span className="truncate text-neutral-500">{r}</span>
+          <span className="hidden truncate text-neutral-500 sm:block">{d}</span>
+          <span className={cn("justify-self-start whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium", s === "In" ? "bg-neutral-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300" : "bg-black text-white dark:bg-white dark:text-black")}>{s}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-const PERMS = ["View members", "Invite members", "Manage roles", "Edit organization", "Read audit log"];
+function RoleViews() {
+  return (
+    <div className="grid w-full gap-2">
+      {[
+        ["Owner", "Team, activity, billing, people"],
+        ["HR Manager", "People, leave approvals"],
+        ["Employee", "My profile, my leave"],
+      ].map(([role, sees], i) => (
+        <div key={role} className={cn("flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm", i === 2 ? "bg-white text-black dark:bg-black dark:text-white" : "border border-white/15 dark:border-black/15")}>
+          <span className="font-semibold">{role}</span>
+          <span className={cn("truncate text-xs", i === 2 ? "text-neutral-500" : "text-white/60 dark:text-black/60")}>{sees}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LiveSync() {
+  return (
+    <div className="relative w-full">
+      <div className={cn(card, "flex items-center justify-between px-4 py-3 text-sm")}>
+        <span className="font-medium">Leave approved</span>
+        <span className="text-xs text-neutral-500">just now</span>
+      </div>
+      <div className="mx-auto h-6 w-px border-l border-dashed border-neutral-400" />
+      <div className={cn(card, "flex items-center justify-between px-4 py-3 text-sm")}>
+        <span className="font-medium">Every open tab</span>
+        <span className="flex items-center gap-1.5 text-xs text-neutral-500">
+          <span className="relative flex size-2"><span className="absolute inset-0 rounded-full bg-black motion-safe:animate-ping dark:bg-white" /><span className="relative size-2 rounded-full bg-black dark:bg-white" /></span>
+          updated
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Permissions() {
+  const perms: [string, boolean][] = [["View people", true], ["Approve leave", true], ["See salaries", false], ["Manage billing", false]];
   return (
-    <ul className="w-full max-w-64 divide-y divide-neutral-100 rounded-2xl border border-neutral-200 bg-white text-sm shadow-sm dark:divide-neutral-900 dark:border-neutral-800 dark:bg-neutral-950">
-      {PERMS.map((p, i) => (
-        <li key={p} className="flex items-center justify-between gap-3 px-4 py-2.5">
-          <span className="text-neutral-700 dark:text-neutral-300">{p}</span>
-          <span
-            className="relative h-4 w-[30px] shrink-0 rounded-full bg-[var(--track-off)] motion-safe:animate-toggle-track"
-            style={{ animationDelay: `${i * 0.45}s` }}
-          >
-            <span
-              className="absolute left-0.5 top-0.5 size-3 rounded-full bg-white shadow motion-safe:animate-toggle-knob dark:bg-neutral-950"
-              style={{ animationDelay: `${i * 0.45}s` }}
-            />
+    <ul className={cn(card, "w-full divide-y divide-neutral-100 text-sm dark:divide-neutral-900")}>
+      {perms.map(([p, on]) => (
+        <li key={p} className="flex items-center justify-between px-4 py-2.5">
+          <span>{p}</span>
+          <span className={cn("relative h-5 w-9 rounded-full transition-colors", on ? "bg-black dark:bg-white" : "bg-neutral-200 dark:bg-neutral-800")}>
+            <span className={cn("absolute top-0.5 size-4 rounded-full bg-white shadow-sm dark:bg-black", on ? "left-[18px]" : "left-0.5")} />
           </span>
         </li>
       ))}
@@ -122,202 +128,131 @@ function Permissions() {
   );
 }
 
+function Assistant() {
+  return (
+    <div className="grid w-full gap-2 text-sm">
+      <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-black px-4 py-2.5 text-white dark:bg-white dark:text-black">Who is on leave today?</p>
+      <p className={cn(card, "max-w-[90%] rounded-2xl rounded-bl-md px-4 py-2.5")}>2 people are on leave today: Wasi Khan and Omar Ali.</p>
+    </div>
+  );
+}
+
 function Isolation() {
   return (
-    <div className="relative flex w-full max-w-72 items-center justify-between">
-      {["Org A", "Org B"].map((org) => (
-        <div key={org} className="grid w-24 gap-1.5 rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950">
-          <p className="text-xs font-semibold text-black dark:text-white">{org}</p>
-          <span className="h-1.5 rounded bg-neutral-200 dark:bg-neutral-800" />
-          <span className="h-1.5 w-2/3 rounded bg-neutral-200 dark:bg-neutral-800" />
-          <span className="h-1.5 w-4/5 rounded bg-neutral-200 dark:bg-neutral-800" />
-        </div>
-      ))}
-      <div className="absolute inset-y-0 left-1/2 -ml-px flex w-0.5 flex-col items-center justify-center bg-[repeating-linear-gradient(to_bottom,rgb(var(--spot)/0.35)_0_4px,transparent_4px_8px)]">
-        <span className="flex size-7 items-center justify-center rounded-full border border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-950">
-          <Lock className="size-3.5 text-black dark:text-white" />
-        </span>
+    <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3 text-sm">
+      <div className="rounded-xl border border-white/20 p-4 dark:border-black/20">
+        <p className="font-semibold">Acme Clinic</p>
+        <p className="mt-1 text-xs text-white/60 dark:text-black/60">24 people</p>
       </div>
-      <span className="absolute right-[86px] top-[22%] size-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgb(244_63_94/0.8)] motion-safe:animate-probe" />
-      <span className="absolute left-1/2 top-[6%] -translate-x-1/2 rounded-full bg-rose-500 px-2 py-0.5 font-mono text-[10px] font-semibold text-white opacity-0 shadow-md shadow-rose-500/40 motion-safe:animate-probe-flag">
-        404
-      </span>
+      <span className="font-mono text-xs text-white/60 dark:text-black/60">404</span>
+      <div className="rounded-xl border border-dashed border-white/20 p-4 dark:border-black/20">
+        <p className="font-semibold">Other company</p>
+        <p className="mt-1 text-xs text-white/60 dark:text-black/60">not found</p>
+      </div>
     </div>
   );
 }
 
-function Invitation() {
+function Logins() {
   return (
-    <div className="relative w-full max-w-64">
-      <div className="absolute inset-x-4 -top-3 h-full rounded-2xl border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900" />
-      <div className="relative rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm motion-safe:animate-invite dark:border-neutral-800 dark:bg-neutral-950">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-violet-600 text-xs font-semibold text-white shadow-md shadow-violet-500/30">SK</span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-black dark:text-white">Join Acme on Aoient</p>
-            <p className="truncate text-xs text-neutral-500">Role: Project manager</p>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="rounded-full bg-black px-3 py-1 text-[11px] font-medium text-white dark:bg-white dark:text-black">Accept</span>
-          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 opacity-0 ring-1 ring-inset ring-emerald-500/30 motion-safe:animate-invite-badge dark:text-emerald-400">
-            <Check className="mr-0.5 inline size-3 -translate-y-px" strokeWidth={3} aria-hidden />
-            Joined
-          </span>
-        </div>
-      </div>
+    <div className={cn(card, "grid w-full gap-2 p-4 text-sm")}>
+      <div className="flex justify-between gap-3"><span className="text-neutral-500">Email</span><span className="truncate font-medium">wasi@acme.co</span></div>
+      <div className="flex justify-between gap-3"><span className="text-neutral-500">Temporary password</span><span className="font-mono">••••••••••</span></div>
+      <p className="mt-1 rounded-lg bg-neutral-100 px-3 py-2 text-xs text-neutral-600 dark:bg-neutral-900 dark:text-neutral-400">They choose their own password at first sign-in.</p>
     </div>
   );
 }
 
-const AUDIT = [
-  ["member.role_changed", "Owner → Admin"],
-  ["invitation.sent", "sara@studio.co"],
-  ["role.created", "Project lead"],
-  ["organization.updated", "currency: USD"],
-  ["member.suspended", "contractor"],
-  ["invitation.accepted", "dev@studio.co"],
-];
+function Install() {
+  return (
+    <div className="flex w-full items-end justify-center gap-3">
+      <div className={cn(card, "h-28 w-44 p-2")}><div className="h-full rounded-md bg-neutral-100 dark:bg-neutral-900" /></div>
+      <div className={cn(card, "h-32 w-16 rounded-2xl p-1.5")}><div className="h-full rounded-xl bg-neutral-100 dark:bg-neutral-900" /></div>
+    </div>
+  );
+}
 
 function AuditFeed() {
-  const rows = [...AUDIT, ...AUDIT];
   return (
-    <div className="h-48 w-full max-w-72 overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]">
-      <ul className="grid gap-2 motion-safe:animate-marquee-y">
-        {rows.map(([action, detail], i) => (
-          <li key={i} className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className={cn("size-1.5 shrink-0 rounded-full", ["bg-violet-500", "bg-sky-500", "bg-fuchsia-500", "bg-amber-500", "bg-rose-500", "bg-emerald-500"][i % 6])} />
-              <span className="truncate font-mono text-[11px] text-black dark:text-white">{action}</span>
-            </span>
-            <span className="truncate text-[11px] text-neutral-500">{detail}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-const CODE = [
-  { text: "$ curl /api/v1/organizations", tone: "text-neutral-500" },
-  { text: "HTTP/1.1 200 OK", tone: "text-black dark:text-white" },
-  { text: "{", tone: "text-black dark:text-white" },
-  { text: '  "data": [{', tone: "text-black dark:text-white" },
-  { text: '    "slug": "acme",', tone: "text-neutral-600 dark:text-neutral-400" },
-  { text: '    "role": "Owner"', tone: "text-neutral-600 dark:text-neutral-400" },
-  { text: "  }]", tone: "text-black dark:text-white" },
-  { text: "}", tone: "text-black dark:text-white" },
-];
-
-function ApiCode() {
-  return (
-    <pre className="w-full max-w-72 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 p-4 font-mono text-[11px] leading-5 dark:border-neutral-800 dark:bg-neutral-900">
-      {CODE.map((line, i) => (
-        <span key={i} className={cn("block motion-safe:animate-line-cycle", line.tone)} style={{ animationDelay: `${i * 0.25}s` }}>
-          {line.text}
-          {i === CODE.length - 1 && <span className="ml-0.5 inline-block h-3 w-1.5 translate-y-0.5 bg-black motion-safe:animate-blink dark:bg-white" />}
-        </span>
+    <ul className="grid w-full gap-1.5 font-mono text-xs">
+      {["member.invited", "role.updated", "leave.approved", "employee.created"].map((a, i) => (
+        <li key={a} className={cn(card, "flex items-center justify-between px-3 py-2")} style={{ opacity: 1 - i * 0.18 }}>
+          <span>{a}</span><span className="text-neutral-500">{["2m", "1h", "3h", "1d"][i]}</span>
+        </li>
       ))}
-    </pre>
+    </ul>
   );
 }
 
-function Themes() {
-  const mini = (dark: boolean) => (
-    <div className={cn("grid gap-1.5 rounded-xl border p-3", dark ? "border-neutral-800 bg-black" : "border-neutral-200 bg-white")}>
-      <span className={cn("h-2 w-1/2 rounded", dark ? "bg-white" : "bg-black")} />
-      <span className={cn("h-1.5 rounded", dark ? "bg-neutral-800" : "bg-neutral-200")} />
-      <span className={cn("h-1.5 w-3/4 rounded", dark ? "bg-neutral-800" : "bg-neutral-200")} />
-      <span className={cn("mt-1 h-4 w-12 rounded-full", dark ? "bg-white" : "bg-black")} />
-    </div>
-  );
-  return (
-    <div className="grid w-full max-w-64 grid-cols-2 gap-3">
-      <div className="transition-transform duration-500 group-hover:-rotate-3 group-hover:-translate-y-1">{mini(false)}</div>
-      <div className="transition-transform duration-500 group-hover:rotate-3 group-hover:-translate-y-1">{mini(true)}</div>
-    </div>
-  );
-}
-
-function PlanToggle() {
+function Plans() {
   const plan = PLANS.find((p) => p.featured) ?? PLANS[0];
-  const monthly = priceFor(plan, "monthly");
   const yearly = priceFor(plan, "yearly");
+  const monthly = priceFor(plan, "monthly");
   return (
-    <div className="grid w-full max-w-60 justify-items-center gap-4">
-      <div className="relative grid w-44 grid-cols-2 rounded-full border border-neutral-200 p-1 text-[11px] font-medium dark:border-neutral-800">
-        <span className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 motion-safe:animate-knob-slide" />
-        <span className="relative z-10 py-1 text-center text-white motion-safe:animate-label-first">Monthly</span>
-        <span className="relative z-10 py-1 text-center text-neutral-500 motion-safe:animate-label-second">Yearly</span>
+    <div className="flex w-full items-end justify-between gap-4">
+      <div>
+        <p className="text-xs text-neutral-500">{plan.name}</p>
+        <p className="text-4xl font-bold tracking-tight tabular-nums">${monthly.amount}<span className="text-sm font-normal text-neutral-500"> / mo</span></p>
       </div>
-      <div className="relative h-12 w-full text-center">
-        <p className="absolute inset-0 motion-safe:animate-swap-out">
-          <span className="text-4xl font-semibold tracking-tight text-black dark:text-white">${monthly.amount}</span>
-          <span className="text-sm text-neutral-500"> / month</span>
-        </p>
-        <p className="absolute inset-0 opacity-0 motion-safe:animate-swap-in">
-          <span className="text-4xl font-semibold tracking-tight text-black dark:text-white">${yearly.amount.toLocaleString("en-US")}</span>
-          <span className="text-sm text-neutral-500"> / year</span>
-        </p>
-      </div>
-      <p className="text-xs text-neutral-500">{plan.name} plan</p>
+      <p className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs dark:border-neutral-700">${yearly.amount.toLocaleString("en-US")} / year</p>
+    </div>
+  );
+}
+
+function Integrations() {
+  return (
+    <div className="flex w-full flex-wrap gap-2">
+      {["Gmail", "Calendar", "Stripe", "QuickBooks", "Slack", "HubSpot"].map((n) => (
+        <span key={n} className="rounded-full border border-dashed border-neutral-300 px-3 py-1 text-xs text-neutral-500 dark:border-neutral-700">{n}</span>
+      ))}
     </div>
   );
 }
 
 export function FeatureBento() {
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-      <Tile
-        className="sm:col-span-2 lg:col-span-4 lg:row-span-2"
-        reveal="scale"
-        status="soon"
-        title="Connect the tools you already use"
-        body="Planned integrations for Aoient Connect, such as Gmail, Google Calendar, Stripe, QuickBooks and HubSpot. None are connected yet; they'll be added as Connect is built."
-      >
-        <Orbit />
+    <ul className="grid auto-rows-auto grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      <Tile className="sm:col-span-2 lg:col-span-4" status="live" title="People, in one directory"
+        body="Departments, managers and private HR details that only the right people can see. Leave requests go to approval with weekends left out.">
+        <Directory />
       </Tile>
-      <Tile
-        className="sm:col-span-2 lg:col-span-2 lg:row-span-2"
-        status="live"
-        delay={100}
-        title="Roles & permissions"
-        body="Owner, Admin and Member roles out of the box, plus custom roles. Nobody can grant a permission they don't hold."
-      >
+      <Tile className="sm:col-span-2 lg:col-span-2" dark status="live" delay={80} title="A dashboard for every role"
+        body="Owners see the business. Employees see their own profile and leave. Custom roles see what you switch on.">
+        <RoleViews />
+      </Tile>
+
+      <Tile className="lg:col-span-2" status="live" title="Live without refreshing" body="Changes show up on every open screen within seconds.">
+        <LiveSync />
+      </Tile>
+      <Tile className="lg:col-span-2" status="live" delay={80} title="Roles & permissions" body="Built-in roles plus custom ones. Nobody can grant more than they hold.">
         <Permissions />
       </Tile>
-      <Tile className="lg:col-span-2" status="live" title="Tenant isolation" body="Every request proves membership on the server. Another company's data answers with “not found”.">
+      <Tile className="sm:col-span-2 lg:col-span-2" status="live" delay={160} title="Ask Aoient" body="Plain questions, answered from your own records and limited to your role.">
+        <Assistant />
+      </Tile>
+
+      <Tile className="sm:col-span-2 lg:col-span-3" dark status="live" title="Your data stays yours"
+        body="Every request proves membership on the server. Another company's records simply don't exist for you.">
         <Isolation />
       </Tile>
-      <Tile className="lg:col-span-2" status="live" delay={100} title="Team invitations" body="Invite teammates with a role attached. Invitation links are single-use and expire.">
-        <Invitation />
+      <Tile className="sm:col-span-2 lg:col-span-3" status="live" delay={80} title="Logins for your staff"
+        body="Give someone an email and a temporary password, or invite them with a link. Either way, only they know their final password.">
+        <Logins />
       </Tile>
-      <Tile className="sm:col-span-2 lg:col-span-2" status="live" delay={200} title="Audit log" body="Role changes, invitations and settings edits are recorded with who did what.">
+
+      <Tile className="lg:col-span-2" status="live" title="Install it like an app" body="On a computer or phone, straight from the browser.">
+        <Install />
+      </Tile>
+      <Tile className="lg:col-span-2" status="live" delay={80} title="Every change on record" body="Who did what, and when, for roles, members, people and leave.">
         <AuditFeed />
       </Tile>
-      <Tile className="lg:col-span-2" status="live" title="Versioned API" body="A JSON API under /api/v1 with the same permission checks as the app.">
-        <ApiCode />
+      <Tile className="sm:col-span-2 lg:col-span-2" status="live" delay={160} title="Monthly or yearly" body="Three plans. Yearly gets two months free. 14-day trial first.">
+        <Plans />
       </Tile>
-      <li data-reveal="flip" className="reveal lg:col-span-2" style={{ "--reveal-delay": "100ms" } as CSSProperties}>
-        <article
-          data-spotlight
-          data-tilt="5"
-          className="group flex h-full flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white transition-[border-color,box-shadow] duration-500 hover:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-600"
-        >
-          <div aria-hidden className="flex min-h-44 flex-1 items-center justify-center p-6">
-            <Themes />
-          </div>
-          <div className="border-t border-neutral-100 p-6 dark:border-neutral-900">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-semibold text-black dark:text-white">White or black</h3>
-              <ThemeToggle label="Try it" className="h-7 px-2 text-xs" />
-            </div>
-            <p className="mt-1.5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">A clean light theme by default, and a true dark theme one click away.</p>
-          </div>
-        </article>
-      </li>
-      <Tile className="sm:col-span-2 lg:col-span-2" status="live" delay={200} title="Monthly or yearly" body="Three plans, each billed monthly or yearly, with two months free on yearly. Every workspace starts with a 14-day free trial, and a plan switches on as soon as Paddle confirms it.">
-        <PlanToggle />
+
+      <Tile className="sm:col-span-2 lg:col-span-6" compact status="soon" title="Connect the tools you already use"
+        body="Planned integrations for Aoient Connect. None are connected yet, and we'll say so until they are.">
+        <Integrations />
       </Tile>
     </ul>
   );

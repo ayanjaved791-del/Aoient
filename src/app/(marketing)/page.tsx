@@ -1,47 +1,30 @@
-import { Hero } from "@/modules/marketing/hero";
-import { TechStack } from "@/modules/marketing/brand-logos";
+import { HomeHero } from "@/modules/marketing/home/hero";
+import { BuiltOn, FinalCta, Heading, HowItWorks, ModulesBand, TextLink } from "@/modules/marketing/home/sections";
 import { FeatureBento } from "@/modules/marketing/bento";
 import { PricingTeaser } from "@/modules/marketing/pricing-teaser";
-import {
-  CtaSection,
-  FaqSection,
-  IntegrationMarquee,
-  ModulesSection,
-  MoreLink,
-  SectionHeading,
-  SecuritySection,
-  StepsSection,
-  WorkflowSection,
-} from "@/modules/marketing/sections";
+import { FaqSection, MoreLink } from "@/modules/marketing/sections";
 
-/** The overview. Each section links to its own page with the full story. */
+/** The overview, in black and white. Each section links to its own page with the full story. */
 export default function LandingPage() {
   return (
     <>
-      <Hero />
-      <IntegrationMarquee />
-      <TechStack />
+      <HomeHero />
+      <BuiltOn />
 
       <section className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
-        <SectionHeading
-          eyebrow="Features"
-          title="Built on a foundation you can trust"
-          body="Tiles marked Live work today. The rest are on the way, and we label them honestly."
-        />
+        <Heading title="Everything your team needs. Nothing pretend." body="Tiles marked Live work today. Anything else is labelled as in development." />
         <div className="mt-14">
           <FeatureBento />
         </div>
         <MoreLink href="/features">Explore all features</MoreLink>
       </section>
 
-      <WorkflowSection />
-      <ModulesSection more={<MoreLink href="/modules">See every module</MoreLink>} />
-      <SecuritySection more={<MoreLink href="/security">How we protect your data</MoreLink>} />
-      <StepsSection />
+      <ModulesBand more={<TextLink href="/modules" invert>See every module</TextLink>} />
+      <HowItWorks />
 
-      <section className="border-t border-neutral-200 bg-neutral-50 dark:border-neutral-900 dark:bg-neutral-950/40">
+      <section className="border-t border-neutral-200 bg-[#f7f7f5] dark:border-neutral-900 dark:bg-neutral-950">
         <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
-          <SectionHeading eyebrow="Pricing" title="Simple plans that grow with you" body="Every plan is available monthly or yearly." />
+          <Heading title="Simple plans that grow with you" body="Every plan is available monthly or yearly, after a 14-day free trial." />
           <div className="mt-12">
             <PricingTeaser />
           </div>
@@ -50,7 +33,7 @@ export default function LandingPage() {
       </section>
 
       <FaqSection limit={4} more={<MoreLink href="/faq">Read all questions</MoreLink>} />
-      <CtaSection />
+      <FinalCta />
     </>
   );
 }
