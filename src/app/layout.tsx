@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PwaRegister } from "@/components/pwa/pwa-register";
+import { NetworkStatus } from "@/components/network/network-status";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"], display: "swap" });
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
           <Toaster />
           <PwaRegister />
+          <NetworkStatus />
         </ThemeProvider>
       </body>
     </html>

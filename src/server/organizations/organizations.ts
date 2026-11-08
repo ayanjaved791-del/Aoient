@@ -1,4 +1,5 @@
 import "server-only";
+import { avatarUrl, orgLogoUrl } from "@/lib/media";
 import { getDb, transaction, type Db } from "@/server/database/client";
 import { isUniqueViolation } from "@/server/database/errors";
 import { recordAudit } from "@/server/audit/audit";
@@ -19,18 +20,21 @@ export interface OrganizationSummary {
   name: string;
   slug: string;
   roleName: string;
+  /** Logo image URL for members, or null for none. */
+  logoUrl: string | null;
 }
 
 /** Organizations the user is an active member of (used by the switcher). */
 export async function listUserOrganizations(userId: string): Promise<OrganizationSummary[]> {
   if (!isUuid(userId)) return [];
-  return getDb()<OrganizationSummary[]>`
-    select o.id, o.name, o.slug, r.name as "roleName"
+  const rows = await getDb()<(Omit<OrganizationSummary, "logoUrl"> & { logoUpdatedAt: Date | null })[]>`
+    select o.id, o.name, o.slug, r.name as "roleName", o.logo_updated_at as "logoUpdatedAt"
     from organization_member m
     join organization o on o.id = m.organization_id
     join role r on r.id = m.role_id
     where m.user_id = ${userId} and m.status = 'active' and o.status = 'active'
     order by m.joined_at asc`;
+  return rows.map(({ logoUpdatedAt, ...o }) => ({ ...o, logoUrl: orgLogoUrl(o.id, logoUpdatedAt) }));
 }
 
 const ORG_SLUG_CONSTRAINT = "organization_slug_key";
@@ -138,6 +142,7 @@ export interface MemberRow {
   status: "active" | "suspended";
   joinedAt: Date;
   role: { id: string; name: string; key: string; isSystem: boolean };
+  avatarUrl: string | null;
 }
 
 export async function listMembers(ctx: OrgContext, opts: { query?: string; status?: "active" | "suspended" } = {}): Promise<MemberRow[]> {
@@ -147,9 +152,9 @@ export async function listMembers(ctx: OrgContext, opts: { query?: string; statu
   const like = q ? `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
   const rows = await sql<{
     id: string; user_id: string; status: "active" | "suspended"; joined_at: Date; name: string; email: string;
-    role_id: string; role_name: string; role_key: string; is_system: boolean;
+    role_id: string; role_name: string; role_key: string; is_system: boolean; avatar_updated_at: Date | null;
   }[]>`
-    select m.id, m.user_id, m.status, m.joined_at, p.name, p.email,
+    select m.id, m.user_id, m.status, m.joined_at, p.name, p.email, p.avatar_updated_at,
            r.id as role_id, r.name as role_name, r.key as role_key, r.is_system
     from organization_member m
     join profile p on p.id = m.user_id
@@ -162,6 +167,7 @@ export async function listMembers(ctx: OrgContext, opts: { query?: string; statu
   return rows.map((r) => ({
     id: r.id, userId: r.user_id, name: r.name, email: r.email, status: r.status, joinedAt: r.joined_at,
     role: { id: r.role_id, name: r.role_name, key: r.role_key, isSystem: r.is_system },
+    avatarUrl: avatarUrl(r.user_id, r.avatar_updated_at),
   }));
 }
 

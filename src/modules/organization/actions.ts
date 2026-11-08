@@ -14,6 +14,7 @@ import { createCustomRole, deleteCustomRole, updateCustomRole } from "@/server/o
 import { createBillingPortalUrl } from "@/server/billing/paddle-portal";
 import { syncMyLicense } from "@/server/billing/paddle-sync";
 import { assertTermsAccepted } from "@/server/legal/acceptance";
+import { removeOrganizationLogo, setOrganizationLogo } from "@/server/media/media";
 
 async function ctxFor(slug: string) {
   const user = await requireUser();
@@ -128,5 +129,21 @@ export async function syncPaddleLicenseAction(slug: string) {
     const result = await syncMyLicense(await ctxFor(slug));
     refresh();
     return result;
+  });
+}
+
+/** Organization logo: the organization comes from the slug and membership, never the form. */
+export async function uploadOrganizationLogoAction(slug: string, form: FormData) {
+  return runAction(async () => {
+    const result = await setOrganizationLogo(await ctxFor(slug), form.get("file"));
+    refresh();
+    return result;
+  });
+}
+
+export async function removeOrganizationLogoAction(slug: string) {
+  return runAction(async () => {
+    await removeOrganizationLogo(await ctxFor(slug));
+    refresh();
   });
 }

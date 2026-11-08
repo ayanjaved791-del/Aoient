@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { ArrowLeft, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Camera, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { getSessionUser } from "@/server/auth/session";
 import { getAccount } from "@/server/account/account";
 import { safeNextPath } from "@/lib/validation/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmailForm, NameForm, PasswordForm } from "@/modules/account/account-forms";
+import { AvatarForm } from "@/modules/account/avatar-form";
+import { avatarUrl } from "@/lib/media";
+import { initials } from "@/components/ui/avatar";
 
 export const metadata: Metadata = { title: "Account settings", robots: { index: false } };
 
@@ -45,6 +48,13 @@ async function Account({ searchParams }: { searchParams: Promise<{ setup?: strin
         <h1 className="text-2xl font-semibold tracking-tight">Account settings</h1>
         <p className="text-sm text-muted-foreground">Changes here show up for your workspace admins too, in Members and People.</p>
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Camera className="size-4 text-primary" aria-hidden />Profile picture</CardTitle>
+          <CardDescription>Shown to people in your workspaces, next to your name.</CardDescription>
+        </CardHeader>
+        <CardContent><AvatarForm currentUrl={avatarUrl(user.id, user.avatarUpdatedAt)} fallback={initials(account.name)} /></CardContent>
+      </Card>
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><UserRound className="size-4 text-primary" aria-hidden />Your name</CardTitle></CardHeader>
         <CardContent><NameForm initial={account.name} /></CardContent>

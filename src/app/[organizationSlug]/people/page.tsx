@@ -111,7 +111,7 @@ async function Directory({ params, searchParams }: Props) {
                       <tr key={e.id} className="group relative hover:bg-surface-muted/60">
                         <td className="px-4 py-3">
                           <Link href={`${base}/${e.id}`} className="flex items-center gap-3 after:absolute after:inset-0">
-                            <Avatar name={e.fullName} />
+                            <Avatar name={e.fullName} src={e.avatarUrl} />
                             <span className="grid min-w-0">
                               <span className="truncate font-medium">{e.fullName}{e.id === myId && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(you)</span>}</span>
                               <span className="truncate text-xs text-muted-foreground">{e.jobTitle ?? e.workEmail ?? "—"}</span>

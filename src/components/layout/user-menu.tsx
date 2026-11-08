@@ -11,7 +11,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function UserMenu({ name, email }: { name: string; email: string }) {
+export function UserMenu({ name, email, avatarUrl }: { name: string; email: string; avatarUrl?: string | null }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [installHelp, setInstallHelp] = useState<null | { ios: boolean }>(null);
@@ -27,7 +27,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
     <HowToDialog open={installHelp !== null} onOpenChange={(o) => !o && setInstallHelp(null)} ios={installHelp?.ios ?? false} />
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-full" aria-label="Account menu">
-        <Avatar name={name} />
+        <Avatar name={name} src={avatarUrl} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel className="grid gap-0.5 pb-1.5 font-normal normal-case tracking-normal">

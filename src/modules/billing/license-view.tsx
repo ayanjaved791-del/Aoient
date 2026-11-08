@@ -182,14 +182,19 @@ export function LicenseBanner({ slug, license, canManage }: { slug: string; lice
   // Nothing to nag about once a plan is bought (including its free trial).
   if (license?.state === "active" || (license?.state === "trial" && license.source === "paddle")) return null;
   const label = licenseLabel(license);
+  // Billing managers can act on it; everyone else is told who can.
   const message =
     !license || license.state === "expired"
-      ? "Your trial or subscription has ended. This workspace is read-only until a plan is active."
+      ? canManage
+        ? "Your trial or subscription has ended. This workspace is read-only until a plan is active."
+        : "This workspace is read-only because its plan has ended. You can still view everything; ask the workspace owner to choose a plan to make changes again."
       : license.state === "trial"
-        ? `You're on a free ${license.planName} trial. ${label.text.replace("Trial · ", "")}.`
+        ? `${canManage ? "You're" : "This workspace is"} on a free ${license.planName} trial. ${label.text.replace("Trial · ", "")}.`
         : license.state === "past_due"
-          ? "There's a problem with your last payment. Paddle will retry; update your payment method to avoid interruption."
-          : `Your subscription is canceled and ends on ${fmtDate(license.currentPeriodEndsAt)}.`;
+          ? canManage
+            ? "There's a problem with your last payment. Paddle will retry; update your payment method to avoid interruption."
+            : "There's a problem with this workspace's last payment. Ask the workspace owner to update the payment method."
+          : `${canManage ? "Your" : "This workspace's"} subscription is canceled and ends on ${fmtDate(license.currentPeriodEndsAt)}.`;
   const tone = !license || license.state === "expired" ? "bg-danger-subtle text-danger" : license.state === "trial" ? "bg-primary-subtle text-primary" : "bg-warning-subtle text-warning";
   return (
     <div className={cn("border-b border-border", tone)}>

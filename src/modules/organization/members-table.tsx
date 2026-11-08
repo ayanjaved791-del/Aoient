@@ -23,6 +23,7 @@ export interface MemberVM {
   isSelf: boolean;
   canManage: boolean;
   canRemove: boolean;
+  avatarUrl?: string | null;
 }
 
 const dateFmt = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
@@ -160,7 +161,7 @@ export function MembersTable({ slug, members, roles, filtered }: { slug: string;
                   <tr key={m.id}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <Avatar name={m.name} />
+                        <Avatar name={m.name} src={m.avatarUrl} />
                         <div className="grid min-w-0">
                           <span className="truncate font-medium">{m.name}{m.isSelf && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(you)</span>}</span>
                           <span className="truncate text-[13px] text-muted-foreground">{m.email}</span>
@@ -181,7 +182,7 @@ export function MembersTable({ slug, members, roles, filtered }: { slug: string;
             {members.map((m) => (
               <li key={m.id} className="grid gap-3 rounded-lg border border-border bg-surface p-4">
                 <div className="flex items-start gap-3">
-                  <Avatar name={m.name} />
+                  <Avatar name={m.name} src={m.avatarUrl} />
                   <div className="grid min-w-0 flex-1">
                     <span className="truncate text-sm font-medium">{m.name}{m.isSelf && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(you)</span>}</span>
                     <span className="truncate text-[13px] text-muted-foreground">{m.email}</span>

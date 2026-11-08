@@ -44,7 +44,7 @@ async function Content({ params, searchParams }: Props) {
         roles={view.grantableRoles}
         members={view.members.map((m) => ({
           id: m.id, name: m.name, email: m.email, status: m.status, joinedAt: m.joinedAt.toISOString(),
-          role: { id: m.role.id, name: m.role.name }, isSelf: m.isSelf, canManage: m.canManage, canRemove: m.canRemove,
+          role: { id: m.role.id, name: m.role.name }, isSelf: m.isSelf, canManage: m.canManage, canRemove: m.canRemove, avatarUrl: m.avatarUrl,
         }))}
       />
     </div>

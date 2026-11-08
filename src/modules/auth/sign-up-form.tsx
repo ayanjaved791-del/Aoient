@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -23,6 +24,7 @@ export function SignUpForm() {
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"));
   const [serverError, setServerError] = useState<string | null>(null);
+  const [existing, setExisting] = useState<string | null>(null);
   const form = useForm<Values>({
     resolver: zodResolver(signUpSchema),
     defaultValues: { name: "", email: params.get("email") ?? "", password: "", confirmPassword: "" },
@@ -34,6 +36,7 @@ export function SignUpForm() {
 
   async function onSubmit(values: Values) {
     setServerError(null);
+    setExisting(null);
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
@@ -46,7 +49,14 @@ export function SignUpForm() {
     });
     captcha.reset();
     if (error) {
-      setServerError(describeAuthError(error, "We couldn't create your account."));
+      if (error.code === "user_already_exists" || error.code === "email_exists") setExisting(values.email);
+      else setServerError(describeAuthError(error, "We couldn't create your account."));
+      return;
+    }
+    // Supabase doesn't send another email for an address that already has an
+    // account; it answers with a user that has no sign-in methods instead.
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setExisting(values.email);
       return;
     }
     // With email confirmation off in Supabase, a session is returned straight away.
@@ -62,6 +72,13 @@ export function SignUpForm() {
     <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="grid gap-4">
       <OAuthButtons next={next} />
       {serverError && <Alert tone="danger" title={serverError} />}
+      {existing && (
+        <Alert tone="info" title="You already have an account with this email.">
+          <Link className="font-medium text-primary hover:underline" href={`/sign-in?next=${encodeURIComponent(next)}`}>Sign in instead</Link>
+          {" "}or{" "}
+          <Link className="font-medium text-primary hover:underline" href="/forgot-password">reset your password</Link>.
+        </Alert>
+      )}
       <Field id="name" label="Full name" error={errors.name?.message}>
         <Input autoComplete="name" autoFocus {...form.register("name")} />
       </Field>

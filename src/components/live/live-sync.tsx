@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { reportNetworkFailure } from "@/components/network/network-store";
 
 const INTERVAL_MS = 10_000;
 
@@ -37,7 +38,7 @@ export function LiveSync({ slug }: { slug: string }) {
     };
 
     const check = async () => {
-      if (stopped || inFlight || document.visibilityState !== "visible") return;
+      if (stopped || inFlight || document.visibilityState !== "visible" || !navigator.onLine) return;
       inFlight = true;
       try {
         const res = await fetch(`/${encodeURIComponent(slug)}/live`, { cache: "no-store", credentials: "same-origin" });
@@ -52,7 +53,8 @@ export function LiveSync({ slug }: { slug: string }) {
           else if (prev && prev.v !== next.v && pending.current !== "reload") pending.current = "refresh";
         }
       } catch {
-        // Offline or a hiccup: try again on the next tick.
+        // Offline or a hiccup: find out which, and try again on the next tick.
+        void reportNetworkFailure();
       } finally {
         inFlight = false;
         apply();

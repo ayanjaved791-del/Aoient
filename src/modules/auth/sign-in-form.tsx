@@ -13,6 +13,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
+import { explainSignInFailureAction } from "./actions";
 import { SupabaseMissingNotice } from "./supabase-missing-notice";
 import { OAuthButtons } from "./oauth-buttons";
 import { CaptchaBox, useCaptcha } from "@/components/captcha/turnstile";
@@ -23,7 +24,7 @@ export function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"), "/organizations");
-  const [error, setError] = useState<{ message: string; unverifiedEmail?: string } | null>(null);
+  const [error, setError] = useState<{ message: string; detail?: "no-account" | "wrong-password" | "unconfirmed" | "deactivated"; email?: string } | null>(null);
   const form = useForm<Values>({ resolver: zodResolver(signInSchema), defaultValues: { email: "", password: "" } });
   const captcha = useCaptcha();
   const { errors, isSubmitting } = form.formState;
@@ -35,10 +36,24 @@ export function SignInForm() {
     const { error } = await getSupabaseBrowserClient().auth.signInWithPassword({ email: values.email, password: values.password, options: { captchaToken: captcha.token } });
     captcha.reset();
     if (error) {
-      setError({
-        message: describeAuthError(error, "We couldn't sign you in."),
-        unverifiedEmail: error.code === "email_not_confirmed" ? values.email : undefined,
-      });
+      if (error.code === "email_not_confirmed") {
+        setError({ message: describeAuthError(error, "We couldn't sign you in."), detail: "unconfirmed", email: values.email });
+        return;
+      }
+      if (error.code === "invalid_credentials") {
+        // Say whether the email has an account, so people know to sign up instead.
+        const reason = await explainSignInFailureAction(values.email).catch(() => "unknown" as const);
+        const messages = {
+          "no-account": "There's no Aoient account for this email.",
+          "wrong-password": "That password isn't right for this account.",
+          unconfirmed: "Verify your email to continue. Check your inbox for the link.",
+          deactivated: "This account has been turned off.",
+          unknown: "Incorrect email or password.",
+        } as const;
+        setError({ message: messages[reason], detail: reason === "unknown" ? undefined : reason, email: values.email });
+        return;
+      }
+      setError({ message: describeAuthError(error, "We couldn't sign you in.") });
       return;
     }
     router.replace(next);
@@ -51,15 +66,27 @@ export function SignInForm() {
       <OAuthButtons next={next} />
       {params.get("reset") === "success" && <Alert tone="success" title="Password updated">Sign in with your new password.</Alert>}
       {error && (
-        <Alert tone="danger" title={error.message}>
-          {error.unverifiedEmail && (
-            <Link
-              className="font-medium text-primary hover:underline"
-              href={`/verify-email?email=${encodeURIComponent(error.unverifiedEmail)}&next=${encodeURIComponent(next)}`}
-            >
+        <Alert tone={error.detail === "no-account" ? "info" : "danger"} title={error.message}>
+          {error.detail === "unconfirmed" && error.email && (
+            <Link className="font-medium text-primary hover:underline" href={`/verify-email?email=${encodeURIComponent(error.email)}&next=${encodeURIComponent(next)}`}>
               Send a new link
             </Link>
           )}
+          {error.detail === "no-account" && error.email && (
+            <>
+              Check the spelling, or{" "}
+              <Link className="font-medium text-primary hover:underline" href={`/sign-up?email=${encodeURIComponent(error.email)}&next=${encodeURIComponent(next)}`}>
+                create an account
+              </Link>
+              .
+            </>
+          )}
+          {error.detail === "wrong-password" && (
+            <>
+              Try again, <Link className="font-medium text-primary hover:underline" href="/forgot-password">reset your password</Link>, or use Continue with Google if you signed up with Google.
+            </>
+          )}
+          {error.detail === "deactivated" && <>Contact your workspace admin if you think this is a mistake.</>}
         </Alert>
       )}
       <Field id="email" label="Work email" error={errors.email?.message}>

@@ -51,6 +51,12 @@ export function describeActivity(row: ActivityRow): ActivityItem {
       text = fields.length ? `updated the organization's ${fields.join(", ")}` : "updated the organization settings";
       break;
     }
+    case "organization.logo_updated":
+      text = "changed the organization logo";
+      break;
+    case "organization.logo_removed":
+      text = "removed the organization logo";
+      break;
     case "member.invited":
       text = `invited ${str(m.email) ?? "someone"}${str(m.role) ? ` as ${m.role}` : ""}`;
       break;

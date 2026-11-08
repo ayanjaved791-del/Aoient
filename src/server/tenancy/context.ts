@@ -20,6 +20,8 @@ export interface OrgContext extends PermissionSubject {
     slug: string;
     timezone: string;
     currency: string;
+    /** When the logo last changed; null when there is none. */
+    logoUpdatedAt?: Date | null;
   };
   readonly memberId: string;
   readonly roleId: string;
@@ -43,8 +45,9 @@ export async function resolveOrgContext(userId: string, ref: OrgRef): Promise<Or
   const [row] = await sql<{
     member_id: string; org_id: string; org_name: string; slug: string; timezone: string; currency: string;
     role_id: string; role_key: string; role_name: string; is_system: boolean; role_org_id: string | null; permissions: string[];
+    logo_updated_at: Date | null;
   }[]>`
-    select m.id as member_id, o.id as org_id, o.name as org_name, o.slug, o.timezone, o.currency,
+    select m.id as member_id, o.id as org_id, o.name as org_name, o.slug, o.timezone, o.currency, o.logo_updated_at,
            r.id as role_id, r.key as role_key, r.name as role_name, r.is_system, r.organization_id as role_org_id,
            coalesce(array_agg(p.key) filter (where p.key is not null), '{}') as permissions
     from organization_member m
@@ -68,7 +71,7 @@ export async function resolveOrgContext(userId: string, ref: OrgRef): Promise<Or
     ...subject,
     userId,
     organizationId: row.org_id,
-    organization: { id: row.org_id, name: row.org_name, slug: row.slug, timezone: row.timezone, currency: row.currency.trim() },
+    organization: { id: row.org_id, name: row.org_name, slug: row.slug, timezone: row.timezone, currency: row.currency.trim(), logoUpdatedAt: row.logo_updated_at },
     memberId: row.member_id,
     roleId: row.role_id,
     roleName: row.role_name,

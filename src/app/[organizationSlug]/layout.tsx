@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
+import { avatarUrl, orgLogoUrl } from "@/lib/media";
 import { UserMenu } from "@/components/layout/user-menu";
 import { AppSidebar, MobileNav, type SidebarGroup } from "@/components/layout/app-sidebar";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
@@ -90,7 +91,7 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
   const [orgs, { license }] = await Promise.all([listUserOrganizations(user.id), getLicenseOverview(ctx.organizationId)]);
   const base = `/${ctx.organization.slug}`;
   const groups = sidebarGroups(ctx, base);
-  const switcher = <OrgSwitcher current={{ slug: ctx.organization.slug, name: ctx.organization.name, roleName: ctx.roleName }} organizations={orgs} />;
+  const switcher = <OrgSwitcher current={{ slug: ctx.organization.slug, name: ctx.organization.name, roleName: ctx.roleName, logoUrl: orgLogoUrl(ctx.organizationId, ctx.organization.logoUpdatedAt) }} organizations={orgs} />;
   const top = (
     <>
       <Link href={base} aria-label="Workspace home" className="shrink-0"><Logo withWordmark={false} /></Link>
@@ -116,7 +117,12 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
               <span className="mx-1.5 text-border">·</span>
               {ctx.roleName}
             </p>
-            <div className="ml-auto"><UserMenu name={user.name} email={user.email} /></div>
+            {readOnly && (
+              <span className="hidden shrink-0 rounded-full border border-danger/30 bg-danger-subtle px-2 py-0.5 text-xs font-medium text-danger sm:inline-flex" title="The plan has ended: you can view everything but not make changes.">
+                Read-only
+              </span>
+            )}
+            <div className="ml-auto"><UserMenu name={user.name} email={user.email} avatarUrl={avatarUrl(user.id, user.avatarUpdatedAt)} /></div>
           </div>
         </header>
         {(seesPlan || readOnly) && <LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} />}

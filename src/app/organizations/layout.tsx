@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Logo } from "@/components/ui/logo";
+import { avatarUrl } from "@/lib/media";
 import { UserMenu } from "@/components/layout/user-menu";
 import { requireUserOrRedirect } from "@/server/auth/session";
 
 async function AccountMenu() {
   const user = await requireUserOrRedirect("/organizations");
-  return <UserMenu name={user.name} email={user.email} />;
+  return <UserMenu name={user.name} email={user.email} avatarUrl={avatarUrl(user.id, user.avatarUpdatedAt)} />;
 }
 
 export default function OrganizationsLayout({ children }: LayoutProps<"/organizations">) {

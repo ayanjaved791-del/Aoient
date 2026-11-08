@@ -12,6 +12,7 @@ import { MyInvitations, type MyInvitationItem } from "@/modules/organization/my-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OrgMark } from "@/components/ui/avatar";
 import { CreateOrganizationForm } from "@/modules/organization/create-organization-form";
 import { hasAcceptedCurrentTerms } from "@/server/legal/acceptance";
 
@@ -100,7 +101,7 @@ async function OrganizationList({ searchParams }: { searchParams: Promise<{ all?
           {orgs.map((o) => (
             <li key={o.id}>
               <Link href={`/${o.slug}`} className="group flex items-center gap-3 px-5 py-4 hover:bg-surface-muted focus-visible:bg-surface-muted sm:px-6">
-                <span className="flex size-9 items-center justify-center rounded-md bg-navy text-sm font-semibold text-white dark:bg-primary">{o.name.slice(0, 1).toUpperCase()}</span>
+                <OrgMark name={o.name} src={o.logoUrl} className="size-9 text-sm" />
                 <span className="grid min-w-0 flex-1">
                   <span className="truncate text-sm font-medium">{o.name}</span>
                   <span className="truncate text-[13px] text-muted-foreground">{o.roleName}</span>

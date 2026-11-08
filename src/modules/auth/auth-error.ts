@@ -3,6 +3,9 @@
  * their own message so a broken setup is never reported as a user mistake.
  */
 export function describeAuthError(error: { status?: number; code?: string; message?: string }, fallback: string): string {
+  if ((!error.status || error.status === 0) && typeof navigator !== "undefined" && navigator.onLine === false) {
+    return "You're offline. Check your Wi-Fi or mobile data and try again.";
+  }
   switch (error.code) {
     case "invalid_credentials":
       return "Incorrect email or password.";

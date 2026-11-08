@@ -1,4 +1,5 @@
 import "server-only";
+import { avatarUrl } from "@/lib/media";
 import { getDb, transaction, type Db } from "@/server/database/client";
 import { recordAudit } from "@/server/audit/audit";
 import { assertWritable } from "@/server/billing/license";
@@ -24,6 +25,8 @@ export interface EmployeeListRow {
   startDate: string | null;
   hasAccount: boolean;
   onLeaveToday: boolean;
+  /** Profile picture of the linked sign-in account, if it has one. */
+  avatarUrl: string | null;
 }
 
 export interface EmployeeSensitive {
@@ -53,16 +56,20 @@ const BASE_SELECT = (db: Db, ctx: OrgContext) => db`
   select e.id, e.full_name, e.work_email, e.job_title, e.employment_type, e.location, e.status,
          to_char(e.start_date, 'YYYY-MM-DD') as start_date, e.member_id, e.phone, e.employee_code, e.created_at, e.archived_at,
          d.id as dept_id, d.name as dept_name, m.id as mgr_id, m.full_name as mgr_name,
+         acct.id as account_user_id, acct.avatar_updated_at,
          exists (select 1 from leave_request l where l.employee_id = e.id and l.status = 'approved'
                  and (now() at time zone ${ctx.organization.timezone})::date between l.start_date and l.end_date) as on_leave
   from employee e
   left join department d on d.id = e.department_id and d.organization_id = e.organization_id
-  left join employee m on m.id = e.manager_id and m.organization_id = e.organization_id`;
+  left join employee m on m.id = e.manager_id and m.organization_id = e.organization_id
+  left join organization_member om on om.id = e.member_id and om.organization_id = e.organization_id
+  left join profile acct on acct.id = om.user_id`;
 
 type BaseRow = {
   id: string; full_name: string; work_email: string | null; job_title: string | null; employment_type: EmploymentType; location: string | null;
   status: "active" | "archived"; start_date: string | null; member_id: string | null; phone: string | null; employee_code: string | null;
   created_at: Date; archived_at: Date | null; dept_id: string | null; dept_name: string | null; mgr_id: string | null; mgr_name: string | null; on_leave: boolean;
+  account_user_id: string | null; avatar_updated_at: Date | null;
 };
 
 const toListRow = (r: BaseRow): EmployeeListRow => ({
@@ -71,6 +78,7 @@ const toListRow = (r: BaseRow): EmployeeListRow => ({
   manager: r.mgr_id ? { id: r.mgr_id, name: r.mgr_name! } : null,
   employmentType: r.employment_type, location: r.location, status: r.status, startDate: r.start_date,
   hasAccount: r.member_id !== null, onLeaveToday: r.on_leave,
+  avatarUrl: r.account_user_id ? avatarUrl(r.account_user_id, r.avatar_updated_at) : null,
 });
 
 export async function listEmployees(

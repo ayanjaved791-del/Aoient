@@ -5,7 +5,7 @@ import { listLeave, type LeaveRow, type LeaveType } from "@/server/people/leave"
 
 export interface PersonalDashboard {
   /** The viewer's own People record, if one is linked to their membership. */
-  me: Pick<EmployeeDetail, "id" | "fullName" | "jobTitle" | "department" | "manager" | "startDate" | "location" | "employmentType" | "onLeaveToday" | "reports"> | null;
+  me: Pick<EmployeeDetail, "id" | "fullName" | "jobTitle" | "department" | "manager" | "startDate" | "location" | "employmentType" | "onLeaveToday" | "reports" | "avatarUrl"> | null;
   leave: {
     canRequest: boolean;
     pending: LeaveRow[];
@@ -43,7 +43,7 @@ export async function getPersonalDashboard(ctx: OrgContext): Promise<PersonalDas
   return {
     me: emp && {
       id: emp.id, fullName: emp.fullName, jobTitle: emp.jobTitle, department: emp.department, manager: emp.manager, startDate: emp.startDate,
-      location: emp.location, employmentType: emp.employmentType, onLeaveToday: emp.onLeaveToday, reports: emp.reports,
+      location: emp.location, employmentType: emp.employmentType, onLeaveToday: emp.onLeaveToday, reports: emp.reports, avatarUrl: emp.avatarUrl,
     },
     leave: {
       canRequest: canRequest && Boolean(id),

@@ -267,7 +267,7 @@ function MyProfileCard({ me, base }: { me: NonNullable<PersonalDashboard["me"]>;
   return (
     <ListCard title="My profile" subtitle={me.onLeaveToday ? "You're on leave today" : undefined} action={{ href: `${base}/people/${me.id}`, label: "Open" }} delay={160}>
       <div className="flex items-center gap-3">
-        <Avatar name={me.fullName} size="lg" />
+        <Avatar name={me.fullName} src={me.avatarUrl} size="lg" />
         <div className="min-w-0">
           <p className="truncate font-semibold">{me.fullName}</p>
           <p className="truncate text-sm text-muted-foreground">{me.jobTitle ?? "No job title yet"}</p>

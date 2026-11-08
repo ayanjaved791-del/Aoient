@@ -6,6 +6,8 @@ type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 export type AuditAction =
   | "organization.created"
   | "organization.updated"
+  | "organization.logo_updated"
+  | "organization.logo_removed"
   | "member.invited"
   | "member.login_created"
   | "member.password_reset"

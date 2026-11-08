@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { describeAuthError } from "@/modules/auth/auth-error";
 
 describe("describeAuthError (Supabase Auth)", () => {
@@ -11,6 +11,15 @@ describe("describeAuthError (Supabase Auth)", () => {
   it("reports server failures as a service problem, not a user mistake", () => {
     expect(describeAuthError({ status: 500 }, "x")).toMatch(/sign-in service/);
     expect(describeAuthError({}, "x")).toMatch(/sign-in service/);
+  });
+  it("says when the device is offline instead of blaming the service", () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    try {
+      expect(describeAuthError({}, "x")).toMatch(/offline/);
+      expect(describeAuthError({ code: "invalid_credentials", status: 400 }, "x")).toBe("Incorrect email or password.");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
   it("falls back to the message, then the fallback", () => {
     expect(describeAuthError({ status: 400, message: "Password should contain a number" }, "x")).toBe("Password should contain a number");
