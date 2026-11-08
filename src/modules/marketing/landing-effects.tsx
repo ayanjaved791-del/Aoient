@@ -28,7 +28,7 @@ export function LandingEffects() {
       { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
     );
     root.classList.add("reveal-ready");
-    document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw)").forEach((el) => observer.observe(el));
+    document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw, .logo-rain)").forEach((el) => observer.observe(el));
 
     let frame = 0;
     const hero = document.querySelector<HTMLElement>("[data-hero]");
@@ -43,7 +43,7 @@ export function LandingEffects() {
         if (hero && !reduced) root.style.setProperty("--hs", String(Math.max(0, 1 - window.scrollY / 420)));
         // At the very bottom nothing more can scroll into view, so show whatever is left.
         if (max > 0 && window.scrollY >= max - 4) {
-          document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw):not(.is-visible)").forEach((el) => el.classList.add("is-visible"));
+          document.querySelectorAll(".landing :is(.reveal, .words, .stagger, .draw, .logo-rain):not(.is-visible)").forEach((el) => el.classList.add("is-visible"));
         }
       });
     }

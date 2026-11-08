@@ -3,6 +3,8 @@ import type { CSSProperties, ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Face, Squiggle } from "./doodles";
+import { siCloudflare, siNextdotjs, siPaddle, siPostgresql, siSupabase, siVercel, type SimpleIcon } from "simple-icons";
+import { BrandMark } from "../brand-logos";
 
 const d = (ms: number) => ({ "--reveal-delay": `${ms}ms` }) as CSSProperties;
 
@@ -16,17 +18,29 @@ export function Heading({ title, body, invert, align = "center" }: { title: Reac
   );
 }
 
-const STACK = ["Supabase", "PostgreSQL", "Paddle", "Next.js", "Vercel", "Cloudflare Turnstile"];
+/** The services Aoient actually runs on, with their own marks and colours. */
+const STACK: { icon: SimpleIcon; glyph: string }[] = [
+  { icon: siSupabase, glyph: "fill-[#3FCF8E]" },
+  { icon: siPostgresql, glyph: "fill-[#4169E1]" },
+  { icon: siPaddle, glyph: "fill-[#FDDD35] drop-shadow-[0_0_0.5px_rgb(0_0_0/0.6)]" },
+  { icon: siNextdotjs, glyph: "fill-black dark:fill-white" },
+  { icon: siVercel, glyph: "fill-black dark:fill-white" },
+  { icon: siCloudflare, glyph: "fill-[#F38020]" },
+];
+const STACK_NAMES: Record<string, string> = { Cloudflare: "Cloudflare Turnstile" };
 
-/** Honest "built on" strip: the services Aoient actually runs on. Text only. */
+/** Honest "built on" strip. When it scrolls into view the logos drop in one by one. */
 export function BuiltOn() {
   return (
     <section aria-labelledby="built-on" className="border-y border-neutral-200 dark:border-neutral-900">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-10 sm:px-6 lg:flex-row lg:justify-between">
-        <p id="built-on" className="shrink-0 text-sm text-neutral-500">Built on infrastructure you already trust</p>
-        <ul className="flex flex-wrap justify-center gap-x-8 gap-y-3 lg:justify-end">
-          {STACK.map((s) => (
-            <li key={s} className="text-base font-semibold tracking-tight text-neutral-400 transition-colors hover:text-black sm:text-lg dark:text-neutral-600 dark:hover:text-white">{s}</li>
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-12 sm:px-6">
+        <p id="built-on" className="text-sm text-neutral-500">Built on infrastructure you already trust</p>
+        <ul className="logo-rain flex flex-wrap justify-center gap-x-9 gap-y-4">
+          {STACK.map(({ icon, glyph }, i) => (
+            <li key={icon.slug} className="logo-drop flex items-center gap-2.5" style={{ "--i": i } as CSSProperties}>
+              <BrandMark icon={icon} className={cn("size-7 shrink-0", glyph)} />
+              <span className="text-base font-semibold tracking-tight text-black dark:text-white">{STACK_NAMES[icon.title] ?? icon.title}</span>
+            </li>
           ))}
         </ul>
       </div>

@@ -1,139 +1,248 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-const TOTAL_MS = 3000;
-
 /**
- * Opening effect for the home hero: a big wave rolls in from the left,
- * washes the hero text away to the right, and once it has passed the
- * headline words drop back into place from above.
+ * Opening effect for the home hero: an ocean wave rolls in from the left and
+ * carries the hero text away; 1.5 s after the wave has gone the headline
+ * words drop back into place from above, then the rest returns.
  *
- * Progressive enhancement: the text is plain, visible HTML. The effect only
- * runs after hydration, when the tab is visible and the visitor hasn't asked
- * for reduced motion. Elements opt in with the `wash-word` / `wash-block`
- * classes and a `--i` order; the timing lives in globals.css.
+ * The wave is drawn on a canvas every frame (moving front, leaning crest,
+ * ragged trailing edge that thins out, live foam, spray and a wet trail), so
+ * it never looks like a flat picture sliding across.
+ *
+ * Progressive enhancement: the text is plain, visible HTML. Nothing runs with
+ * reduced motion or in a background tab. Elements opt in with `wash-word`
+ * (falls back in) or `wash-block` (rises back in); timing follows the wave.
  */
+const SWEEP_S = 1.9; // time for the whole wave, tail included, to cross the screen
+const PAUSE_AFTER_S = 1.5; // empty hero after the wave, before the headline returns
+const WORD_STAGGER_S = 0.11;
+const FALL_S = 0.9;
+
 export function WaveIntro({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.visibilityState !== "visible") return;
-    const el = ref.current;
-    if (!el) return;
-    // Start on the next frame so the browser has painted the text first.
-    const start = requestAnimationFrame(() => {
-      el.classList.add("wave-intro");
-      setPlaying(true);
-    });
-    const stop = window.setTimeout(() => {
-      // Mark as done rather than just removing the class: otherwise the
-      // elements' own load-in animations would replay and blink.
-      el.classList.replace("wave-intro", "wave-done");
-      setPlaying(false);
-    }, TOTAL_MS);
-    return () => {
-      cancelAnimationFrame(start);
-      window.clearTimeout(stop);
-      el.classList.remove("wave-intro");
-    };
+    const frame = requestAnimationFrame(() => setPlaying(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (!playing) return;
+    const root = ref.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!root || !canvas || !ctx) return;
+
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.scale(dpr, dpr);
+
+    // Text to carry: its position on screen, and whether the wave has reached it.
+    const targets = [...root.querySelectorAll<HTMLElement>(".wash-word, .wash-block")].map((el) => {
+      const r = el.getBoundingClientRect();
+      return { el, x: r.left + r.width * 0.3, y: r.top + r.height / 2, word: el.classList.contains("wash-word"), hit: false };
+    });
+    root.classList.add("wave-intro");
+
+    const thickness = Math.max(W * 0.5, 360);
+    const travel = W * 1.05 + thickness + 260;
+    const speed = travel / SWEEP_S;
+    const start = performance.now();
+    const timers: number[] = [];
+
+    // Deterministic noise so foam shimmers rather than flickers randomly.
+    const hash = (n: number) => {
+      const s = Math.sin(n * 127.1) * 43758.5453;
+      return s - Math.floor(s);
+    };
+    const base = (t: number) => -W * 0.05 + speed * t;
+    const front = (y: number, t: number) => {
+      const lean = Math.min(110, W * 0.09) * Math.max(0, 1 - y / (H * 0.5)) ** 2; // crest leads
+      const wobble = 13 * Math.sin(y * 0.011 + t * 6) + 8 * Math.sin(y * 0.029 - t * 9) + 4 * Math.sin(y * 0.07 + t * 15);
+      return base(t) + lean + wobble;
+    };
+    const back = (y: number, t: number) =>
+      base(t) - thickness * (0.9 + 0.07 * Math.sin(y * 0.006 + t * 3)) - 22 * Math.sin(y * 0.021 - t * 5) - 10 * Math.sin(y * 0.055 + t * 7);
+
+    type P = { x: number; y: number; vx: number; vy: number; life: number; max: number; r: number; wet?: boolean };
+    const particles: P[] = [];
+    let raf = 0;
+    let last = start;
+
+    const draw = (now: number) => {
+      const t = (now - start) / 1000;
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      ctx.clearRect(0, 0, W, H);
+      const step = 8;
+
+      if (t <= SWEEP_S) {
+        // Water body: a ragged band between the trailing edge and the front.
+        const body = new Path2D();
+        body.moveTo(back(0, t), 0);
+        for (let y = 0; y <= H + step; y += step) body.lineTo(front(y, t), y);
+        for (let y = H + step; y >= 0; y -= step) body.lineTo(back(y, t), y);
+        body.closePath();
+
+        const b = base(t);
+        const g = ctx.createLinearGradient(b - thickness - 60, 0, b + 40, 0);
+        g.addColorStop(0, "rgba(10,70,120,0)");
+        g.addColorStop(0.14, "rgba(6,55,105,0.75)");
+        g.addColorStop(0.45, "#05386a");
+        g.addColorStop(0.75, "#0b5f9f");
+        g.addColorStop(0.92, "#1a8ccb");
+        g.addColorStop(1, "#5cc9ee");
+        ctx.fillStyle = g;
+        ctx.fill(body);
+        const v = ctx.createLinearGradient(0, 0, 0, H);
+        v.addColorStop(0, "rgba(160,232,255,0.28)");
+        v.addColorStop(0.4, "rgba(255,255,255,0)");
+        v.addColorStop(1, "rgba(1,15,34,0.45)");
+        ctx.fillStyle = v;
+        ctx.fill(body);
+
+        // Currents inside the water, following the front.
+        ctx.lineCap = "round";
+        for (const [off, a] of [[70, 0.18], [150, 0.12], [250, 0.09], [360, 0.06]] as const) {
+          ctx.beginPath();
+          for (let y = 0; y <= H; y += step) {
+            const x = front(y, t - 0.04) - off - 14 * Math.sin(y * 0.02 + off);
+            if (y === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = `rgba(200,240,255,${a})`;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+
+        // Curling lip at the crest, with shadow underneath.
+        const f0 = front(0, t);
+        const fh = front(H * 0.2, t);
+        ctx.beginPath();
+        ctx.moveTo(f0 - 30, 0);
+        ctx.bezierCurveTo(f0 + 60, H * 0.01, f0 + 95, H * 0.07, f0 + 70, H * 0.13);
+        ctx.bezierCurveTo(f0 + 55, H * 0.17, fh + 10, H * 0.2, fh - 10, H * 0.21);
+        ctx.lineTo(fh - 40, H * 0.2);
+        ctx.closePath();
+        const lip = ctx.createLinearGradient(f0 - 40, 0, f0 + 90, 0);
+        lip.addColorStop(0, "#1a8ccb");
+        lip.addColorStop(1, "#8fe0f6");
+        ctx.fillStyle = lip;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(fh + 18, H * 0.17, 26, H * 0.045, 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(2,26,51,0.35)";
+        ctx.fill();
+
+        // Foam along the front and over the lip: bright core, soft halo, bubbles.
+        ctx.beginPath();
+        for (let y = 0; y <= H; y += step) {
+          const x = front(y, t);
+          if (y === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(170,225,245,0.45)";
+        ctx.lineWidth = 18;
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(250,254,255,0.95)";
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        const bucket = Math.floor(t * 16);
+        for (let y = 0, i = 0; y <= H; y += 5, i++) {
+          const n = hash(i * 3.1 + bucket * 0.7);
+          if (n < 0.35) continue;
+          const x = front(y, t) + (hash(i + bucket) - 0.35) * 22;
+          ctx.beginPath();
+          ctx.arc(x, y, 1.5 + n * 6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${0.55 + n * 0.4})`;
+          ctx.fill();
+        }
+        for (let k = 0; k < 26; k++) {
+          const n = hash(k * 9.7 + bucket);
+          const x = f0 - 20 + n * 110;
+          const y = H * 0.005 + hash(k * 4.3 + bucket) * H * 0.12;
+          ctx.beginPath();
+          ctx.arc(x, y, 2 + n * 7, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${0.6 + n * 0.35})`;
+          ctx.fill();
+        }
+
+        // Spray from the crest; wet foam left behind at the trailing edge.
+        for (let k = 0; k < 7; k++) {
+          const y = Math.random() * H * 0.45;
+          particles.push({ x: front(y, t), y, vx: speed * (0.9 + Math.random() * 0.5), vy: -120 - Math.random() * 260, life: 0, max: 0.45 + Math.random() * 0.35, r: 1.2 + Math.random() * 3 });
+        }
+        for (let k = 0; k < 5; k++) {
+          const y = Math.random() * H;
+          particles.push({ x: back(y, t) + 20 + Math.random() * 40, y, vx: 0, vy: 0, life: 0, max: 0.7 + Math.random() * 0.6, r: 1.5 + Math.random() * 3.5, wet: true });
+        }
+
+        // Carry the text the moment the front reaches it.
+        for (const tg of targets) {
+          if (!tg.hit && front(tg.y, t) >= tg.x) {
+            tg.hit = true;
+            tg.el.classList.add("is-washed");
+          }
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life += dt;
+        if (p.life >= p.max) {
+          particles.splice(i, 1);
+          continue;
+        }
+        p.vy += (p.wet ? 0 : 900) * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        const a = 1 - p.life / p.max;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.wet ? `rgba(110,180,225,${0.45 * a})` : `rgba(240,250,255,${0.9 * a})`;
+        ctx.fill();
+      }
+
+      if (t <= SWEEP_S || particles.length) raf = requestAnimationFrame(draw);
+      else ctx.clearRect(0, 0, W, H);
+    };
+    raf = requestAnimationFrame(draw);
+
+    // After the wave: wait, drop the words in order, then bring back the rest.
+    for (const tg of targets) if (!tg.hit) timers.push(window.setTimeout(() => tg.el.classList.add("is-washed"), SWEEP_S * 1000));
+    const fallAt = (SWEEP_S + PAUSE_AFTER_S) * 1000;
+    const words = targets.filter((x) => x.word);
+    const blocks = targets.filter((x) => !x.word);
+    words.forEach((w, i) => timers.push(window.setTimeout(() => w.el.classList.add("is-falling"), fallAt + i * WORD_STAGGER_S * 1000)));
+    const backAt = fallAt + words.length * WORD_STAGGER_S * 1000 + 250;
+    blocks.forEach((b, i) => timers.push(window.setTimeout(() => b.el.classList.add("is-back"), backAt + i * 80)));
+    const doneAt = Math.max(backAt + blocks.length * 80 + 700, fallAt + words.length * WORD_STAGGER_S * 1000 + FALL_S * 1000 + 100);
+    timers.push(
+      window.setTimeout(() => {
+        // Mark as done (stops the elements' load-in fades from replaying), then tidy up.
+        root.classList.replace("wave-intro", "wave-done");
+        for (const tg of targets) tg.el.classList.remove("is-washed", "is-falling", "is-back");
+        setPlaying(false);
+      }, doneAt),
+    );
+
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [playing]);
 
   return (
     <div ref={ref}>
       {children}
-      {playing && <Wave />}
-    </div>
-  );
-}
-
-/** The wave itself: an ocean-blue body with a curling crest, foam and spray. */
-function Wave() {
-  // Front edge of the wave, crest at the top curling back over itself.
-  const FRONT = "M440 0C560 -5 655 30 688 105C705 145 695 185 662 192C640 197 626 182 634 166C590 210 585 300 615 400C640 490 600 590 630 690C655 780 615 880 645 1000";
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[60] overflow-hidden">
-      <div className="wave-sweep absolute inset-y-0 left-0 w-[max(60vw,520px)] will-change-transform">
-        <svg viewBox="0 0 700 1000" preserveAspectRatio="none" className="wave-bob absolute inset-0 h-full w-full">
-          <defs>
-            <linearGradient id="wv-body" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#031d3a" />
-              <stop offset="0.45" stopColor="#063a6b" />
-              <stop offset="0.75" stopColor="#0c5c9c" />
-              <stop offset="0.92" stopColor="#1784c4" />
-              <stop offset="1" stopColor="#2aa3dc" />
-            </linearGradient>
-            <linearGradient id="wv-depth" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#7fdcf5" stopOpacity="0.35" />
-              <stop offset="0.35" stopColor="#ffffff" stopOpacity="0" />
-              <stop offset="1" stopColor="#010f22" stopOpacity="0.55" />
-            </linearGradient>
-            <linearGradient id="wv-face" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#1a8fd0" stopOpacity="0" />
-              <stop offset="0.6" stopColor="#3cb9e6" stopOpacity="0.55" />
-              <stop offset="1" stopColor="#8fe3f7" stopOpacity="0.85" />
-            </linearGradient>
-            <radialGradient id="wv-glow" cx="0.9" cy="0.13" r="0.22">
-              <stop offset="0" stopColor="#b8f1ff" stopOpacity="0.75" />
-              <stop offset="1" stopColor="#b8f1ff" stopOpacity="0" />
-            </radialGradient>
-            <filter id="wv-foam" x="-10%" y="-10%" width="120%" height="120%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" />
-              <feDisplacementMap in="SourceGraphic" scale="16" />
-            </filter>
-          </defs>
-
-          {/* A lighter swell rolling just behind the main wave. */}
-          <path d="M0 60H400C480 60 560 110 575 190C590 265 545 320 495 312C470 420 520 520 540 610C560 700 520 800 545 1000H0Z" fill="#3aa6d6" opacity="0.45" />
-
-          {/* Body, then light from above and shadow toward the bottom. */}
-          <path d={`M0 0H440${FRONT.slice(6)}H0Z`} fill="url(#wv-body)" />
-          <path d={`M0 0H440${FRONT.slice(6)}H0Z`} fill="url(#wv-depth)" />
-          {/* Thin, brighter water along the front face. */}
-          <path d={`${FRONT}H575C545 880 585 780 560 690C535 590 575 490 548 400C520 300 540 220 600 150C560 90 500 60 440 40Z`} fill="url(#wv-face)" />
-          {/* The hollow under the curling lip, and sunlight through the crest. */}
-          <path d="M634 166C600 200 592 255 604 310C622 255 648 218 662 192C648 196 638 186 634 166Z" fill="#021a33" opacity="0.55" />
-          <rect width="700" height="1000" fill="url(#wv-glow)" />
-
-          {/* Currents inside the water. */}
-          <g fill="none" strokeLinecap="round" stroke="#bdefff" strokeOpacity="0.16" strokeWidth="5">
-            <path d="M380 120C460 140 500 200 480 270C460 350 520 430 540 520" />
-            <path d="M300 260C360 300 380 380 370 450C360 540 420 610 440 700" />
-            <path d="M200 420C250 470 260 540 250 610C240 690 290 760 300 860" />
-            <path d="M110 150C160 200 170 260 160 330" />
-            <path d="M420 600C460 660 450 740 470 820" />
-          </g>
-
-          {/* Foam: a rough white band along the crest and the front, plus bubbles. */}
-          <g filter="url(#wv-foam)">
-            <path d={FRONT} fill="none" stroke="#9fd9f0" strokeWidth="26" strokeLinecap="round" opacity="0.7" />
-            <path d={FRONT} fill="none" stroke="#f4fcff" strokeWidth="14" strokeLinecap="round" />
-            <path d="M400 6C520 0 630 25 680 95" fill="none" stroke="#ffffff" strokeWidth="22" strokeLinecap="round" />
-            <g fill="#ffffff">
-              <circle cx="610" cy="40" r="16" />
-              <circle cx="660" cy="80" r="13" />
-              <circle cx="560" cy="18" r="11" />
-              <circle cx="690" cy="140" r="9" />
-              <circle cx="640" cy="200" r="8" />
-              <circle cx="618" cy="420" r="9" />
-              <circle cx="646" cy="600" r="8" />
-              <circle cx="634" cy="760" r="10" />
-              <circle cx="651" cy="900" r="8" />
-            </g>
-          </g>
-          <g fill="#e9f9ff" opacity="0.7">
-            <circle cx="545" cy="330" r="3" /><circle cx="590" cy="520" r="4" /><circle cx="575" cy="690" r="3" />
-            <circle cx="600" cy="850" r="4" /><circle cx="520" cy="120" r="3" /><circle cx="470" cy="60" r="4" />
-          </g>
-        </svg>
-        {/* Spray thrown ahead of the crest. */}
-        <span className="wave-spray absolute right-[2%] top-[8%] size-3 rounded-full bg-sky-100 [--sx:60px] [--sy:-40px]" />
-        <span className="wave-spray absolute right-[4%] top-[14%] size-2 rounded-full bg-white [--sx:90px] [--sy:-10px] [animation-delay:120ms]" />
-        <span className="wave-spray absolute right-[1%] top-[22%] size-2.5 rounded-full bg-sky-200 [--sx:70px] [--sy:20px] [animation-delay:240ms]" />
-        <span className="wave-spray absolute right-[3%] top-[40%] size-2 rounded-full bg-white [--sx:80px] [--sy:-20px] [animation-delay:360ms]" />
-        <span className="wave-spray absolute right-[2%] top-[62%] size-3 rounded-full bg-sky-100 [--sx:60px] [--sy:10px] [animation-delay:180ms]" />
-        <span className="wave-spray absolute right-[5%] top-[30%] size-1.5 rounded-full bg-white [--sx:110px] [--sy:-30px] [animation-delay:300ms]" />
-      </div>
+      {playing && <canvas ref={canvasRef} aria-hidden className="pointer-events-none fixed inset-0 z-[60] h-dvh w-screen" />}
     </div>
   );
 }
