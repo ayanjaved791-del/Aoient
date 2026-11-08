@@ -59,6 +59,12 @@ export function HomeHero() {
           </Link>
         </div>
         <p className="wash-block animate-fade-up mt-3 text-xs text-neutral-500" style={{ animationDelay: "260ms", ...t(0.52, 2.05) }}>14-day free trial · no card needed to start</p>
+        <div className="wash-block animate-fade-up mt-7 flex justify-center" style={{ animationDelay: "300ms", ...t(0.56, 2.1) }}>
+          <a href="https://alumni.saylaniit.com/launchpad" target="_blank" rel="noopener noreferrer" className="inline-flex rounded-lg transition-transform hover:-translate-y-0.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- third-party badge served as SVG by Saylani Launchpad */}
+            <img src="https://alumni.saylaniit.com/assets/badge-featured.svg" alt="Featured on Saylani Launchpad" width={240} height={56} loading="lazy" decoding="async" />
+          </a>
+        </div>
         </WaveIntro>
 
         <ul className="animate-fade-up mx-auto mt-14 flex max-w-3xl flex-wrap items-end justify-center gap-x-6 gap-y-6 sm:gap-x-10" style={{ animationDelay: "320ms" }}>
