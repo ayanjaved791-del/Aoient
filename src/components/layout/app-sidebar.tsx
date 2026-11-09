@@ -29,8 +29,8 @@ function SidebarBody({ groups, top, bottom }: { groups: SidebarGroup[]; top: Rea
   const pathname = usePathname();
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 shrink-0 items-center gap-2 px-3">{top}</div>
-      <nav aria-label="Workspace" className="flex-1 overflow-y-auto px-3 pb-4">
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">{top}</div>
+      <nav aria-label="Workspace" className="flex-1 overflow-y-auto px-3 py-4">
         {groups.map((g, i) => (
           <div key={g.label ?? i} className={cn(i > 0 && "mt-6")}>
             {g.label && <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</p>}
@@ -44,14 +44,13 @@ function SidebarBody({ groups, top, bottom }: { groups: SidebarGroup[]; top: Rea
                       href={link.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
                         active
-                          ? "bg-primary-subtle text-primary"
+                          ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-secondary-foreground hover:bg-surface-muted hover:text-foreground",
                       )}
                     >
-                      {active && <span aria-hidden className="absolute -left-3 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary" />}
-                      <Icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} aria-hidden />
+                      <Icon className={cn("size-4 shrink-0", active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} aria-hidden />
                       {link.label}
                     </Link>
                   </li>
@@ -83,8 +82,9 @@ function SidebarBody({ groups, top, bottom }: { groups: SidebarGroup[]; top: Rea
 
 /** Desktop: a fixed column beside the page. */
 export function AppSidebar(props: { groups: SidebarGroup[]; top: ReactNode; bottom: ReactNode }) {
+  // Always ink-black, in light and dark mode alike: Aoient's black-and-white look.
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-border bg-sidebar lg:block">
+    <aside className="dark sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-border bg-sidebar text-foreground lg:block">
       <SidebarBody {...props} />
     </aside>
   );
@@ -126,7 +126,7 @@ export function MobileNav(props: { groups: SidebarGroup[]; top: ReactNode; botto
       {open && createPortal(
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
           <button type="button" tabIndex={-1} aria-hidden className="motion-safe:animate-overlay-in absolute inset-0 bg-navy/40 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
-          <div className="motion-safe:animate-drawer-in absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-border bg-sidebar shadow-lg">
+          <div className="dark motion-safe:animate-drawer-in absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-border bg-sidebar text-foreground shadow-lg">
             <button
               type="button"
               onClick={() => setOpen(false)}

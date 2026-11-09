@@ -37,7 +37,7 @@ async function Departments({ params }: { params: Promise<{ organizationSlug: str
           {departments.map((d) => (
             <Card key={d.id} className="flex flex-col p-5">
               <div className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"><Building2 className="size-5" aria-hidden /></span>
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Building2 className="size-5" aria-hidden /></span>
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate font-semibold">{d.name}</h2>
                   <p className="text-xs text-muted-foreground">{d.employeeCount} {d.employeeCount === 1 ? "person" : "people"}</p>

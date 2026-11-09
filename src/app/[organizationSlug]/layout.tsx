@@ -61,7 +61,7 @@ function PlanCard({ license, href }: { license: License | null; href: string | n
   const body = (
     <>
       <div className="flex items-center gap-2">
-        <span className="flex size-7 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-orange-400 text-white">
+        <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <Sparkles className="size-3.5" aria-hidden />
         </span>
         <span className="grid min-w-0 leading-tight">
@@ -71,17 +71,17 @@ function PlanCard({ license, href }: { license: License | null; href: string | n
       </div>
       {pct !== null && (
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-muted" role="progressbar" aria-label="Trial days left" aria-valuemin={0} aria-valuemax={TRIAL_DAYS} aria-valuenow={left ?? 0}>
-          <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-orange-400" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
         </div>
       )}
     </>
   );
   return href ? (
-    <Link href={href} className="block rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/40">
+    <Link href={href} className="block rounded-xl border border-border bg-surface-muted/60 p-3 transition-colors hover:border-primary/40 hover:bg-surface-muted">
       {body}
     </Link>
   ) : (
-    <div className="rounded-lg border border-border bg-surface p-3">{body}</div>
+    <div className="rounded-xl border border-border bg-surface-muted/60 p-3">{body}</div>
   );
 }
 

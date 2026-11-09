@@ -110,7 +110,7 @@ export function AssistantPanel({ slug, organizationName, roleName, suggestions, 
         aria-label={open ? "Close assistant" : "Open assistant (Ctrl+J)"}
         aria-expanded={open}
         className={cn(
-          "fixed bottom-5 right-5 z-40 flex h-12 items-center gap-2 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 pl-4 pr-5 text-sm font-semibold text-white shadow-lg ring-1 ring-white/20 transition-all hover:-translate-y-0.5 hover:shadow-xl",
+          "fixed bottom-5 right-5 z-40 flex h-12 items-center gap-2 rounded-full bg-primary pl-4 pr-5 text-sm font-semibold text-primary-foreground ring-1 ring-border shadow-lg ring-1 ring-white/20 transition-all hover:-translate-y-0.5 hover:shadow-xl",
           open && "pointer-events-none scale-90 opacity-0",
         )}
       >
@@ -123,9 +123,9 @@ export function AssistantPanel({ slug, organizationName, roleName, suggestions, 
           aria-label="Aoient assistant"
           className="motion-safe:animate-pop-in fixed inset-0 z-50 flex flex-col overflow-hidden bg-surface sm:inset-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100dvh-40px))] sm:w-[400px] sm:rounded-2xl sm:border sm:border-border sm:shadow-lg"
         >
-          <header className="relative flex items-center gap-3 overflow-hidden border-b border-border bg-navy px-4 py-3 text-white dark:bg-[#141a2e]">
-            <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 size-40 rounded-full bg-violet-500/40 blur-3xl" />
-            <span className="relative flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500"><Bot className="size-5" aria-hidden /></span>
+          <header className="relative flex items-center gap-3 overflow-hidden border-b border-border bg-navy px-4 py-3 text-white dark:bg-[#161616]">
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.09)_1px,transparent_1px)] [background-size:14px_14px] [mask-image:linear-gradient(to_left,black,transparent_80%)]" />
+            <span className="relative flex size-9 items-center justify-center rounded-xl bg-white text-navy"><Bot className="size-5" aria-hidden /></span>
             <div className="relative min-w-0 flex-1">
               <h2 className="text-sm font-semibold">Aoient Assistant</h2>
               <p className="truncate text-xs text-white/60">{organizationName} · {fullAccess ? `${roleName} access` : `${roleName}: your own info`}</p>

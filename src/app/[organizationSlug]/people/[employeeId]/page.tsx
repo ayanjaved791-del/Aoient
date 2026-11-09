@@ -78,7 +78,7 @@ async function Profile({ params }: { params: Promise<{ organizationSlug: string;
       )}
 
       <Card className="relative overflow-hidden">
-        <div aria-hidden className="h-24 bg-gradient-to-r from-violet-500/80 via-fuchsia-500/60 to-orange-400/70" />
+        <div aria-hidden className="h-24 bg-navy bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[#161616]" />
         <div className="flex flex-col gap-4 px-6 pb-6 sm:flex-row sm:items-end">
           <Avatar name={e.fullName} src={e.avatarUrl} className="-mt-10 size-20 border-4 border-surface text-xl" />
           <div className="min-w-0 flex-1">

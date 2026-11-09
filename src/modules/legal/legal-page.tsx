@@ -22,7 +22,7 @@ export function LegalPage({ title, intro, sections, other }: { title: string; in
               <li key={s.id}><a href={`#${s.id}`} className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white">{i + 1}. {s.title}</a></li>
             ))}
           </ol>
-          <Link href={other.href} className="mt-6 inline-block text-sm font-medium text-violet-600 hover:underline dark:text-violet-400">{other.label} →</Link>
+          <Link href={other.href} className="mt-6 inline-block text-sm font-medium text-foreground underline underline-offset-4 hover:no-underline">{other.label} →</Link>
         </nav>
         <article className="grid max-w-3xl gap-10">
           {sections.map((s, i) => (

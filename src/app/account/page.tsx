@@ -29,7 +29,7 @@ async function Account({ searchParams }: { searchParams: Promise<{ setup?: strin
     return (
       <div className="grid gap-6">
         <div className="grid gap-2 text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"><ShieldCheck className="size-6" aria-hidden /></span>
+          <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground"><ShieldCheck className="size-6" aria-hidden /></span>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">Welcome, {account.name.split(" ")[0]}! Choose your own password</h1>
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
             {account.managedBy ?? "Your organization"} created this login with a temporary password. Pick a new one that only you know; nobody else, including your admin, can see it.

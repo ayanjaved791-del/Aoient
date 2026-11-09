@@ -30,7 +30,7 @@ const shortDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("
 function Stat({ icon: Icon, label, value, href }: { icon: typeof Users; label: string; value: number | string; href?: string }) {
   const body = (
     <Card className="flex items-center gap-3 p-4 transition-colors hover:border-primary/40">
-      <span className="flex size-9 items-center justify-center rounded-lg bg-primary-subtle text-primary"><Icon className="size-4" aria-hidden /></span>
+      <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Icon className="size-4" aria-hidden /></span>
       <span className="grid"><span className="text-xl font-semibold">{value}</span><span className="text-xs text-muted-foreground">{label}</span></span>
     </Card>
   );

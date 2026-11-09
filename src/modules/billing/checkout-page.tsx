@@ -200,8 +200,8 @@ export function CheckoutPage({
             aria-labelledby="summary-title"
             className="animate-rise-in relative isolate overflow-hidden rounded-2xl bg-navy p-6 text-white shadow-[0_30px_60px_-24px_rgba(16,24,40,0.55)] sm:p-8 lg:sticky lg:top-8 dark:border dark:border-border dark:bg-primary-subtle"
           >
-            <span aria-hidden className="pointer-events-none absolute -right-20 -top-20 -z-10 size-64 rounded-full bg-primary/40 blur-3xl" />
-            <span aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 -z-10 size-56 rounded-full bg-fuchsia-500/20 blur-3xl" />
+            <span aria-hidden className="pointer-events-none absolute -right-20 -top-20 -z-10 size-64 rounded-full bg-white/15 blur-3xl" />
+            <span aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 -z-10 size-56 rounded-full bg-white/10 blur-3xl" />
 
             <p className="text-xs font-medium uppercase tracking-widest text-white/60">Order summary</p>
             <div className="mt-4 flex items-center gap-3">

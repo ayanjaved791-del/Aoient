@@ -30,10 +30,14 @@ const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2,
 
 function Hero({ firstName, orgName, roleName, actions, personal }: { firstName: string; orgName: string; roleName: string; actions: { href: string; label: string; icon: typeof Users }[]; personal: boolean }) {
   return (
-    <section className="relative isolate overflow-hidden rounded-2xl bg-navy px-6 py-8 text-white shadow-sm ring-1 ring-white/10 sm:px-8 sm:py-10 dark:bg-[#141a2e]">
-      <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 -z-10 size-72 rounded-full bg-violet-500/40 blur-3xl motion-safe:animate-blob" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-28 right-40 -z-10 size-64 rounded-full bg-orange-400/25 blur-3xl motion-safe:animate-blob [animation-delay:-6s]" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(rgb(255_255_255/0.08)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:linear-gradient(to_left,black,transparent_70%)]" />
+    <section className="relative isolate overflow-hidden rounded-2xl bg-navy px-6 py-8 text-white shadow-sm ring-1 ring-white/10 sm:px-8 sm:py-10 dark:bg-[#141414]">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(rgb(255_255_255/0.10)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:linear-gradient(to_left,black,transparent_75%)]" />
+      <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute -right-10 -top-12 -z-10 hidden size-72 text-white/[0.07] sm:block">
+        <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="1.2" />
+        <g fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M28 82 L50 16 L72 82" /><path d="M50 10 V82" /><path d="M31 66 H69" /><circle cx="50" cy="66" r="6.5" />
+        </g>
+      </svg>
       <p className="motion-safe:animate-rise text-sm font-medium text-white/60">{orgName}</p>
       <h1 className="motion-safe:animate-rise mt-1 text-2xl font-semibold tracking-tight [animation-delay:60ms] sm:text-3xl">
         Welcome back, {firstName}
@@ -69,7 +73,7 @@ function StatTile({ href, icon: Icon, label, value, limit, hint, index, delta }:
     <Link href={href} className={cn("group motion-safe:animate-rise min-w-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring")} style={{ animationDelay: `${120 + index * 70}ms` }}>
       <Card className="h-full p-4 transition-all sm:p-5 group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-primary-subtle text-primary"><Icon className="size-4.5" aria-hidden /></span>
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:-rotate-6"><Icon className="size-4.5" aria-hidden /></span>
           <ArrowRight className="size-4 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" aria-hidden />
         </div>
         <p className="mt-4 truncate text-2xl font-semibold tracking-tight sm:text-3xl">

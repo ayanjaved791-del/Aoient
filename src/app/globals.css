@@ -8,22 +8,22 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --brand-navy: #101828;
-  --brand-slate: #344054;
-  --brand-indigo: #635bff;
+  --brand-navy: #0a0a0a;
+  --brand-slate: #3f3f46;
+  --brand-indigo: #0a0a0a;
 
-  --background: #f8fafc;      /* Canvas */
+  --background: #fafafa;      /* Canvas */
   --surface: #ffffff;          /* Cards, dialogs, menus */
-  --surface-muted: #f2f4f7;
-  --foreground: #101828;       /* Navy — strong text */
-  --secondary-foreground: #344054; /* Slate — secondary text, nav */
-  --muted-foreground: #667085; /* Muted — metadata, helper text */
-  --border: #e4e7ec;
-  --input: #d0d5dd;
-  --primary: #635bff;
-  --primary-hover: #544ce6;
+  --surface-muted: #f4f4f5;
+  --foreground: #0a0a0a;       /* Ink — strong text */
+  --secondary-foreground: #3f3f46; /* secondary text, nav */
+  --muted-foreground: #71717a; /* metadata, helper text */
+  --border: #e4e4e7;
+  --input: #d4d4d8;
+  --primary: #0a0a0a;          /* Aoient is black and white */
+  --primary-hover: #27272a;
   --primary-foreground: #ffffff;
-  --primary-subtle: #f0efff;
+  --primary-subtle: #f4f4f5;
   --success: #12b76a;
   --success-subtle: #ecfdf3;
   --warning: #f79009;
@@ -31,24 +31,24 @@
   --danger: #f04438;
   --danger-hover: #d92d20;
   --danger-subtle: #fef3f2;
-  --ring: #635bff;
+  --ring: #0a0a0a;
   --sidebar: #ffffff;
-  --shadow-color: 16 24 40;
+  --shadow-color: 0 0 0;
 }
 
 .dark {
-  --background: #0b0f19;
-  --surface: #111827;
-  --surface-muted: #1a2232;
-  --foreground: #f2f4f7;
-  --secondary-foreground: #d0d5dd;
-  --muted-foreground: #98a2b3;
-  --border: #253041;
-  --input: #344054;
-  --primary: #7a73ff;
-  --primary-hover: #8f89ff;
-  --primary-foreground: #ffffff;
-  --primary-subtle: #1e1b4b;
+  --background: #0a0a0a;
+  --surface: #121212;
+  --surface-muted: #1c1c1c;
+  --foreground: #fafafa;
+  --secondary-foreground: #d4d4d8;
+  --muted-foreground: #a1a1aa;
+  --border: #27272a;
+  --input: #3f3f46;
+  --primary: #fafafa;
+  --primary-hover: #e4e4e7;
+  --primary-foreground: #0a0a0a;
+  --primary-subtle: #1f1f1f;
   --success: #32d583;
   --success-subtle: #053321;
   --warning: #fdb022;
@@ -56,8 +56,8 @@
   --danger: #f97066;
   --danger-hover: #fda29b;
   --danger-subtle: #55160c;
-  --ring: #8f89ff;
-  --sidebar: #0f1522;
+  --ring: #fafafa;
+  --sidebar: #0a0a0a;
   --shadow-color: 0 0 0;
 }
 

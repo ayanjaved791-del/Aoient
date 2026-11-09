@@ -8,7 +8,7 @@ import { AutoRefresh } from "./auto-refresh";
 import { PLANS, priceFor } from "@/lib/billing/plans";
 import { addInterval } from "@/lib/billing/entitlements";
 
-const CONFETTI_COLORS = ["#7c3aed", "#d946ef", "#fb923c", "#22d3ee", "#12b76a", "#facc15"];
+const CONFETTI_COLORS = ["#0a0a0a", "#71717a", "#d4d4d8", "#12b76a", "#3f3f46", "#a1a1aa"];
 
 /** Deterministic confetti (no Math.random, so server and client render the same). */
 const CONFETTI = Array.from({ length: 48 }, (_, i) => {
