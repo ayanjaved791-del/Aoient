@@ -25,6 +25,7 @@ Status of the controls in spec §22. "✅" means implemented **and** covered by 
 | Data API lock-down | ✅ | RLS enabled on every `public` table with no policies; tests prove `anon`/`authenticated` read 0 rows and cannot write. |
 | Secrets | ✅ | `.env` is git-ignored; `.env.example` lists names only; secrets read only in `server-only` modules. |
 | Paddle webhooks & licenses | ✅ | Paid plans change only through webhooks verified with HMAC-SHA256 (`Paddle-Signature`, 5-minute window); each event ID applied once; stale events ignored; plan taken from the Paddle price ID. The organization comes from a known subscription or a server-signed checkout token (only members with `billing.manage` can get one), so a browser can't point a payment at another tenant or overwrite a live subscription. Limits are checked inside the same transaction as the change, with the organization row locked. |
+| CRM records | ✅ | Every CRM service checks its own permission (`crm.lead.*`, `crm.contact.*`, `crm.deal.*`, `crm.pipeline.manage`, `crm.report.read`) and scopes by the verified organization; cross-organization links are refused by the service and by composite foreign keys (`tests/integration/crm.test.ts`). Reports never convert currencies with made-up rates. |
 | Files, API keys | ⏳ | Milestones M5, M7. |
 | MFA | ❌ | Not implemented — not claimed. |
 | Backups, monitoring | ❌ | Launch tasks (M9). |

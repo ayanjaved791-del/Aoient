@@ -38,9 +38,19 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ] : []),
     ...(can(ctx, "people.leave.request") || can(ctx, "people.leave.approve") ? [{ href: `${base}/people/leave`, label: "Leave", icon: "leave" as const }] : []),
   ];
+  const crm: SidebarGroup["links"] = [
+    ...(can(ctx, "crm.deal.read") ? [{ href: `${base}/crm`, label: "Pipeline", icon: "pipeline" as const, exact: true }] : []),
+    ...(can(ctx, "crm.lead.read") ? [{ href: `${base}/crm/leads`, label: "Leads", icon: "leads" as const }] : []),
+    ...(can(ctx, "crm.contact.read") ? [
+      { href: `${base}/crm/contacts`, label: "Contacts", icon: "contacts" as const },
+      { href: `${base}/crm/companies`, label: "Companies", icon: "companies" as const },
+    ] : []),
+    ...(can(ctx, "crm.report.read") ? [{ href: `${base}/crm/reports`, label: "Sales reports", icon: "reports" as const }] : []),
+  ];
   return [
     { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
     ...(people.length ? [{ label: "People", links: people }] : []),
+    ...(crm.length ? [{ label: "CRM", links: crm }] : []),
     ...(team.length ? [{ label: "Team", links: team }] : []),
     ...(org.length ? [{ label: "Organization", links: org }] : []),
   ];

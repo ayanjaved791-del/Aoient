@@ -7,7 +7,7 @@ Milestones from spec §27. A milestone is complete only when its exit criteria p
 | M0 Repository readiness | Project setup, architecture decisions, design tokens | Clean baseline; install/build checks pass | ✅ Done |
 | M1 Identity foundation | Auth, organizations, memberships, invitations, roles & permissions | Cross-tenant negative tests pass | ✅ Done |
 | M2 Core workspace | App shell (grouped sidebar, search, create menu), dashboard, profile & sessions, notifications base, audit log viewer | Responsive shell with functional routes | Next |
-| M3 Core operations | People, CRM, Projects, Time | Pilot business can use core workflow | |
+| M3 Core operations | People, CRM, Projects, Time | Pilot business can use core workflow | ✅ People. ✅ CRM: leads (with conversion), contacts, companies, a drag-and-drop pipeline with editable stages, notes and sales reports. Projects and Time next. |
 | M4 Connected flow | Deal won → project → tasks → time → metrics | E2E flow verified | |
 | M5 Operations add-ons | Flow, Analytics expansion, Documents | Auditable automation | |
 | M6 Commercial modules | Finance, Inventory | Calculations verified | |

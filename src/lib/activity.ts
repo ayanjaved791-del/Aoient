@@ -14,7 +14,7 @@ export interface ActivityRow {
   createdAt: Date;
 }
 
-export type ActivityKind = "organization" | "member" | "role" | "billing" | "people";
+export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm";
 
 export interface ActivityItem {
   id: string;
@@ -33,6 +33,8 @@ export function describeActivity(row: ActivityRow): ActivityItem {
   const subject = row.subjectName ?? "a member";
   const kind: ActivityKind = row.action.startsWith("people.")
     ? "people"
+    : row.action.startsWith("crm.")
+    ? "crm"
     : row.action.startsWith("role.")
     ? "role"
     : row.action.startsWith("billing.")
@@ -137,6 +139,29 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     case "people.leave_cancelled":
       text = "cancelled a leave request";
       break;
+    case "crm.company_created": text = `added the company ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.company_updated": text = `updated the company ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.company_archived": text = `archived the company ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.company_restored": text = `restored the company ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.contact_created": text = `added the contact ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.contact_updated": text = `updated the contact ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.contact_archived": text = `archived the contact ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.contact_restored": text = `restored the contact ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.lead_created": text = `added the lead ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.lead_updated": text = `updated the lead ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.lead_archived": text = `archived the lead ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.lead_converted": text = `converted the lead ${str(m.name) ?? ""}${m.deal ? " into a deal" : ""}`.replace("  ", " "); break;
+    case "crm.deal_created": text = `added the deal ${str(m.title) ?? ""}`.trim(); break;
+    case "crm.deal_updated": text = `updated the deal ${str(m.title) ?? ""}`.trim(); break;
+    case "crm.deal_moved": text = `moved ${str(m.title) ?? "a deal"} to ${str(m.stage) ?? "another stage"}`; break;
+    case "crm.deal_won": text = `won the deal ${str(m.title) ?? ""}`.trim(); break;
+    case "crm.deal_lost": text = `marked ${str(m.title) ?? "a deal"} as lost`; break;
+    case "crm.deal_archived": text = `archived the deal ${str(m.title) ?? ""}`.trim(); break;
+    case "crm.stage_created": text = `added the pipeline stage ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.stage_updated": text = `updated the pipeline stage ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.stage_deleted": text = `deleted the pipeline stage ${str(m.name) ?? ""}`.trim(); break;
+    case "crm.stages_reordered": text = "reordered the pipeline stages"; break;
+    case "crm.note_added": text = `added a note to a ${str(m.subject) ?? "record"}`; break;
     default:
       text = row.action.replace(/[._]/g, " ");
   }

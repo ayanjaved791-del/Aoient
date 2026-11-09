@@ -3,11 +3,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-/** Tabs across the People pages. Only tabs the role can open are passed in. */
-export function PeopleNav({ items }: { items: { href: string; label: string; badge?: number | null; exact?: boolean }[] }) {
+/** Tabs across a section (People, CRM). Only tabs the role can open are passed in. */
+export function PeopleNav({ items, label = "People" }: { items: { href: string; label: string; badge?: number | null; exact?: boolean }[]; label?: string }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="People" className="scroll-thin -mb-px flex gap-1 overflow-x-auto border-b border-border">
+    <nav aria-label={label} className="scroll-thin -mb-px flex gap-1 overflow-x-auto border-b border-border">
       {items.map((i) => {
         const active = i.exact ? pathname === i.href : pathname === i.href || pathname.startsWith(`${i.href}/`);
         return (

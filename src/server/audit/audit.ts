@@ -32,7 +32,30 @@ export type AuditAction =
   | "people.leave_requested"
   | "people.leave_approved"
   | "people.leave_rejected"
-  | "people.leave_cancelled";
+  | "people.leave_cancelled"
+  | "crm.company_created"
+  | "crm.company_updated"
+  | "crm.company_archived"
+  | "crm.company_restored"
+  | "crm.contact_created"
+  | "crm.contact_updated"
+  | "crm.contact_archived"
+  | "crm.contact_restored"
+  | "crm.lead_created"
+  | "crm.lead_updated"
+  | "crm.lead_archived"
+  | "crm.lead_converted"
+  | "crm.deal_created"
+  | "crm.deal_updated"
+  | "crm.deal_moved"
+  | "crm.deal_won"
+  | "crm.deal_lost"
+  | "crm.deal_archived"
+  | "crm.stage_created"
+  | "crm.stage_updated"
+  | "crm.stage_deleted"
+  | "crm.stages_reordered"
+  | "crm.note_added";
 
 export interface AuditEvent {
   organizationId: string | null;

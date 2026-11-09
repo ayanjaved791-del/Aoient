@@ -4,18 +4,17 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  BarChart3, Building2, CalendarDays, Contact, Network, CircleDashed, Clock3, CreditCard, FolderKanban, LayoutDashboard, Menu, ShieldCheck, Users, Wallet, X,
+  BarChart3, Building2, CalendarDays, Contact, Network, CircleDashed, Clock3, CreditCard, FolderKanban, Handshake, LayoutDashboard, Magnet, Menu, ShieldCheck, SlidersHorizontal, Users, UsersRound, Wallet, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays } as const;
+const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays, pipeline: Handshake, leads: Magnet, contacts: UsersRound, companies: Building2, reports: BarChart3, crmsettings: SlidersHorizontal } as const;
 
 export interface SidebarLink { href: string; label: string; icon: keyof typeof ICONS; exact?: boolean }
 export interface SidebarGroup { label?: string; links: SidebarLink[] }
 
 /** Modules that are planned but not built. Shown as plain text, never as links. */
 const SOON = [
-  { label: "CRM", icon: BarChart3 },
   { label: "Projects", icon: FolderKanban },
   { label: "Time", icon: Clock3 },
   { label: "Finance", icon: Wallet },

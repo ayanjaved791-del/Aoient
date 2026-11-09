@@ -12,7 +12,7 @@ export const FAQ: { q: string; a: string; topic: FaqTopic }[] = [
   {
     topic: "product",
     q: "What can I use today?",
-    a: "Organizations, members, invitations, built-in and custom roles, the audit log and the /api/v1 organization API. People is live too: employee directory, departments, managers, private HR details and leave with approvals. Each role gets its own live dashboard, and the Ask Aoient assistant answers questions from your records. CRM, Projects and the other modules are in development and are released one at a time.",
+    a: "Organizations, members, invitations, built-in and custom roles, the audit log and the /api/v1 organization API. People is live too: employee directory, departments, managers, private HR details and leave with approvals. Each role gets its own live dashboard, and the Ask Aoient assistant answers questions from your records. CRM is live as well: leads, contacts, companies, a drag-and-drop deal pipeline, notes and sales reports. Projects and the other modules are in development and are released one at a time.",
   },
   {
     topic: "product",

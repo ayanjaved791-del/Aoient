@@ -32,6 +32,9 @@ Supabase (managed PostgreSQL). Schema changes are plain SQL files in `supabase/m
 | `permission`, `role_permission` | Controlled catalogue mirrored from `src/server/permissions/catalog.ts`. |
 | `invitation` | Stores only `token_hash` (SHA-256). Partial unique index: one pending invitation per `(organization_id, lower(email))`. |
 | `audit_log` | Actor, action, target, source, correlation id, sanitised metadata. |
+| `crm_company`, `crm_contact`, `crm_lead`, `crm_deal` | CRM records. Links between them (and to the record owner in `organization_member`) are composite `(organization_id, id)` foreign keys, so the database refuses a link to another organization's row. Archived with `archived_at`, never deleted. |
+| `crm_stage` | The organization's pipeline: ordered stages of kind `open`, `won` or `lost` with a win probability. Six default stages are created the first time the CRM is used. A deal in a won/lost stage has `closed_at` set. |
+| `crm_note` | Notes on a lead, contact, company or deal (`subject_type`, `subject_id`); the server checks the subject belongs to the same organization. Audit entries record that a note was added, never its words. |
 
 ## Seed
 
