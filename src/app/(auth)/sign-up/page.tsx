@@ -12,7 +12,7 @@ export default function SignUpPage() {
   return (
     <AuthCard
       title="Create your account"
-      description="Set up Aoient for your business. You'll verify your email next."
+      description="Set up Aoient for your business in a minute."
       footer={<>Already have an account? <Suspense fallback={<Link href="/sign-in" className="font-medium text-primary hover:underline">Sign in</Link>}><AuthSwitchLink to="/sign-in">Sign in</AuthSwitchLink></Suspense></>}
     >
       <Suspense fallback={<FormSkeleton fields={4} />}><SignUpForm /></Suspense>

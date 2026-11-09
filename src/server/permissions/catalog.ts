@@ -33,7 +33,7 @@ export const MODULES: Record<ModuleKey, { label: string; released: boolean }> = 
   crm: { label: "CRM", released: true },
   projects: { label: "Projects", released: true },
   time: { label: "Time", released: false },
-  finance: { label: "Finance", released: false },
+  finance: { label: "Finance", released: true },
   flow: { label: "Flow", released: false },
   analytics: { label: "Analytics", released: false },
   documents: { label: "Documents", released: false },

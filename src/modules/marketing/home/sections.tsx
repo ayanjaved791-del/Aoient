@@ -75,10 +75,10 @@ const MODULES: { name: string; body: string; live?: boolean }[] = [
   { name: "Organization & access", body: "Workspaces, members, invitations, roles, audit log.", live: true },
   { name: "People", body: "Directory, departments, managers, private details, leave.", live: true },
   { name: "Dashboards", body: "A live dashboard for each role, from real records.", live: true },
-  { name: "CRM", body: "Leads, contacts, companies and deals." },
-  { name: "Projects", body: "Projects, tasks and boards from won deals." },
+  { name: "CRM", body: "Leads, contacts, companies and deals.", live: true },
+  { name: "Projects", body: "Projects, tasks and boards from won deals.", live: true },
   { name: "Time", body: "Timers, timesheets and billable hours." },
-  { name: "Finance", body: "Invoices and expenses from delivered work." },
+  { name: "Finance", body: "Invoices, estimates, payments and expenses.", live: true },
   { name: "Documents", body: "Proposals, contracts and files." },
   { name: "Flow", body: "Automations between modules." },
   { name: "Connect", body: "Integrations with tools you use." },
@@ -91,7 +91,7 @@ export function ModulesBand({ more }: { more?: ReactNode }) {
       <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
           <div>
-            <Heading align="left" invert title="One system. Every part of the business." body="Turn on what you need today and grow into each module as it ships. Three are live now." />
+            <Heading align="left" invert title="One system. Every part of the business." body={`Turn on what you need today and grow into each module as it ships. ${MODULES.filter((m) => m.live).length} are live now.`} />
             <Squiggle className="mt-8 w-40 text-white dark:text-black" />
             {more && <div className="mt-8">{more}</div>}
           </div>

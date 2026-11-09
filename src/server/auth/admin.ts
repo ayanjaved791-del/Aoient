@@ -53,3 +53,41 @@ export async function setAuthUserPassword(userId: string, password: string, opts
 export async function deleteAuthUser(userId: string, opts: AdminOptions = {}): Promise<void> {
   await call(`/admin/users/${userId}`, { method: "DELETE" }, opts).catch(() => undefined);
 }
+
+/**
+ * Self sign-up when Supabase can't send the confirmation email. The login is
+ * confirmed so the person can sign in, but app_metadata (server-only) marks the
+ * address as unproven, so the profile keeps `email_verified = false`.
+ * Returns null when the email already has a login.
+ */
+export async function createUnprovenUser(u: { email: string; password: string; name: string }, opts: AdminOptions = {}): Promise<string | null> {
+  const res = await call("/admin/users", {
+    method: "POST",
+    body: JSON.stringify({ email: u.email, password: u.password, email_confirm: true, user_metadata: { name: u.name }, app_metadata: { aoient_email_unproven: true } }),
+  }, opts);
+  const body = (await res.json().catch(() => ({}))) as { id?: string; code?: string; error_code?: string; msg?: string; message?: string };
+  if (res.status === 422 || res.status === 409 || body.error_code === "email_exists" || body.code === "email_exists") return null;
+  if (!res.ok || !body.id) throw new Error(`Supabase admin createUser failed (${res.status}): ${body.msg ?? body.message ?? "unknown"}`);
+  return body.id;
+}
+
+/** Finishes a sign-up Supabase started but couldn't email: same marking as createUnprovenUser. */
+export async function confirmUnprovenUser(userId: string, u: { password: string; name: string }, opts: AdminOptions = {}): Promise<void> {
+  const res = await call(`/admin/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify({ password: u.password, email_confirm: true, user_metadata: { name: u.name }, app_metadata: { aoient_email_unproven: true } }),
+  }, opts);
+  if (!res.ok) throw new Error(`Supabase admin updateUser failed (${res.status})`);
+}
+
+/**
+ * A one-time sign-in token for a login the server just created. Nothing is
+ * emailed; the caller exchanges it for a session cookie straight away.
+ */
+export async function createSignInTokenHash(email: string, opts: AdminOptions = {}): Promise<string> {
+  const res = await call("/admin/generate_link", { method: "POST", body: JSON.stringify({ type: "magiclink", email }) }, opts);
+  const body = (await res.json().catch(() => ({}))) as { hashed_token?: string; properties?: { hashed_token?: string } };
+  const hash = body.hashed_token ?? body.properties?.hashed_token;
+  if (!res.ok || !hash) throw new Error(`Supabase admin generate_link failed (${res.status})`);
+  return hash;
+}

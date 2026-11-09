@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { avatarUrl, orgLogoUrl } from "@/lib/media";
 import { UserMenu } from "@/components/layout/user-menu";
-import { AppSidebar, MobileNav, type SidebarGroup } from "@/components/layout/app-sidebar";
+import { AppSidebar, MobileNav, SidebarToggle, type SidebarGroup } from "@/components/layout/app-sidebar";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
 import { listUserOrganizations } from "@/server/organizations/organizations";
 import { getLicenseOverview, type License } from "@/server/billing/license";
@@ -52,11 +52,22 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ...(can(ctx, "projects.task.read") ? [{ href: `${base}/projects/my-tasks`, label: "My tasks", icon: "mytasks" as const }] : []),
     ...(can(ctx, "projects.project.update") ? [{ href: `${base}/projects/workload`, label: "Workload", icon: "workload" as const }] : []),
   ];
+  const seesExpenses = can(ctx, "finance.expense.read") || can(ctx, "finance.expense.manage") || can(ctx, "finance.expense.approve");
+  const finance: SidebarGroup["links"] = [
+    ...(can(ctx, "finance.report.read") ? [{ href: `${base}/finance`, label: "Overview", icon: "finance" as const, exact: true }] : []),
+    ...(can(ctx, "finance.invoice.read") ? [
+      { href: `${base}/finance/invoices`, label: "Invoices", icon: "invoices" as const },
+      { href: `${base}/finance/estimates`, label: "Estimates", icon: "estimates" as const },
+    ] : []),
+    ...(seesExpenses ? [{ href: `${base}/finance/expenses`, label: "Expenses", icon: "expenses" as const }] : []),
+    ...(seesExpenses || can(ctx, "finance.vendor.manage") ? [{ href: `${base}/finance/vendors`, label: "Vendors", icon: "vendors" as const }] : []),
+  ];
   return [
     { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
     ...(people.length ? [{ label: "People", links: people }] : []),
     ...(projects.length ? [{ label: "Projects", links: projects }] : []),
     ...(crm.length ? [{ label: "CRM", links: crm }] : []),
+    ...(finance.length ? [{ label: "Finance", links: finance }] : []),
     ...(team.length ? [{ label: "Team", links: team }] : []),
     ...(org.length ? [{ label: "Organization", links: org }] : []),
   ];
@@ -124,9 +135,10 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
     <div className="flex min-h-dvh">
       <AppSidebar groups={groups} top={top} bottom={bottom} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur supports-[backdrop-filter]:bg-surface/75">
+        <header className="sticky top-0 z-30 border-b print:hidden border-border bg-surface/90 backdrop-blur supports-[backdrop-filter]:bg-surface/75">
           <div className="flex h-14 items-center gap-2 px-4 sm:px-6 lg:px-8">
             <MobileNav groups={groups} top={top} bottom={bottom} />
+            <SidebarToggle />
             <div className="min-w-0 lg:hidden">{switcher}</div>
             <p className="hidden min-w-0 truncate text-sm text-muted-foreground lg:block">
               <span className="font-medium text-foreground">{ctx.organization.name}</span>
@@ -141,8 +153,8 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
             <div className="ml-auto"><UserMenu name={user.name} email={user.email} avatarUrl={avatarUrl(user.id, user.avatarUpdatedAt)} /></div>
           </div>
         </header>
-        {(seesPlan || readOnly) && <LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} />}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+        {(seesPlan || readOnly) && <div className="print:hidden"><LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} /></div>}
+        <main className="mx-auto w-full max-w-6xl flex-1 nav-closed:max-w-7xl px-4 py-8 sm:px-6 lg:px-8 print:max-w-none print:p-0">{children}</main>
         <LiveSync slug={ctx.organization.slug} />
         <AssistantPanel slug={ctx.organization.slug} organizationName={ctx.organization.name} roleName={ctx.roleName}
           suggestions={suggestionsFor(ctx).slice(0, 6)} fullAccess={assistantScope(ctx).team} />
@@ -154,7 +166,7 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
 function FrameSkeleton() {
   return (
     <div className="flex min-h-dvh">
-      <div className="hidden w-64 shrink-0 border-r border-border bg-sidebar lg:block" />
+      <div className="hidden w-64 shrink-0 border-r border-border bg-sidebar lg:block lg:nav-closed:hidden" />
       <div className="flex-1">
         <div className="h-14 border-b border-border bg-surface" />
         <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:px-6 lg:px-8"><Skeleton className="h-8 w-64" /><Skeleton className="h-48 w-full" /></div>

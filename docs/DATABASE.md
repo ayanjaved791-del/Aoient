@@ -36,6 +36,11 @@ Supabase (managed PostgreSQL). Schema changes are plain SQL files in `supabase/m
 | `crm_stage` | The organization's pipeline: ordered stages of kind `open`, `won` or `lost` with a win probability. Six default stages are created the first time the CRM is used. A deal in a won/lost stage has `closed_at` set. |
 | `project`, `project_member` | Projects with a status, optional client (`crm_company`) and source deal (`crm_deal`, one project per deal), a lead and a team. People without `projects.project.update` only see projects they're a member of. |
 | `project_milestone`, `project_task`, `project_task_comment` | Milestones, tasks (status, priority, assignee from the team, due date, board position) and task comments. All links are composite `(organization_id, id)` foreign keys. |
+| `finance_vendor` | Suppliers the organization pays. Name unique per organization. |
+| `finance_document`, `finance_document_line` | Invoices and estimates (`kind`), numbered per organization and kind (INV-0001, EST-0001). Totals are computed on the server from the lines. Issued invoices are fixed; an accepted estimate becomes at most one invoice (`converted_from_id`). Optional links to `crm_company` and `project` via composite keys. |
+| `finance_payment` | Money a client paid against an issued invoice (bookkeeping only; Aoient moves no money). `amount_paid` can never exceed `total`. |
+| `finance_expense` | Spending with a pending → approved/rejected → paid flow, optional vendor and project. Nobody but the owner approves their own expense. |
+| `profile.email_unproven` | Set when the server created a login because Supabase couldn't send the confirmation email. Such a login can sign in and create its own workspace, but `email_verified` stays false. |
 | `crm_note` | Notes on a lead, contact, company or deal (`subject_type`, `subject_id`); the server checks the subject belongs to the same organization. Audit entries record that a note was added, never its words. |
 
 ## Seed

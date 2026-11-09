@@ -1,14 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  BarChart3, Building2, CalendarDays, Contact, Network, CircleDashed, Clock3, CreditCard, FolderKanban, Handshake, Gauge, LayoutDashboard, ListTodo, Magnet, Menu, ShieldCheck, SlidersHorizontal, Users, UsersRound, Wallet, X,
+  BarChart3, Building2, CalendarDays, Contact, Network, CircleDashed, Clock3, CreditCard, FolderKanban, Handshake, Gauge, LayoutDashboard, ListTodo, Landmark, FileText, FileSignature, Receipt, Store, Magnet, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, SlidersHorizontal, Users, UsersRound, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays, pipeline: Handshake, leads: Magnet, contacts: UsersRound, companies: Building2, reports: BarChart3, crmsettings: SlidersHorizontal, projects: FolderKanban, mytasks: ListTodo, workload: Gauge } as const;
+const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays, pipeline: Handshake, leads: Magnet, contacts: UsersRound, companies: Building2, reports: BarChart3, crmsettings: SlidersHorizontal, projects: FolderKanban, mytasks: ListTodo, workload: Gauge, finance: Landmark, invoices: FileText, estimates: FileSignature, expenses: Receipt, vendors: Store } as const;
 
 export interface SidebarLink { href: string; label: string; icon: keyof typeof ICONS; exact?: boolean }
 export interface SidebarGroup { label?: string; links: SidebarLink[] }
@@ -16,7 +16,6 @@ export interface SidebarGroup { label?: string; links: SidebarLink[] }
 /** Modules that are planned but not built. Shown as plain text, never as links. */
 const SOON = [
   { label: "Time", icon: Clock3 },
-  { label: "Finance", icon: Wallet },
 ];
 
 function isActive(pathname: string, link: SidebarLink) {
@@ -82,7 +81,7 @@ function SidebarBody({ groups, top, bottom }: { groups: SidebarGroup[]; top: Rea
 export function AppSidebar(props: { groups: SidebarGroup[]; top: ReactNode; bottom: ReactNode }) {
   // Always ink-black, in light and dark mode alike: Aoient's black-and-white look.
   return (
-    <aside className="dark sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-border bg-sidebar text-foreground lg:block">
+    <aside id="workspace-sidebar" className="dark sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-border bg-sidebar text-foreground lg:block lg:nav-closed:hidden print:hidden">
       <SidebarBody {...props} />
     </aside>
   );
@@ -140,5 +139,45 @@ export function MobileNav(props: { groups: SidebarGroup[]; top: ReactNode; botto
         document.body,
       )}
     </>
+  );
+}
+
+const NAV_EVENT = "aoient-nav";
+const navClosed = () => document.documentElement.dataset.nav === "closed";
+function subscribeNav(cb: () => void) {
+  window.addEventListener(NAV_EVENT, cb);
+  return () => window.removeEventListener(NAV_EVENT, cb);
+}
+
+function toggleNav() {
+  const next = !navClosed();
+  if (next) document.documentElement.dataset.nav = "closed";
+  else delete document.documentElement.dataset.nav;
+  try { localStorage.setItem("aoient-nav", next ? "closed" : "open"); } catch { /* private mode: still works for this visit */ }
+  window.dispatchEvent(new Event(NAV_EVENT));
+}
+
+/** Desktop: closes the sidebar for more room, and opens it again. Remembered on this device. */
+export function SidebarToggle() {
+  const closed = useSyncExternalStore(subscribeNav, navClosed, () => false);
+  useEffect(() => {
+    // Ctrl/⌘ + B, as in most editors, unless typing in a field.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "b" || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, select, [contenteditable=true]")) return;
+      e.preventDefault();
+      toggleNav();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  const label = closed ? "Open sidebar" : "Close sidebar";
+  return (
+    <button type="button" onClick={toggleNav} aria-label={label} title={`${label} (Ctrl+B)`} aria-controls="workspace-sidebar" aria-expanded={!closed}
+      className="hidden size-9 shrink-0 items-center justify-center rounded-md text-secondary-foreground hover:bg-surface-muted hover:text-foreground lg:flex">
+      <PanelLeftClose className="size-4 nav-closed:hidden" aria-hidden />
+      <PanelLeftOpen className="hidden size-4 nav-closed:block" aria-hidden />
+    </button>
   );
 }

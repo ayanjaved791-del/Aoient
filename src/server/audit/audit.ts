@@ -68,7 +68,29 @@ export type AuditAction =
   | "projects.task_moved"
   | "projects.task_completed"
   | "projects.task_deleted"
-  | "projects.comment_added";
+  | "projects.comment_added"
+  | "finance.vendor_created"
+  | "finance.vendor_updated"
+  | "finance.vendor_archived"
+  | "finance.vendor_restored"
+  | "finance.invoice_created"
+  | "finance.invoice_updated"
+  | "finance.invoice_issued"
+  | "finance.invoice_voided"
+  | "finance.invoice_deleted"
+  | "finance.estimate_created"
+  | "finance.estimate_updated"
+  | "finance.estimate_status_changed"
+  | "finance.estimate_converted"
+  | "finance.estimate_deleted"
+  | "finance.payment_recorded"
+  | "finance.payment_deleted"
+  | "finance.expense_created"
+  | "finance.expense_updated"
+  | "finance.expense_approved"
+  | "finance.expense_rejected"
+  | "finance.expense_paid"
+  | "finance.expense_deleted";
 
 export interface AuditEvent {
   organizationId: string | null;

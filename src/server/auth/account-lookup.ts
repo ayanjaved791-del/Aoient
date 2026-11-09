@@ -33,11 +33,11 @@ export async function explainSignInFailure(email: string, clientKey: string): Pr
     if (e instanceof RateLimitedError) return "unknown";
     throw e;
   }
-  const [row] = await getDb()<{ email_verified: boolean; status: string }[]>`
-    select email_verified, status from profile where lower(email) = ${normalized}`;
+  const [row] = await getDb()<{ email_verified: boolean; email_unproven: boolean; status: string }[]>`
+    select email_verified, email_unproven, status from profile where lower(email) = ${normalized}`;
   if (!row) return "no-account";
   if (row.status !== "active") return "deactivated";
-  if (!row.email_verified) return "unconfirmed";
+  if (!row.email_verified && !row.email_unproven) return "unconfirmed";
   return "wrong-password";
 }
 

@@ -10,6 +10,8 @@ export interface SessionUser {
   name: string;
   email: string;
   emailVerified: boolean;
+  /** Signed up while the confirmation email couldn't be sent: can sign in, but owning the inbox isn't proven. */
+  emailUnproven: boolean;
   /** Signed in with a temporary password an admin set: must choose their own first. */
   mustChangePassword: boolean;
   /** When the profile picture last changed; null when there is none. */
@@ -28,8 +30,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const userId = data?.claims?.sub;
   if (error || !isUuid(userId)) return null;
 
-  const [profile] = await getDb()<{ name: string; email: string; email_verified: boolean; status: string; must_change_password: boolean; avatar_updated_at: Date | null }[]>`
-    select name, email, email_verified, status, must_change_password, avatar_updated_at from profile where id = ${userId}`.catch((e: { code?: string }) => {
+  const [profile] = await getDb()<{ name: string; email: string; email_verified: boolean; email_unproven: boolean; status: string; must_change_password: boolean; avatar_updated_at: Date | null }[]>`
+    select name, email, email_verified, email_unproven, status, must_change_password, avatar_updated_at from profile where id = ${userId}`.catch((e: { code?: string }) => {
     if (e?.code === "42P01") {
       throw new Error(
         "Aoient's tables are missing in the database the server connects to (DATABASE_URL, or POSTGRES_URL on Vercel). " +
@@ -39,7 +41,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     throw e;
   });
   if (!profile || profile.status !== "active") return null;
-  return { id: userId, name: profile.name, email: profile.email, emailVerified: profile.email_verified, mustChangePassword: profile.must_change_password, avatarUpdatedAt: profile.avatar_updated_at };
+  return { id: userId, name: profile.name, email: profile.email, emailVerified: profile.email_verified, emailUnproven: profile.email_unproven, mustChangePassword: profile.must_change_password, avatarUpdatedAt: profile.avatar_updated_at };
 }
 
 /** For route handlers / server actions: throws 401. */

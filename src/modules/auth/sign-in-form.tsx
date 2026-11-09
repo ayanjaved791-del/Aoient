@@ -25,7 +25,7 @@ export function SignInForm() {
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"), "/organizations");
   const [error, setError] = useState<{ message: string; detail?: "no-account" | "wrong-password" | "unconfirmed" | "deactivated"; email?: string } | null>(null);
-  const form = useForm<Values>({ resolver: zodResolver(signInSchema), defaultValues: { email: "", password: "" } });
+  const form = useForm<Values>({ resolver: zodResolver(signInSchema), defaultValues: { email: params.get("email") ?? "", password: "" } });
   const captcha = useCaptcha();
   const { errors, isSubmitting } = form.formState;
 

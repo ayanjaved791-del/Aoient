@@ -110,7 +110,7 @@ export function AssistantPanel({ slug, organizationName, roleName, suggestions, 
         aria-label={open ? "Close assistant" : "Open assistant (Ctrl+J)"}
         aria-expanded={open}
         className={cn(
-          "fixed bottom-5 right-5 z-40 flex h-12 items-center gap-2 rounded-full bg-primary pl-4 pr-5 text-sm font-semibold text-primary-foreground ring-1 ring-border shadow-lg ring-1 ring-white/20 transition-all hover:-translate-y-0.5 hover:shadow-xl",
+          "fixed bottom-5 right-5 z-40 print:hidden flex h-12 items-center gap-2 rounded-full bg-primary pl-4 pr-5 text-sm font-semibold text-primary-foreground ring-1 ring-border shadow-lg ring-1 ring-white/20 transition-all hover:-translate-y-0.5 hover:shadow-xl",
           open && "pointer-events-none scale-90 opacity-0",
         )}
       >

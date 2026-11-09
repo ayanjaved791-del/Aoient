@@ -29,6 +29,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
+        {/* Before first paint: keep the workspace sidebar closed if the person closed it. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem("aoient-nav")==="closed")document.documentElement.dataset.nav="closed"}catch(e){}` }} />
         <ThemeProvider>
           {children}
           <Toaster />

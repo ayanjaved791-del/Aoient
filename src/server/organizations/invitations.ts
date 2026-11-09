@@ -181,7 +181,7 @@ export async function getInvitationPreview(token: string): Promise<InvitationPre
   return { state: "valid", organizationName: inv.org_name, roleName: inv.role_name, email: inv.email, inviterName: inv.inviter_name, expiresAt: inv.expires_at };
 }
 
-type InvitationUser = { id: string; email: string; emailVerified: boolean };
+type InvitationUser = { id: string; email: string; emailVerified: boolean; emailUnproven?: boolean };
 
 export interface MyInvitation {
   id: string;
@@ -231,7 +231,11 @@ async function acceptWhere(
   user: InvitationUser,
   by: { tokenHash: string } | { id: string },
 ): Promise<{ organizationSlug: string }> {
-  if (!user.emailVerified) throw new ForbiddenError("Verify your email address before accepting invitations.");
+  // The join link is a secret sent to the invitee, so it may be used by a login
+  // whose email is unproven (still matched below). Finding invitations by email
+  // alone (an id, no link) needs a proven inbox.
+  const proven = user.emailVerified || ("tokenHash" in by && user.emailUnproven === true);
+  if (!proven) throw new ForbiddenError("Verify your email address before accepting invitations.");
   await enforceRateLimit(`invite-accept:${user.id}`, { max: 20, windowSeconds: 3600 });
 
   return transaction(async (tx) => {

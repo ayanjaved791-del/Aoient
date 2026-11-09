@@ -15,7 +15,21 @@ import { Alert } from "@/components/ui/alert";
 import { describeAuthError } from "./auth-error";
 import { SupabaseMissingNotice } from "./supabase-missing-notice";
 import { OAuthButtons } from "./oauth-buttons";
-import { CaptchaBox, useCaptcha } from "@/components/captcha/turnstile";
+import { CaptchaBox, isCaptchaEnabled, useCaptcha } from "@/components/captcha/turnstile";
+import { signUpWithoutEmailAction } from "./actions";
+
+/**
+ * Supabase refuses a sign-up when it can't send the confirmation email: its
+ * built-in email service only delivers to the project's own team and a few
+ * times an hour. Those refusals are retried on the server, which creates the
+ * account without the email.
+ */
+function isEmailDeliveryFailure(error: { status?: number; code?: string; message?: string }): boolean {
+  if (error.code === "email_address_not_authorized" || error.code === "over_email_send_rate_limit") return true;
+  const msg = error.message ?? "";
+  if (/not authorized|email rate limit|sending (the )?(confirmation )?e?mail/i.test(msg)) return true;
+  return (error.status ?? 0) >= 500 && /email|smtp|mail/i.test(msg);
+}
 
 type Values = z.infer<typeof signUpSchema>;
 
@@ -25,6 +39,8 @@ export function SignUpForm() {
   const next = safeNextPath(params.get("next"));
   const [serverError, setServerError] = useState<string | null>(null);
   const [existing, setExisting] = useState<string | null>(null);
+  // Set once Supabase couldn't email: the next submit goes straight to the server.
+  const [serverPath, setServerPath] = useState(false);
   const form = useForm<Values>({
     resolver: zodResolver(signUpSchema),
     defaultValues: { name: "", email: params.get("email") ?? "", password: "", confirmPassword: "" },
@@ -37,6 +53,7 @@ export function SignUpForm() {
   async function onSubmit(values: Values) {
     setServerError(null);
     setExisting(null);
+    if (serverPath) return signUpOnServer(values, captcha.token);
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
@@ -50,7 +67,12 @@ export function SignUpForm() {
     captcha.reset();
     if (error) {
       if (error.code === "user_already_exists" || error.code === "email_exists") setExisting(values.email);
-      else setServerError(describeAuthError(error, "We couldn't create your account."));
+      else if (isEmailDeliveryFailure(error)) {
+        setServerPath(true);
+        // A Turnstile token works once and Supabase just spent it: ask for a fresh check.
+        if (isCaptchaEnabled) setServerError("One more step: complete the security check again, then press Create account.");
+        else await signUpOnServer(values, undefined);
+      } else setServerError(describeAuthError(error, "We couldn't create your account."));
       return;
     }
     // Supabase doesn't send another email for an address that already has an
@@ -66,6 +88,23 @@ export function SignUpForm() {
       return;
     }
     router.push(`/verify-email?email=${encodeURIComponent(values.email)}&next=${encodeURIComponent(next)}`);
+  }
+
+  async function signUpOnServer(values: Values, token: string | undefined) {
+    setServerError(null);
+    const res = await signUpWithoutEmailAction(values, token);
+    captcha.reset();
+    if (!res.ok) {
+      if (res.error.code === "CONFLICT" && /already exists/.test(res.error.message)) setExisting(values.email);
+      else setServerError(res.error.message);
+      return;
+    }
+    if (!res.data.signedIn) {
+      router.push(`/sign-in?email=${encodeURIComponent(values.email)}&next=${encodeURIComponent(next)}`);
+      return;
+    }
+    router.replace(next);
+    router.refresh();
   }
 
   return (

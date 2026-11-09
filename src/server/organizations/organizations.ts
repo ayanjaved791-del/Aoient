@@ -47,8 +47,10 @@ const ORG_SLUG_CONSTRAINT = "organization_slug_key";
  * @param opts.recordTerms store, in the same transaction, that the creator agreed
  *   to the current Terms and Privacy Policy (callers check that first).
  */
-export async function createOrganization(user: { id: string; emailVerified: boolean }, input: unknown, opts: { recordTerms?: boolean } = {}) {
-  if (!user.emailVerified) throw new ForbiddenError("Verify your email address before creating an organization.");
+export async function createOrganization(user: { id: string; emailVerified: boolean; emailUnproven?: boolean }, input: unknown, opts: { recordTerms?: boolean } = {}) {
+  // An unproven email (signed up while confirmation emails couldn't be sent) is
+  // still a confirmed login; a workspace of your own exposes no one else's data.
+  if (!user.emailVerified && !user.emailUnproven) throw new ForbiddenError("Verify your email address before creating an organization.");
   const data = parseInput(createOrganizationSchema, input);
   await enforceRateLimit(`org-create:${user.id}`, { max: 10, windowSeconds: 3600 });
 

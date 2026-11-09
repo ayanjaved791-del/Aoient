@@ -14,7 +14,7 @@ export interface ActivityRow {
   createdAt: Date;
 }
 
-export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm" | "projects";
+export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm" | "projects" | "finance";
 
 export interface ActivityItem {
   id: string;
@@ -37,6 +37,8 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     ? "crm"
     : row.action.startsWith("projects.")
     ? "projects"
+    : row.action.startsWith("finance.")
+    ? "finance"
     : row.action.startsWith("role.")
     ? "role"
     : row.action.startsWith("billing.")
@@ -175,6 +177,28 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     case "projects.task_moved": text = `moved ${str(m.title) ?? "a task"} to ${({ todo: "To do", in_progress: "In progress", review: "Review", done: "Done" } as Record<string, string>)[String(m.status)] ?? "another column"}`; break;
     case "projects.task_completed": text = `finished the task ${str(m.title) ?? ""}`.trim(); break;
     case "projects.task_deleted": text = `deleted the task ${str(m.title) ?? ""}`.trim(); break;
+    case "finance.vendor_created": text = `added the vendor ${str(m.name) ?? ""}`.trim(); break;
+    case "finance.vendor_updated": text = `updated the vendor ${str(m.name) ?? ""}`.trim(); break;
+    case "finance.vendor_archived": text = `archived the vendor ${str(m.name) ?? ""}`.trim(); break;
+    case "finance.vendor_restored": text = `restored the vendor ${str(m.name) ?? ""}`.trim(); break;
+    case "finance.invoice_created": text = `drafted invoice ${str(m.number) ?? ""} for ${str(m.client) ?? "a client"}`; break;
+    case "finance.invoice_updated": text = `updated invoice ${str(m.number) ?? ""}`.trim(); break;
+    case "finance.invoice_issued": text = `issued invoice ${str(m.number) ?? ""} to ${str(m.client) ?? "a client"}`; break;
+    case "finance.invoice_voided": text = `voided invoice ${str(m.number) ?? ""}`.trim(); break;
+    case "finance.invoice_deleted": text = `deleted draft invoice ${str(m.number) ?? ""}`.trim(); break;
+    case "finance.estimate_created": text = `drafted estimate ${str(m.number) ?? ""} for ${str(m.client) ?? "a client"}`; break;
+    case "finance.estimate_updated": text = `updated estimate ${str(m.number) ?? ""}`.trim(); break;
+    case "finance.estimate_status_changed": text = `marked estimate ${str(m.number) ?? ""} as ${({ draft: "draft", sent: "sent", accepted: "accepted", declined: "declined" } as Record<string, string>)[String(m.status)] ?? "changed"}`; break;
+    case "finance.estimate_converted": text = `turned estimate ${str(m.number) ?? ""} into invoice ${str(m.invoice) ?? ""}`.trim(); break;
+    case "finance.estimate_deleted": text = `deleted estimate ${str(m.number) ?? ""}`.trim(); break;
+    case "finance.payment_recorded": text = `recorded a payment on invoice ${str(m.number) ?? ""}`.trim(); break;
+    case "finance.payment_deleted": text = `removed a payment from invoice ${str(m.number) ?? ""}`.trim(); break;
+    case "finance.expense_created": text = `added the expense ${str(m.description) ?? ""}`.trim(); break;
+    case "finance.expense_updated": text = `updated the expense ${str(m.description) ?? ""}`.trim(); break;
+    case "finance.expense_approved": text = `approved the expense ${str(m.description) ?? ""}`.trim(); break;
+    case "finance.expense_rejected": text = `rejected the expense ${str(m.description) ?? ""}`.trim(); break;
+    case "finance.expense_paid": text = `paid out the expense ${str(m.description) ?? ""}`.trim(); break;
+    case "finance.expense_deleted": text = `deleted the expense ${str(m.description) ?? ""}`.trim(); break;
     case "projects.comment_added": text = `commented on ${str(m.title) ?? "a task"}`; break;
     case "crm.note_added": text = `added a note to a ${str(m.subject) ?? "record"}`; break;
     default:

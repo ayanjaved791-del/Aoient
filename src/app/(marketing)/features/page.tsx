@@ -66,10 +66,7 @@ const FEATURES: Feature[] = [
 ];
 
 const COMING = [
-  ["CRM", "Leads, contacts, companies and a deal pipeline."],
-  ["Projects", "Projects, tasks and boards created from won deals."],
   ["Time", "Timers, timesheets and billable hours."],
-  ["Finance", "Invoices and expenses from delivered work."],
   ["Documents", "Proposals, contracts and files."],
   ["Flow", "Automations between modules."],
   ["Connect", "Integrations with the tools you already use."],

@@ -16,3 +16,4 @@ end $$;
 -- tests prove Row Level Security (not missing grants) is what blocks access.
 grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
+alter table auth.users add column if not exists raw_app_meta_data jsonb not null default '{}'::jsonb;
