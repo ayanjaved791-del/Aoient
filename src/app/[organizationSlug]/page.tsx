@@ -8,6 +8,8 @@ import { DASHBOARD_RANGES, getDashboard, parseRange, type DashboardRange, type T
 import { TimeSeriesChart } from "@/components/charts/time-series-chart";
 import { DashboardLayout, Widget, type WidgetDef } from "@/modules/dashboard/widgets";
 import { ActivityHeatmap } from "@/modules/dashboard/activity-heatmap";
+import { CountUp, Departments, EmploymentMix, LeaveByType, Milestones, OutThisWeek, TeamSnapshot } from "@/modules/dashboard/people-widgets";
+import { getPeopleInsights } from "@/server/dashboard/people-insights";
 import { licenseLabel } from "@/modules/billing/license-view";
 import { daysLeft } from "@/lib/billing/entitlements";
 import { getLicenseOverview } from "@/server/billing/license";
@@ -28,7 +30,9 @@ import { cn } from "@/lib/utils";
 
 const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact };
 
-function Hero({ firstName, orgName, roleName, actions, personal }: { firstName: string; orgName: string; roleName: string; actions: { href: string; label: string; icon: typeof Users }[]; personal: boolean }) {
+interface HeroFact { label: string; value: number }
+
+function Hero({ firstName, orgName, roleName, actions, personal, today, facts }: { firstName: string; orgName: string; roleName: string; actions: { href: string; label: string; icon: typeof Users }[]; personal: boolean; today: { weekday: string; date: string; greeting: string }; facts: HeroFact[] }) {
   return (
     <section className="relative isolate overflow-hidden rounded-2xl bg-navy px-6 py-8 text-white shadow-sm ring-1 ring-white/10 sm:px-8 sm:py-10 dark:bg-[#141414]">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(rgb(255_255_255/0.10)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:linear-gradient(to_left,black,transparent_75%)]" />
@@ -38,14 +42,38 @@ function Hero({ firstName, orgName, roleName, actions, personal }: { firstName: 
           <path d="M28 82 L50 16 L72 82" /><path d="M50 10 V82" /><path d="M31 66 H69" /><circle cx="50" cy="66" r="6.5" />
         </g>
       </svg>
-      <p className="motion-safe:animate-rise text-sm font-medium text-white/60">{orgName}</p>
+      <div className="flex flex-wrap items-start justify-between gap-6">
+      <div className="min-w-0">
+      <p className="motion-safe:animate-rise flex items-center gap-2 text-sm font-medium text-white/60">
+        <span className="relative flex size-2" aria-hidden>
+          <span className="absolute inline-flex size-full rounded-full bg-success opacity-70 motion-safe:animate-ping" />
+          <span className="relative inline-flex size-2 rounded-full bg-success" />
+        </span>
+        {orgName} <span className="text-white/30">·</span> <span className="text-white/50">Live</span>
+      </p>
       <h1 className="motion-safe:animate-rise mt-1 text-2xl font-semibold tracking-tight [animation-delay:60ms] sm:text-3xl">
-        Welcome back, {firstName}
+        {today.greeting}, {firstName}
       </h1>
       <p className="motion-safe:animate-rise mt-2 max-w-xl text-sm text-white/70 [animation-delay:120ms]">
         You&apos;re signed in as <span className="font-medium text-white">{roleName}</span>.{" "}
         {personal ? "Here's your own work at a glance. You see what your role allows." : "Everything below comes straight from your organization's records."}
       </p>
+      </div>
+      <div className="motion-safe:animate-rise shrink-0 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 backdrop-blur-sm [animation-delay:140ms]">
+        <p className="text-xs font-medium uppercase tracking-widest text-white/50">{today.weekday}</p>
+        <p className="text-lg font-semibold">{today.date}</p>
+        {facts.length > 0 && (
+          <dl className="mt-2 flex gap-4 border-t border-white/10 pt-2">
+            {facts.map((f, i) => (
+              <div key={f.label}>
+                <dt className="text-[11px] text-white/50">{f.label}</dt>
+                <dd className="text-base font-semibold"><CountUp value={f.value} delay={300 + i * 120} /></dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+      </div>
       {actions.length > 0 && (
         <div className="motion-safe:animate-rise mt-6 flex flex-wrap gap-2 [animation-delay:180ms]">
           {actions.map((a, i) => (
@@ -77,14 +105,14 @@ function StatTile({ href, icon: Icon, label, value, limit, hint, index, delta }:
           <ArrowRight className="size-4 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" aria-hidden />
         </div>
         <p className="mt-4 truncate text-2xl font-semibold tracking-tight sm:text-3xl">
-          {value}
+          {typeof value === "number" ? <CountUp value={value} delay={200 + index * 70} /> : value}
           {limit ? <span className="text-base font-medium text-muted-foreground"> / {limit}</span> : null}
         </p>
         <p className="mt-0.5 text-[13px] text-muted-foreground">{label}</p>
         {delta && <DeltaBadge delta={delta} />}
         {pct !== null && (
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-muted" aria-hidden>
-            <div className={cn("h-full rounded-full", pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-primary")} style={{ width: `${Math.max(pct, 3)}%` }} />
+            <div className={cn("h-full origin-left rounded-full motion-safe:animate-grow-x [animation-delay:350ms]", pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-primary")} style={{ width: `${Math.max(pct, 3)}%` }} />
           </div>
         )}
         {hint && <p className="mt-2 text-xs text-muted-foreground">{hint}</p>}
@@ -129,14 +157,14 @@ function HBars({ rows, total }: { rows: { label: string; value: number }[]; tota
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <ul className="grid gap-3.5">
-      {rows.map((r) => (
+      {rows.map((r, i) => (
         <li key={r.label} className="grid gap-1.5">
           <div className="flex items-baseline justify-between gap-3 text-sm">
             <span className="truncate">{r.label}</span>
             <span className="font-medium tabular-nums">{r.value}<span className="ml-1 text-xs font-normal text-muted-foreground">{total ? Math.round((r.value / total) * 100) : 0}%</span></span>
           </div>
           <div className="h-2 rounded-full bg-primary-subtle" aria-hidden>
-            {r.value > 0 && <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (r.value / max) * 100)}%` }} />}
+            {r.value > 0 && <div className="h-full origin-left rounded-full bg-primary motion-safe:animate-grow-x" style={{ width: `${Math.max(4, (r.value / max) * 100)}%`, animationDelay: `${300 + i * 70}ms` }} />}
           </div>
         </li>
       ))}
@@ -154,7 +182,7 @@ function Meter({ label, used, limit, note }: { label: string; used: number; limi
         <span className="font-medium tabular-nums">{used}{limit !== null && <span className="font-normal text-muted-foreground"> / {limit}</span>}</span>
       </div>
       <div className="h-2 rounded-full bg-primary-subtle" role="meter" aria-label={label} aria-valuenow={used} aria-valuemin={0} aria-valuemax={limit ?? used}>
-        {limit !== null && used > 0 && <div className={cn("h-full rounded-full", tone)} style={{ width: `${Math.max(4, pct)}%` }} />}
+        {limit !== null && used > 0 && <div className={cn("h-full origin-left rounded-full motion-safe:animate-grow-x [animation-delay:400ms]", tone)} style={{ width: `${Math.max(4, pct)}%` }} />}
       </div>
       {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </div>
@@ -415,7 +443,7 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
   const canLeaveApprove = can(ctx, "people.leave.approve");
   // Plan limits matter to people who pay or add seats; others don't need them.
   const showPlan = canBilling || canInvite;
-  const [counts, { license, usage }, feed, dash, peopleStats, out, personal] = await Promise.all([
+  const [counts, { license, usage }, feed, dash, peopleStats, out, personal, insights] = await Promise.all([
     canSeeMembers ? getOverviewCounts(ctx) : null,
     getLicenseOverview(ctx.organizationId),
     canReadAudit ? listRecentActivity(ctx, 6) : null,
@@ -423,7 +451,20 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
     canPeople ? getPeopleStats(ctx) : null,
     canPeople ? whoIsOut(ctx) : null,
     getPersonalDashboard(ctx),
+    canPeople ? getPeopleInsights(ctx) : null,
   ]);
+  const tz = ctx.organization.timezone;
+  const hour = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date()));
+  const today = {
+    weekday: new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: tz }).format(new Date()),
+    date: new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: tz }).format(new Date()),
+    greeting: hour < 5 ? "Working late" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening",
+  };
+  const heroFacts: HeroFact[] = peopleStats ? [
+    { label: "People", value: peopleStats.headcount },
+    { label: "On leave", value: peopleStats.onLeaveToday },
+    ...(peopleStats.pendingLeave !== null ? [{ label: "To review", value: peopleStats.pendingLeave }] : []),
+  ] : [];
   const now = new Date();
   const ent = license?.entitlements;
   const { team, activity } = dash;
@@ -468,9 +509,11 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
     ...(personalView ? personalWidgets : []),
     ...(showKpis ? [{ id: "kpis", label: "Key numbers" }] : []),
     ...(team || activity ? [{ id: "trends", label: "Trend charts" }] : []),
-    ...(activity ? [{ id: "heatmap", label: "When your team works" }, { id: "areas", label: "Changes by area" }, { id: "people", label: "Most active people" }] : []),
+    ...(activity ? [{ id: "heatmap", label: "When your team works" }, { id: "areas", label: "Changes by area" }, { id: "top", label: "Most active people" }] : []),
     ...(team ? [{ id: "roles", label: "Team by role" }, { id: "joined", label: "Recently joined" }, { id: "invites", label: "Invitations" }, { id: "expiring", label: "Expiring invitations" }] : []),
     ...(peopleStats ? [{ id: "people", label: "People today" }] : []),
+    ...(insights ? [{ id: "outweek", label: "Out this week" }, { id: "mix", label: "Employment mix" }, { id: "depts", label: "Headcount by department" }, { id: "snapshot", label: "Team snapshot" }, { id: "milestones", label: "Milestones" }] : []),
+    ...(insights?.leaveDaysByType ? [{ id: "leavetypes", label: "Leave taken this year" }] : []),
     ...(!personalView ? personalWidgets : []),
     ...(showPlan ? [{ id: "usage", label: "Plan usage" }] : []),
     ...(feed ? [{ id: "feed", label: "Recent activity" }] : []),
@@ -480,7 +523,7 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
 
   return (
     <div className="grid gap-6">
-      <Hero firstName={user.name.split(" ")[0] || "there"} orgName={ctx.organization.name} roleName={ctx.roleName} actions={actions} personal={personalView} />
+      <Hero firstName={user.name.split(" ")[0] || "there"} orgName={ctx.organization.name} roleName={ctx.roleName} actions={actions} personal={personalView} today={today} facts={heroFacts} />
 
       <DashboardLayout storageKey={`aoient-dashboard-hidden:${ctx.organization.slug}`} widgets={widgets}
         exportHref={team || activity ? `${base}/dashboard-export?range=${range}` : null}
@@ -559,6 +602,21 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
           </div>
         )}
 
+        {insights && peopleStats && (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Widget id="outweek" className="lg:col-span-2"><OutThisWeek insights={insights} base={`${base}`} delay={320} /></Widget>
+            <Widget id="mix"><EmploymentMix byType={peopleStats.byType} headcount={peopleStats.headcount} delay={360} /></Widget>
+          </div>
+        )}
+        {insights && peopleStats && (
+          <div className={cn("grid gap-6 md:grid-cols-2", !insights.leaveDaysByType && "xl:grid-cols-3")}>
+            <Widget id="depts"><Departments insights={insights} base={base} headcount={peopleStats.headcount} delay={380} /></Widget>
+            <Widget id="snapshot"><TeamSnapshot insights={insights} delay={420} /></Widget>
+            <Widget id="milestones"><Milestones insights={insights} base={base} delay={460} /></Widget>
+            {insights.leaveDaysByType && <Widget id="leavetypes"><LeaveByType rows={insights.leaveDaysByType} delay={500} /></Widget>}
+          </div>
+        )}
+
         {!personalView && personalRow}
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -604,7 +662,7 @@ async function Overview({ params, searchParams }: { params: Promise<{ organizati
             </ListCard>
           </Widget>}
           {activity && (
-            <Widget id="people">
+            <Widget id="top">
               <ListCard title="Most active people" subtitle={`Recorded changes in ${range} days`} delay={440} empty={activity.topPeople.length === 0 ? "No changes in this period." : null}>
                 <ol className="grid gap-3">
                   {activity.topPeople.map((p, i) => (
