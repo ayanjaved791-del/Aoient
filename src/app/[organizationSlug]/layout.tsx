@@ -47,9 +47,15 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ] : []),
     ...(can(ctx, "crm.report.read") ? [{ href: `${base}/crm/reports`, label: "Sales reports", icon: "reports" as const }] : []),
   ];
+  const projects: SidebarGroup["links"] = [
+    ...(can(ctx, "projects.project.read") ? [{ href: `${base}/projects`, label: "Projects", icon: "projects" as const, exact: true }] : []),
+    ...(can(ctx, "projects.task.read") ? [{ href: `${base}/projects/my-tasks`, label: "My tasks", icon: "mytasks" as const }] : []),
+    ...(can(ctx, "projects.project.update") ? [{ href: `${base}/projects/workload`, label: "Workload", icon: "workload" as const }] : []),
+  ];
   return [
     { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
     ...(people.length ? [{ label: "People", links: people }] : []),
+    ...(projects.length ? [{ label: "Projects", links: projects }] : []),
     ...(crm.length ? [{ label: "CRM", links: crm }] : []),
     ...(team.length ? [{ label: "Team", links: team }] : []),
     ...(org.length ? [{ label: "Organization", links: org }] : []),

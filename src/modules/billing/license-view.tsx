@@ -137,7 +137,7 @@ export function LicenseView({
           <CardHeader>
             <CardTitle>What&apos;s included</CardTitle>
             <CardDescription>
-              Users, admin seats and custom roles are enforced today. Project and automation limits apply when those modules are released.
+              Users, admin seats, custom roles and active projects are enforced today. Automation limits apply when automations ship.
             </CardDescription>
           </CardHeader>
           <CardContent>

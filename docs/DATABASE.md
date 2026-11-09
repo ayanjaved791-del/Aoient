@@ -34,6 +34,8 @@ Supabase (managed PostgreSQL). Schema changes are plain SQL files in `supabase/m
 | `audit_log` | Actor, action, target, source, correlation id, sanitised metadata. |
 | `crm_company`, `crm_contact`, `crm_lead`, `crm_deal` | CRM records. Links between them (and to the record owner in `organization_member`) are composite `(organization_id, id)` foreign keys, so the database refuses a link to another organization's row. Archived with `archived_at`, never deleted. |
 | `crm_stage` | The organization's pipeline: ordered stages of kind `open`, `won` or `lost` with a win probability. Six default stages are created the first time the CRM is used. A deal in a won/lost stage has `closed_at` set. |
+| `project`, `project_member` | Projects with a status, optional client (`crm_company`) and source deal (`crm_deal`, one project per deal), a lead and a team. People without `projects.project.update` only see projects they're a member of. |
+| `project_milestone`, `project_task`, `project_task_comment` | Milestones, tasks (status, priority, assignee from the team, due date, board position) and task comments. All links are composite `(organization_id, id)` foreign keys. |
 | `crm_note` | Notes on a lead, contact, company or deal (`subject_type`, `subject_id`); the server checks the subject belongs to the same organization. Audit entries record that a note was added, never its words. |
 
 ## Seed

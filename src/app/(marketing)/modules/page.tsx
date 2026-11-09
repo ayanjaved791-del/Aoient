@@ -15,7 +15,7 @@ const MODULES: Mod[] = [
   { name: "People", live: true, summary: "Your team, their details and their time off.", inside: ["Employee directory", "Departments and managers", "Private HR details", "Leave with approvals"], uses: "Members, Dashboards" },
   { name: "Dashboards", live: true, summary: "A live overview for each role.", inside: ["Owner and admin overview", "Personal view for employees", "Activity and trends", "CSV export"], uses: "All live modules" },
   { name: "CRM", live: true, summary: "Customers and the deals you're working on.", inside: ["Leads and contacts", "Companies", "Deal pipeline", "Sales reports"], uses: "Projects, Finance" },
-  { name: "Projects", live: false, summary: "Delivery, from a won deal to done.", inside: ["Projects and tasks", "Boards", "Milestones"], uses: "CRM, People, Time" },
+  { name: "Projects", live: true, summary: "Delivery, from a won deal to done.", inside: ["Projects and tasks", "Boards", "Milestones"], uses: "CRM, People, Time" },
   { name: "Time", live: false, summary: "Hours worked, and which are billable.", inside: ["Timers", "Timesheets and approvals", "Billable hours"], uses: "Projects, Finance" },
   { name: "Finance", live: false, summary: "Getting paid for the work you delivered.", inside: ["Invoices", "Expenses", "Payment status"], uses: "CRM, Time" },
   { name: "Documents", live: false, summary: "Files attached to the work they belong to.", inside: ["Proposals", "Contracts", "Shared files"], uses: "CRM, Projects" },
@@ -86,7 +86,7 @@ export default function ModulesPage() {
       <section className="bg-black text-white dark:bg-white dark:text-black">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <h2 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">How the modules pass work along</h2>
-          <p className="mt-3 max-w-2xl text-white/65 dark:text-black/60">The same record moves from one module to the next, so nothing is typed twice. This flow needs Projects, Time and Finance alongside CRM; those three are still in development.</p>
+          <p className="mt-3 max-w-2xl text-white/65 dark:text-black/60">The same record moves from one module to the next, so nothing is typed twice. CRM and Projects already connect: a won deal becomes a project in one click. Time and Finance, still in development, complete the flow.</p>
           <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/15 sm:grid-cols-2 lg:grid-cols-6 dark:border-black/15 dark:bg-black/15">
             {FLOW.map((step, i) => (
               <li key={step} data-reveal="blur" className="reveal relative bg-black p-5 dark:bg-white" style={{ "--reveal-delay": `${i * 80}ms` } as React.CSSProperties}>

@@ -31,7 +31,7 @@ export const MODULES: Record<ModuleKey, { label: string; released: boolean }> = 
   billing: { label: "Billing & subscription", released: true },
   people: { label: "People", released: true },
   crm: { label: "CRM", released: true },
-  projects: { label: "Projects", released: false },
+  projects: { label: "Projects", released: true },
   time: { label: "Time", released: false },
   finance: { label: "Finance", released: false },
   flow: { label: "Flow", released: false },

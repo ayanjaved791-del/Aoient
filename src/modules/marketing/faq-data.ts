@@ -12,7 +12,7 @@ export const FAQ: { q: string; a: string; topic: FaqTopic }[] = [
   {
     topic: "product",
     q: "What can I use today?",
-    a: "Organizations, members, invitations, built-in and custom roles, the audit log and the /api/v1 organization API. People is live too: employee directory, departments, managers, private HR details and leave with approvals. Each role gets its own live dashboard, and the Ask Aoient assistant answers questions from your records. CRM is live as well: leads, contacts, companies, a drag-and-drop deal pipeline, notes and sales reports. Projects and the other modules are in development and are released one at a time.",
+    a: "Organizations, members, invitations, built-in and custom roles, the audit log and the /api/v1 organization API. People is live too: employee directory, departments, managers, private HR details and leave with approvals. Each role gets its own live dashboard, and the Ask Aoient assistant answers questions from your records. CRM is live as well: leads, contacts, companies, a drag-and-drop deal pipeline, notes and sales reports. Projects is live too: projects with teams, drag-and-drop task boards, milestones, comments, My tasks and team workload, and a won deal becomes a project in one click. Time, Finance and the other modules are in development and are released one at a time.",
   },
   {
     topic: "product",
@@ -47,7 +47,7 @@ export const FAQ: { q: string; a: string; topic: FaqTopic }[] = [
   {
     topic: "billing",
     q: "What limits does each plan have?",
-    a: "Medisea: 5 users and 1 admin seat. Indiana: 15 users, 3 admin seats and custom roles. Pacfic-DeepDive: 40 users, 10 admin seats and custom roles. These are checked on the server today; project and automation limits apply when those modules are released.",
+    a: "Medisea: 5 users and 1 admin seat. Indiana: 15 users, 3 admin seats and custom roles. Pacfic-DeepDive: 40 users, 10 admin seats and custom roles. These are checked on the server today; the active-project limit (10 on Medisea) is checked too; automation limits apply when automations ship.",
   },
   {
     topic: "team",

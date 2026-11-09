@@ -8,6 +8,8 @@ import { can } from "@/server/tenancy/context";
 import { getDeal, listStages } from "@/server/crm/deals";
 import { listCompanies, listContacts, listCrmOwners } from "@/server/crm/contacts";
 import { listNotes } from "@/server/crm/notes";
+import { projectIdForDeal } from "@/server/projects/projects";
+import { StartProjectButton } from "@/modules/projects/forms";
 import { NotFoundError } from "@/lib/errors";
 import { PermissionDenied } from "@/components/layout/permission-denied";
 import { Badge } from "@/components/ui/badge";
@@ -30,13 +32,15 @@ async function Deal({ params }: PageProps<"/[organizationSlug]/crm/deals/[dealId
   const base = `/${ctx.organization.slug}/crm`;
   const canEdit = can(ctx, "crm.deal.update");
   const seesContacts = can(ctx, "crm.contact.read");
-  const [stages, notes, owners, companies, contacts] = await Promise.all([
+  const [stages, notes, owners, companies, contacts, projectId] = await Promise.all([
     listStages(ctx),
     listNotes(ctx, "deal", deal.id),
     canEdit ? listCrmOwners(ctx) : [],
     canEdit && seesContacts ? listCompanies(ctx) : [],
     canEdit && seesContacts ? listContacts(ctx) : [],
+    projectIdForDeal(ctx, deal.id),
   ]);
+  const canStartProject = deal.stage.kind === "won" && !deal.archived && can(ctx, "projects.project.create");
   const facts = [
     { icon: CircleDollarSign, label: "Amount", value: money(deal.amount, deal.currency) },
     { icon: CalendarDays, label: deal.closedAt ? "Closed" : "Expected close", value: deal.closedAt ? shortDate(deal.closedAt.toISOString().slice(0, 10)) : deal.expectedCloseDate ? shortDate(deal.expectedCloseDate) : "Not set" },
@@ -62,14 +66,17 @@ async function Deal({ params }: PageProps<"/[organizationSlug]/crm/deals/[dealId
               <h1 className="mt-2 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">{deal.title}</h1>
               <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{money(deal.amount, deal.currency)}</p>
             </div>
-            {canEdit && (
-              <div className="flex gap-2">
+            {(canEdit || projectId || canStartProject) && (
+              <div className="flex flex-wrap gap-2">
+                {(projectId || canStartProject) && <StartProjectButton slug={ctx.organization.slug} dealId={deal.id} existingId={projectId} />}
+                {canEdit && (
                 <DealDialog slug={ctx.organization.slug} currency={ctx.organization.currency}
                   trigger={<Button variant="secondary" className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"><Pencil />Edit</Button>}
                   owners={owners} companies={companies.map((c) => ({ id: c.id, name: c.name }))} contacts={contacts.map((c) => ({ id: c.id, name: c.fullName }))}
                   stages={stages.map((s) => ({ id: s.id, name: s.name }))}
                   deal={{ id: deal.id, title: deal.title, stageId: deal.stage.id, amount: deal.amount, currency: deal.currency, expectedCloseDate: deal.expectedCloseDate,
                     companyId: deal.company?.id ?? null, contactId: deal.contact?.id ?? null, ownerId: deal.owner?.id ?? null }} />
+                )}
               </div>
             )}
           </div>

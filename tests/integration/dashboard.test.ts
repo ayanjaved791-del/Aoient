@@ -28,7 +28,7 @@ describe("dashboard", () => {
     expect(d.activity!.byDay.reduce((s, x) => s + x.value, 0)).toBe(4);
     expect(d.activity!.heatmap.flat().reduce((s, x) => s + x, 0)).toBe(4);
     expect(d.activity!.byArea).toEqual([
-      { area: "Team", count: 3 }, { area: "People", count: 0 }, { area: "Sales", count: 0 }, { area: "Roles & access", count: 0 }, { area: "Organization", count: 1 }, { area: "Billing", count: 0 },
+      { area: "Team", count: 3 }, { area: "People", count: 0 }, { area: "Sales", count: 0 }, { area: "Projects", count: 0 }, { area: "Roles & access", count: 0 }, { area: "Organization", count: 1 }, { area: "Billing", count: 0 },
     ]);
     expect(d.activity!.topPeople).toEqual([{ name: a.user.name, count: 4 }]);
     expect(d.team).toMatchObject({ adminMembers: 1, suspendedMembers: 0, joinedPrevRange: 1, sentPrevRange: 0, medianAcceptHours: null });

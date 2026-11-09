@@ -55,7 +55,20 @@ export type AuditAction =
   | "crm.stage_updated"
   | "crm.stage_deleted"
   | "crm.stages_reordered"
-  | "crm.note_added";
+  | "crm.note_added"
+  | "projects.project_created"
+  | "projects.project_updated"
+  | "projects.project_archived"
+  | "projects.project_restored"
+  | "projects.milestone_created"
+  | "projects.milestone_updated"
+  | "projects.milestone_deleted"
+  | "projects.task_created"
+  | "projects.task_updated"
+  | "projects.task_moved"
+  | "projects.task_completed"
+  | "projects.task_deleted"
+  | "projects.comment_added";
 
 export interface AuditEvent {
   organizationId: string | null;

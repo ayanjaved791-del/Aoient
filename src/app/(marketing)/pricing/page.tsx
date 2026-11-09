@@ -29,7 +29,7 @@ const ROWS: { label: string; values: (planId: (typeof PLANS)[number]["id"]) => C
   { label: "Users (members + pending invites)", values: (id) => String(ENTITLEMENTS[id].maxMembers) },
   { label: "Admin seats (Owner / Admin)", values: (id) => String(ENTITLEMENTS[id].maxAdminSeats) },
   { label: "Custom roles", values: (id) => ENTITLEMENTS[id].customRoles },
-  { label: "Active projects", values: (id) => (ENTITLEMENTS[id].maxActiveProjects === null ? "Unlimited" : String(ENTITLEMENTS[id].maxActiveProjects)), note: "when Projects ships" },
+  { label: "Active projects", values: (id) => (ENTITLEMENTS[id].maxActiveProjects === null ? "Unlimited" : String(ENTITLEMENTS[id].maxActiveProjects)) },
   { label: "Automations", values: (id) => String(ENTITLEMENTS[id].maxAutomations), note: "when Flow ships" },
   { label: "Audit log, invitations, roles", values: () => true },
 ];

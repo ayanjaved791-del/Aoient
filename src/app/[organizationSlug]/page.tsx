@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import {
-  Activity, ArrowRight, Handshake, Briefcase, CalendarCheck, Contact, MapPin, UserRound, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
+  Activity, ArrowRight, FolderKanban, Handshake, Briefcase, CalendarCheck, Contact, MapPin, UserRound, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users,
 } from "lucide-react";
 import { getOverviewCounts } from "@/server/organizations/views";
 import { DASHBOARD_RANGES, getDashboard, parseRange, type DashboardRange, type TeamStats } from "@/server/dashboard/dashboard";
@@ -28,7 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact, crm: Handshake };
+const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact, crm: Handshake, projects: FolderKanban };
 
 interface HeroFact { label: string; value: number }
 
@@ -368,7 +368,7 @@ function ComingNext() {
         <Badge className="ml-auto">Not available yet</Badge>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        Live today: your organization, team access, roles, billing, People (directory, departments and leave) and CRM (leads, contacts, companies, the deal pipeline and sales reports). Projects, Time and Finance arrive in the next milestones.
+        Live today: your organization, team access, roles, billing, People (directory, departments and leave) CRM (leads, contacts, companies, the deal pipeline and sales reports) and Projects (task boards, milestones, my tasks and workload). Time and Finance arrive in the next milestones.
       </p>
     </Card>
   );

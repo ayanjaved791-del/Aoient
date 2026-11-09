@@ -14,7 +14,7 @@ export interface ActivityRow {
   createdAt: Date;
 }
 
-export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm";
+export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm" | "projects";
 
 export interface ActivityItem {
   id: string;
@@ -35,6 +35,8 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     ? "people"
     : row.action.startsWith("crm.")
     ? "crm"
+    : row.action.startsWith("projects.")
+    ? "projects"
     : row.action.startsWith("role.")
     ? "role"
     : row.action.startsWith("billing.")
@@ -161,6 +163,19 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     case "crm.stage_updated": text = `updated the pipeline stage ${str(m.name) ?? ""}`.trim(); break;
     case "crm.stage_deleted": text = `deleted the pipeline stage ${str(m.name) ?? ""}`.trim(); break;
     case "crm.stages_reordered": text = "reordered the pipeline stages"; break;
+    case "projects.project_created": text = `started the project ${str(m.name) ?? ""}`.trim(); break;
+    case "projects.project_updated": text = `updated the project ${str(m.name) ?? ""}`.trim(); break;
+    case "projects.project_archived": text = `archived the project ${str(m.name) ?? ""}`.trim(); break;
+    case "projects.project_restored": text = `restored the project ${str(m.name) ?? ""}`.trim(); break;
+    case "projects.milestone_created": text = `added the milestone ${str(m.name) ?? ""} to ${str(m.project) ?? "a project"}`; break;
+    case "projects.milestone_updated": text = m.done === true ? `reached the milestone ${str(m.name) ?? ""} in ${str(m.project) ?? "a project"}` : `updated the milestone ${str(m.name) ?? ""}`.trim(); break;
+    case "projects.milestone_deleted": text = `removed the milestone ${str(m.name) ?? ""}`.trim(); break;
+    case "projects.task_created": text = `added the task ${str(m.title) ?? ""} to ${str(m.project) ?? "a project"}`; break;
+    case "projects.task_updated": text = `updated the task ${str(m.title) ?? ""}`.trim(); break;
+    case "projects.task_moved": text = `moved ${str(m.title) ?? "a task"} to ${({ todo: "To do", in_progress: "In progress", review: "Review", done: "Done" } as Record<string, string>)[String(m.status)] ?? "another column"}`; break;
+    case "projects.task_completed": text = `finished the task ${str(m.title) ?? ""}`.trim(); break;
+    case "projects.task_deleted": text = `deleted the task ${str(m.title) ?? ""}`.trim(); break;
+    case "projects.comment_added": text = `commented on ${str(m.title) ?? "a task"}`; break;
     case "crm.note_added": text = `added a note to a ${str(m.subject) ?? "record"}`; break;
     default:
       text = row.action.replace(/[._]/g, " ");
