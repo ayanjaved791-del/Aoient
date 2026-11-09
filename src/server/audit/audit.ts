@@ -90,7 +90,8 @@ export type AuditAction =
   | "finance.expense_approved"
   | "finance.expense_rejected"
   | "finance.expense_paid"
-  | "finance.expense_deleted";
+  | "finance.expense_deleted"
+  | "finance.template_updated";
 
 export interface AuditEvent {
   organizationId: string | null;

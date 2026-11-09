@@ -17,6 +17,7 @@ async function Nav({ params }: { params: Promise<{ organizationSlug: string }> }
     ...(can(ctx, "finance.invoice.read") ? [{ href: `${base}/invoices`, label: "Invoices" }, { href: `${base}/estimates`, label: "Estimates" }] : []),
     ...(seesExpenses ? [{ href: `${base}/expenses`, label: "Expenses", badge: pending }] : []),
     ...(seesExpenses || can(ctx, "finance.vendor.manage") ? [{ href: `${base}/vendors`, label: "Vendors" }] : []),
+    ...(can(ctx, "finance.invoice.read") && can(ctx, "finance.invoice.issue") ? [{ href: `${base}/editor`, label: "Editor" }] : []),
   ];
   return items.length > 1 ? <div className="print:hidden"><PeopleNav items={items} label="Finance" /></div> : null;
 }

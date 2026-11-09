@@ -89,3 +89,24 @@ export function computeTotals(lines: { quantity: number; unitPrice: number; taxR
   });
   return { amounts, subtotal: subtotal / 100, taxTotal: tax / 100, total: (subtotal + tax) / 100 };
 }
+
+export const TEMPLATE_LAYOUTS = ["classic", "modern", "compact"] as const;
+const title = (fallback: string) => z.string().trim().max(40, "Use 40 characters or fewer").optional().nullable().transform((v) => v || fallback);
+
+export const templateSchema = z.object({
+  layout: z.enum(TEMPLATE_LAYOUTS).default("classic"),
+  accent: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Pick a colour").default("#0a0a0a"),
+  showLogo: z.boolean().default(true),
+  businessName: optionalText(160),
+  businessAddress: optionalText(500),
+  businessEmail: optionalEmail,
+  businessPhone: optionalText(40),
+  taxId: optionalText(60),
+  invoiceTitle: title("Invoice"),
+  estimateTitle: title("Estimate"),
+  receiptTitle: title("Payment receipt"),
+  defaultNotes: optionalText(2000),
+  footer: optionalText(300),
+  defaultDueDays: z.union([z.number(), z.string()]).transform((v) => Number(v)).refine((v) => Number.isInteger(v) && v >= 0 && v <= 365, "Use 0 to 365 days"),
+  defaultTaxRate: num("a tax rate from 0 to 100", { min: 0, max: 100 }),
+});

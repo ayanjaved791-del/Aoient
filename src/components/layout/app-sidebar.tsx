@@ -4,11 +4,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  BarChart3, Building2, CalendarDays, Contact, Network, CircleDashed, Clock3, CreditCard, FolderKanban, Handshake, Gauge, LayoutDashboard, ListTodo, Landmark, FileText, FileSignature, Receipt, Store, Magnet, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, SlidersHorizontal, Users, UsersRound, X,
+  BarChart3, Building2, CalendarDays, Contact, Network, CircleDashed, Clock3, CreditCard, FolderKanban, Handshake, Gauge, LayoutDashboard, ListTodo, Landmark, FileText, FileSignature, Receipt, Store, Palette, Magnet, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, SlidersHorizontal, Users, UsersRound, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays, pipeline: Handshake, leads: Magnet, contacts: UsersRound, companies: Building2, reports: BarChart3, crmsettings: SlidersHorizontal, projects: FolderKanban, mytasks: ListTodo, workload: Gauge, finance: Landmark, invoices: FileText, estimates: FileSignature, expenses: Receipt, vendors: Store } as const;
+const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays, pipeline: Handshake, leads: Magnet, contacts: UsersRound, companies: Building2, reports: BarChart3, crmsettings: SlidersHorizontal, projects: FolderKanban, mytasks: ListTodo, workload: Gauge, finance: Landmark, invoices: FileText, estimates: FileSignature, expenses: Receipt, vendors: Store, editor: Palette } as const;
 
 export interface SidebarLink { href: string; label: string; icon: keyof typeof ICONS; exact?: boolean }
 export interface SidebarGroup { label?: string; links: SidebarLink[] }

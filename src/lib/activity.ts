@@ -198,6 +198,7 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     case "finance.expense_approved": text = `approved the expense ${str(m.description) ?? ""}`.trim(); break;
     case "finance.expense_rejected": text = `rejected the expense ${str(m.description) ?? ""}`.trim(); break;
     case "finance.expense_paid": text = `paid out the expense ${str(m.description) ?? ""}`.trim(); break;
+    case "finance.template_updated": text = "changed how invoices and receipts look"; break;
     case "finance.expense_deleted": text = `deleted the expense ${str(m.description) ?? ""}`.trim(); break;
     case "projects.comment_added": text = `commented on ${str(m.title) ?? "a task"}`; break;
     case "crm.note_added": text = `added a note to a ${str(m.subject) ?? "record"}`; break;

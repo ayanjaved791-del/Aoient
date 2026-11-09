@@ -39,6 +39,7 @@ Supabase (managed PostgreSQL). Schema changes are plain SQL files in `supabase/m
 | `finance_vendor` | Suppliers the organization pays. Name unique per organization. |
 | `finance_document`, `finance_document_line` | Invoices and estimates (`kind`), numbered per organization and kind (INV-0001, EST-0001). Totals are computed on the server from the lines. Issued invoices are fixed; an accepted estimate becomes at most one invoice (`converted_from_id`). Optional links to `crm_company` and `project` via composite keys. |
 | `finance_payment` | Money a client paid against an issued invoice (bookkeeping only; Aoient moves no money). `amount_paid` can never exceed `total`. |
+| `finance_template` | One row per organization: layout, colour, logo, business details, titles, footer and defaults (due days, tax rate, notes) used on invoices, estimates and receipts. Edited in Finance → Editor (`finance.invoice.issue`). |
 | `finance_expense` | Spending with a pending → approved/rejected → paid flow, optional vendor and project. Nobody but the owner approves their own expense. |
 | `profile.email_unproven` | Set when the server created a login because Supabase couldn't send the confirmation email. Such a login can sign in and create its own workspace, but `email_verified` stays false. |
 | `crm_note` | Notes on a lead, contact, company or deal (`subject_type`, `subject_id`); the server checks the subject belongs to the same organization. Audit entries record that a note was added, never its words. |

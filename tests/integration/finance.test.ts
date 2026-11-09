@@ -11,6 +11,7 @@ import {
 import { createExpense, deleteExpense, listExpenses, markExpensePaid, reviewExpense, updateExpense } from "@/server/finance/expenses";
 import { createVendor, listVendors, setVendorArchived, updateVendor } from "@/server/finance/vendors";
 import { getFinanceOverview } from "@/server/finance/reports";
+import { getDocumentTemplate, saveDocumentTemplate } from "@/server/finance/template";
 import { createCompany } from "@/server/crm/contacts";
 import { createProject } from "@/server/projects/projects";
 
@@ -214,5 +215,28 @@ describe("finance", () => {
     });
     expect(o.aging.map((x) => x.amount)).toEqual([150, 0, 300, 0, 0]);
     expect(o.recentPayments).toEqual([expect.objectContaining({ number: "INV-0002", amount: 50, method: "online" })]);
+  });
+
+  it("keeps each organization's document design to itself", async () => {
+    const a = await createOrgWithOwner("tpl-a");
+    const b = await createOrgWithOwner("tpl-b");
+    expect(await getDocumentTemplate(a.ctx)).toMatchObject({ layout: "classic", accent: "#0a0a0a", businessName: a.org.name, invoiceTitle: "Invoice", saved: false });
+    const fm = await addMember(a.org.id, "finance_manager");
+    await saveDocumentTemplate(fm.ctx, { layout: "modern", accent: "#1D4ED8", showLogo: false, businessName: "Northwind Studio (Pvt) Ltd", taxId: "NTN 1234567",
+      invoiceTitle: "Tax invoice", estimateTitle: "", receiptTitle: "Receipt", footer: "Thank you", defaultDueDays: "30", defaultTaxRate: "17", defaultNotes: "Bank: Meezan" });
+    expect(await getDocumentTemplate(a.ctx)).toMatchObject({ layout: "modern", accent: "#1d4ed8", showLogo: false, taxId: "NTN 1234567", invoiceTitle: "Tax invoice",
+      estimateTitle: "Estimate", defaultDueDays: 30, defaultTaxRate: 17, saved: true });
+    await saveDocumentTemplate(fm.ctx, { layout: "compact", accent: "#000000", defaultDueDays: 7, defaultTaxRate: 0 });
+    expect((await getDocumentTemplate(a.ctx)).layout).toBe("compact");
+    // Another organization still has its own defaults, and can't touch A's.
+    await saveDocumentTemplate(b.ctx, { layout: "classic", accent: "#be123c", defaultDueDays: 14, defaultTaxRate: 0 });
+    expect((await getDocumentTemplate(a.ctx)).layout).toBe("compact");
+    expect((await getDocumentTemplate(b.ctx)).accent).toBe("#be123c");
+    // Only people who issue invoices change the design; bad input is refused.
+    const emp = await addMember(a.org.id, "employee");
+    await expect(getDocumentTemplate(emp.ctx)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(saveDocumentTemplate(emp.ctx, { layout: "classic", accent: "#000000", defaultDueDays: 1, defaultTaxRate: 0 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(saveDocumentTemplate(fm.ctx, { layout: "classic", accent: "red;", defaultDueDays: 1, defaultTaxRate: 0 })).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    await expect(saveDocumentTemplate(fm.ctx, { layout: "fancy", accent: "#000000", defaultDueDays: 1, defaultTaxRate: 0 })).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
   });
 });

@@ -61,6 +61,7 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ] : []),
     ...(seesExpenses ? [{ href: `${base}/finance/expenses`, label: "Expenses", icon: "expenses" as const }] : []),
     ...(seesExpenses || can(ctx, "finance.vendor.manage") ? [{ href: `${base}/finance/vendors`, label: "Vendors", icon: "vendors" as const }] : []),
+    ...(can(ctx, "finance.invoice.read") && can(ctx, "finance.invoice.issue") ? [{ href: `${base}/finance/editor`, label: "Editor", icon: "editor" as const }] : []),
   ];
   return [
     { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
@@ -154,7 +155,7 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
           </div>
         </header>
         {(seesPlan || readOnly) && <div className="print:hidden"><LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} /></div>}
-        <main className="mx-auto w-full max-w-6xl flex-1 nav-closed:max-w-7xl px-4 py-8 sm:px-6 lg:px-8 print:max-w-none print:p-0">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 nav-closed:max-w-7xl px-4 pb-28 pt-8 sm:px-6 lg:px-8 print:max-w-none print:p-0">{children}</main>
         <LiveSync slug={ctx.organization.slug} />
         <AssistantPanel slug={ctx.organization.slug} organizationName={ctx.organization.name} roleName={ctx.roleName}
           suggestions={suggestionsFor(ctx).slice(0, 6)} fullAccess={assistantScope(ctx).team} />

@@ -25,8 +25,10 @@ const toNum = (s: string) => { const n = Number(String(s).replace(/,/g, "")); re
 let keySeq = 1;
 
 /** The invoice / estimate editor: who it's for, the items, live totals. Totals are recomputed on the server. */
-export function DocumentForm({ slug, kind, base, currency, today, companies, projects, doc }: {
+export function DocumentForm({ slug, kind, base, currency, today, companies, projects, doc, defaults }: {
   slug: string; kind: "invoice" | "estimate"; base: string; currency: string; today: string;
+  /** From Finance → Editor: due-date days, tax rate and notes for new documents. */
+  defaults?: { dueDays: number; taxRate: number; notes: string | null };
   companies: Opt[]; projects: (Opt & { companyId: string | null })[]; doc?: DocumentFormValue;
 }) {
   const router = useRouter();
@@ -34,12 +36,12 @@ export function DocumentForm({ slug, kind, base, currency, today, companies, pro
   const [v, setV] = useState({
     billToName: doc?.billToName ?? "", billToEmail: doc?.billToEmail ?? "", billToAddress: doc?.billToAddress ?? "",
     companyId: doc?.companyId ?? "", projectId: doc?.projectId ?? "", issueDate: doc?.issueDate ?? today,
-    dueDate: doc ? doc.dueDate ?? "" : addDays(today, kind === "invoice" ? 14 : 30), currency: doc?.currency ?? currency, notes: doc?.notes ?? "",
+    dueDate: doc ? doc.dueDate ?? "" : addDays(today, defaults?.dueDays ?? (kind === "invoice" ? 14 : 30)), currency: doc?.currency ?? currency, notes: doc ? doc.notes ?? "" : defaults?.notes ?? "",
   });
   const [lines, setLines] = useState<Line[]>(
     doc?.lines.length
       ? doc.lines.map((l) => ({ key: keySeq++, description: l.description, quantity: String(l.quantity), unitPrice: String(l.unitPrice), taxRate: String(l.taxRate) }))
-      : [{ key: keySeq++, description: "", quantity: "1", unitPrice: "", taxRate: "0" }],
+      : [{ key: keySeq++, description: "", quantity: "1", unitPrice: "", taxRate: String(defaults?.taxRate ?? 0) }],
   );
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string[]>>({});

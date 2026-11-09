@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileText, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, FileText, Pencil, Plus, ReceiptText } from "lucide-react";
 import { getPageOrgContext } from "@/server/tenancy/page-context";
 import { can } from "@/server/tenancy/context";
 import { getDocument, listDocumentLinkOptions, listDocuments } from "@/server/finance/documents";
 import { NotFoundError } from "@/lib/errors";
+import { orgLogoUrl } from "@/lib/media";
+import { getDocumentTemplate } from "@/server/finance/template";
+import { DocumentPaper, ReceiptPaper } from "@/modules/finance/document-paper";
 import { PageHeader } from "@/components/layout/page-header";
 import { PermissionDenied } from "@/components/layout/permission-denied";
 import { Badge } from "@/components/ui/badge";
@@ -106,9 +109,10 @@ export async function DocumentEditor({ slug, kind, id }: { slug: string; kind: K
   const { ctx } = await getPageOrgContext(slug);
   if (!can(ctx, "finance.invoice.create")) return <PermissionDenied what={`${kind} editing`} />;
   const base = `/${ctx.organization.slug}/finance/${PLURAL[kind]}`;
-  const [doc, links] = await Promise.all([
+  const [doc, links, template] = await Promise.all([
     id ? getDocument(ctx, id, kind).catch((e) => { if (e instanceof NotFoundError) notFound(); throw e; }) : null,
     listDocumentLinkOptions(ctx),
+    getDocumentTemplate(ctx),
   ]);
   const locked = doc && ((kind === "invoice" && doc.status !== "draft") || (kind === "estimate" && doc.status === "accepted"));
   return (
@@ -123,6 +127,7 @@ export async function DocumentEditor({ slug, kind, id }: { slug: string; kind: K
       ) : (
         <DocumentForm slug={ctx.organization.slug} kind={kind} base={base} currency={ctx.organization.currency} today={todayIn(ctx.organization.timezone)}
           companies={links.companies} projects={links.projects}
+          defaults={{ dueDays: kind === "invoice" ? template.defaultDueDays : 30, taxRate: template.defaultTaxRate, notes: template.defaultNotes }}
           doc={doc ? { id: doc.id, billToName: doc.billToName, billToEmail: doc.billToEmail, billToAddress: doc.billToAddress, companyId: doc.company?.id ?? null,
             projectId: doc.project?.id ?? null, issueDate: doc.issueDate, dueDate: doc.dueDate, currency: doc.currency, notes: doc.notes, lines: doc.lines } : undefined} />
       )}
@@ -133,7 +138,11 @@ export async function DocumentEditor({ slug, kind, id }: { slug: string; kind: K
 export async function DocumentView({ slug, kind, id }: { slug: string; kind: Kind; id: string }) {
   const { ctx } = await getPageOrgContext(slug);
   if (!can(ctx, "finance.invoice.read")) return <PermissionDenied what={PLURAL[kind]} />;
-  const d = await getDocument(ctx, id, kind).catch((e) => { if (e instanceof NotFoundError) notFound(); throw e; });
+  const [d, template] = await Promise.all([
+    getDocument(ctx, id, kind).catch((e) => { if (e instanceof NotFoundError) notFound(); throw e; }),
+    getDocumentTemplate(ctx),
+  ]);
+  const logoUrl = orgLogoUrl(ctx.organizationId, ctx.organization.logoUpdatedAt);
   const fin = `/${ctx.organization.slug}/finance`;
   const base = `${fin}/${PLURAL[kind]}`;
   const today = todayIn(ctx.organization.timezone);
@@ -169,64 +178,11 @@ export async function DocumentView({ slug, kind, id }: { slug: string; kind: Kin
       )}
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_300px] print:block">
-        <Card className="motion-safe:animate-rise min-w-0 p-6 sm:p-10 print:border-0 print:p-0 print:shadow-none">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{kind === "invoice" ? "Invoice" : "Estimate"}</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight">{d.number}</h1>
-              <div className="mt-2 print:hidden"><Badge tone={stateTone(kind, d.state)}>{stateLabel(kind, d.state)}</Badge></div>
-            </div>
-            <div className="text-right">
-              <p className="text-base font-semibold">{ctx.organization.name}</p>
-              <dl className="mt-2 grid gap-0.5 text-sm">
-                <div className="flex justify-end gap-2"><dt className="text-muted-foreground">Date</dt><dd>{day(d.issueDate)}</dd></div>
-                {d.dueDate && <div className="flex justify-end gap-2"><dt className="text-muted-foreground">{kind === "invoice" ? "Due" : "Valid until"}</dt><dd className={cn(d.state === "overdue" && "font-medium text-danger")}>{day(d.dueDate)}</dd></div>}
-              </dl>
-            </div>
-          </div>
-          <div className="mt-8">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bill to</p>
-            <p className="mt-1 font-medium">{d.billToName}</p>
-            {d.billToEmail && <p className="text-sm text-muted-foreground">{d.billToEmail}</p>}
-            {d.billToAddress && <p className="whitespace-pre-line text-sm text-muted-foreground">{d.billToAddress}</p>}
-          </div>
-          <div className="scroll-thin mt-8 overflow-x-auto">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead className="border-b-2 border-foreground text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th scope="col" className="py-2 pr-4 font-medium">Item</th>
-                  <th scope="col" className="py-2 pr-4 text-right font-medium">Qty</th>
-                  <th scope="col" className="py-2 pr-4 text-right font-medium">Price</th>
-                  <th scope="col" className="py-2 pr-4 text-right font-medium">Tax</th>
-                  <th scope="col" className="py-2 text-right font-medium">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {d.lines.map((l) => (
-                  <tr key={l.id}>
-                    <td className="py-3 pr-4 [overflow-wrap:anywhere]">{l.description}</td>
-                    <td className="py-3 pr-4 text-right tabular-nums">{l.quantity}</td>
-                    <td className="whitespace-nowrap py-3 pr-4 text-right tabular-nums">{amount(l.unitPrice, d.currency)}</td>
-                    <td className="py-3 pr-4 text-right tabular-nums text-muted-foreground">{l.taxRate ? `${l.taxRate}%` : "—"}</td>
-                    <td className="whitespace-nowrap py-3 text-right tabular-nums">{amount(l.amount, d.currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <dl className="ml-auto mt-4 grid w-full max-w-xs gap-1.5 border-t border-border pt-4 text-sm">
-            <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums">{amount(d.subtotal, d.currency)}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted-foreground">Tax</dt><dd className="tabular-nums">{amount(d.taxTotal, d.currency)}</dd></div>
-            <div className="flex justify-between text-lg font-semibold"><dt>Total</dt><dd className="tabular-nums">{amount(d.total, d.currency)}</dd></div>
-            {kind === "invoice" && d.amountPaid > 0 && (
-              <>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Paid</dt><dd className="tabular-nums text-success">−{amount(d.amountPaid, d.currency)}</dd></div>
-                <div className="flex justify-between font-semibold"><dt>Still owed</dt><dd className="tabular-nums">{amount(d.balance, d.currency)}</dd></div>
-              </>
-            )}
-          </dl>
-          {d.notes && <p className="mt-8 whitespace-pre-line border-t border-border pt-4 text-sm text-muted-foreground">{d.notes}</p>}
-        </Card>
+        <div className="motion-safe:animate-rise min-w-0">
+          <DocumentPaper t={template} logoUrl={logoUrl} overdue={d.state === "overdue"} badge={<Badge tone={stateTone(kind, d.state)}>{stateLabel(kind, d.state)}</Badge>}
+            doc={{ kind, number: d.number, issueDate: d.issueDate, dueDate: d.dueDate, billToName: d.billToName, billToEmail: d.billToEmail, billToAddress: d.billToAddress,
+              currency: d.currency, lines: d.lines, subtotal: d.subtotal, taxTotal: d.taxTotal, total: d.total, amountPaid: d.amountPaid, balance: d.balance, notes: d.notes }} />
+        </div>
 
         <aside className="grid content-start gap-4 print:hidden">
           {kind === "invoice" && d.status !== "draft" && (
@@ -249,6 +205,9 @@ export async function DocumentView({ slug, kind, id }: { slug: string; kind: Kin
                         <p className="truncate text-xs text-muted-foreground">{day(p.paidOn)} · {PAYMENT_METHOD_LABELS[p.method] ?? p.method}{p.reference ? ` · ${p.reference}` : ""}</p>
                         {p.recordedBy && <p className="truncate text-xs text-muted-foreground">Recorded by {p.recordedBy}</p>}
                       </div>
+                      <Button asChild variant="ghost" size="icon-sm" aria-label={`Receipt for ${amount(p.amount, d.currency)}`} title="Receipt">
+                        <Link href={`${base}/${d.id}/receipts/${p.id}`}><ReceiptText /></Link>
+                      </Button>
                       {canPay && d.status === "issued" && <DeletePaymentButton slug={ctx.organization.slug} id={p.id} label={amount(p.amount, d.currency)} />}
                     </li>
                   ))}
@@ -266,6 +225,33 @@ export async function DocumentView({ slug, kind, id }: { slug: string; kind: Kin
             </dl>
           </Card>
         </aside>
+      </div>
+    </>
+  );
+}
+
+export async function ReceiptView({ slug, invoiceId, paymentId }: { slug: string; invoiceId: string; paymentId: string }) {
+  const { ctx } = await getPageOrgContext(slug);
+  if (!can(ctx, "finance.invoice.read")) return <PermissionDenied what="receipts" />;
+  const [d, template] = await Promise.all([
+    getDocument(ctx, invoiceId, "invoice").catch((e) => { if (e instanceof NotFoundError) notFound(); throw e; }),
+    getDocumentTemplate(ctx),
+  ]);
+  const idx = d.payments.findIndex((p) => p.id === paymentId);
+  if (idx < 0) notFound();
+  const p = d.payments[idx];
+  const paidSoFar = d.payments.slice(0, idx + 1).reduce((s, x) => s + x.amount, 0);
+  const back = `/${ctx.organization.slug}/finance/invoices/${d.id}`;
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <Link href={back} className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{d.number}</Link>
+        <PrintButton />
+      </div>
+      <div className="motion-safe:animate-rise mx-auto w-full max-w-3xl">
+        <ReceiptPaper t={template} logoUrl={orgLogoUrl(ctx.organizationId, ctx.organization.logoUpdatedAt)}
+          receipt={{ number: `${d.number}-R${idx + 1}`, paidOn: p.paidOn, method: p.method, reference: p.reference, amount: p.amount, balanceAfter: Math.max(0, Math.round((d.total - paidSoFar) * 100) / 100) }}
+          invoice={{ number: d.number, billToName: d.billToName, billToEmail: d.billToEmail, billToAddress: d.billToAddress, currency: d.currency, total: d.total }} />
       </div>
     </>
   );

@@ -14,6 +14,7 @@ import {
 } from "@/server/finance/documents";
 import { createExpense, deleteExpense, markExpensePaid, reviewExpense, updateExpense } from "@/server/finance/expenses";
 import { createVendor, setVendorArchived, updateVendor } from "@/server/finance/vendors";
+import { saveDocumentTemplate } from "@/server/finance/template";
 
 async function ctxFor(slug: string) {
   const user = await requireUser();
@@ -72,4 +73,7 @@ export async function updateVendorAction(slug: string, id: string, input: unknow
 }
 export async function setVendorArchivedAction(slug: string, id: string, archived: boolean) {
   return runAction(async () => done(await setVendorArchived(await ctxFor(slug), String(id), archived === true)));
+}
+export async function saveDocumentTemplateAction(slug: string, input: unknown) {
+  return runAction(async () => done(await saveDocumentTemplate(await ctxFor(slug), input)));
 }
