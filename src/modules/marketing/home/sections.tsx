@@ -77,7 +77,7 @@ const MODULES: { name: string; body: string; live?: boolean }[] = [
   { name: "Dashboards", body: "A live dashboard for each role, from real records.", live: true },
   { name: "CRM", body: "Leads, contacts, companies and deals.", live: true },
   { name: "Projects", body: "Projects, tasks and boards from won deals.", live: true },
-  { name: "Time", body: "Timers, timesheets and billable hours." },
+  { name: "Time", body: "Timers, timesheets and billable hours.", live: true },
   { name: "Finance", body: "Invoices, estimates, payments and expenses.", live: true },
   { name: "Documents", body: "Proposals, contracts and files." },
   { name: "Flow", body: "Automations between modules." },

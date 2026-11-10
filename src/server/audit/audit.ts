@@ -91,7 +91,12 @@ export type AuditAction =
   | "finance.expense_rejected"
   | "finance.expense_paid"
   | "finance.expense_deleted"
-  | "finance.template_updated";
+  | "finance.template_updated"
+  | "time.timesheet_submitted"
+  | "time.timesheet_withdrawn"
+  | "time.timesheet_approved"
+  | "time.timesheet_rejected"
+  | "time.hours_billed";
 
 export interface AuditEvent {
   organizationId: string | null;

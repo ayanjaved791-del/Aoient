@@ -51,7 +51,7 @@ export interface ActivityStats {
   totalPrevRange: number;
   /** [weekday 0=Mon..6=Sun][hour 0..23] event counts in the organization's time zone. */
   heatmap: number[][];
-  byArea: { area: "Team" | "Roles & access" | "Organization" | "Billing" | "People" | "Sales" | "Projects" | "Finance"; count: number }[];
+  byArea: { area: "Team" | "Roles & access" | "Organization" | "Billing" | "People" | "Sales" | "Projects" | "Finance" | "Time"; count: number }[];
   topPeople: { name: string; count: number }[];
 }
 
@@ -150,7 +150,7 @@ async function loadTeam(ctx: OrgContext, range: DashboardRange, tz: string): Pro
   };
 }
 
-const AREA_OF: Record<string, ActivityStats["byArea"][number]["area"]> = { member: "Team", role: "Roles & access", organization: "Organization", billing: "Billing", people: "People", crm: "Sales", projects: "Projects", finance: "Finance" };
+const AREA_OF: Record<string, ActivityStats["byArea"][number]["area"]> = { member: "Team", role: "Roles & access", organization: "Organization", billing: "Billing", people: "People", crm: "Sales", projects: "Projects", finance: "Finance", time: "Time" };
 
 async function loadActivity(ctx: OrgContext, range: DashboardRange, tz: string): Promise<ActivityStats> {
   assertPermission(ctx, "organization.audit.read");
@@ -204,7 +204,7 @@ async function loadActivity(ctx: OrgContext, range: DashboardRange, tz: string):
     total: totals.total,
     totalPrevRange: totals.prev,
     heatmap,
-    byArea: (["Team", "People", "Sales", "Projects", "Finance", "Roles & access", "Organization", "Billing"] as const).map((area) => ({ area, count: areaCounts.get(area) ?? 0 })),
+    byArea: (["Team", "People", "Sales", "Projects", "Time", "Finance", "Roles & access", "Organization", "Billing"] as const).map((area) => ({ area, count: areaCounts.get(area) ?? 0 })),
     topPeople: people.map((p) => ({ name: p.name, count: p.n })),
   };
 }

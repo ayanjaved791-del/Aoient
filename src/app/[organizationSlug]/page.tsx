@@ -28,7 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact, crm: Handshake, projects: FolderKanban, finance: Wallet };
+const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact, crm: Handshake, projects: FolderKanban, finance: Wallet, time: Clock3 };
 
 interface HeroFact { label: string; value: number }
 

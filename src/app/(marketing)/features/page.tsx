@@ -66,7 +66,6 @@ const FEATURES: Feature[] = [
 ];
 
 const COMING = [
-  ["Time", "Timers, timesheets and billable hours."],
   ["Documents", "Proposals, contracts and files."],
   ["Flow", "Automations between modules."],
   ["Connect", "Integrations with the tools you already use."],

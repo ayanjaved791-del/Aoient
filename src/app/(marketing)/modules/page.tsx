@@ -16,7 +16,7 @@ const MODULES: Mod[] = [
   { name: "Dashboards", live: true, summary: "A live overview for each role.", inside: ["Owner and admin overview", "Personal view for employees", "Activity and trends", "CSV export"], uses: "All live modules" },
   { name: "CRM", live: true, summary: "Customers and the deals you're working on.", inside: ["Leads and contacts", "Companies", "Deal pipeline", "Sales reports"], uses: "Projects, Finance" },
   { name: "Projects", live: true, summary: "Delivery, from a won deal to done.", inside: ["Projects and tasks", "Boards", "Milestones"], uses: "CRM, People, Time" },
-  { name: "Time", live: false, summary: "Hours worked, and which are billable.", inside: ["Timers", "Timesheets and approvals", "Billable hours"], uses: "Projects, Finance" },
+  { name: "Time", live: true, summary: "Hours worked, and which are billable.", inside: ["Timers", "Weekly timesheets and approvals", "Billable hours on invoices", "Team reports"], uses: "Projects, Finance" },
   { name: "Finance", live: true, summary: "Getting paid for the work you delivered.", inside: ["Invoices and estimates", "Payments received", "Expenses with approvals", "Vendors and reports"], uses: "CRM, Projects" },
   { name: "Documents", live: false, summary: "Files attached to the work they belong to.", inside: ["Proposals", "Contracts", "Shared files"], uses: "CRM, Projects" },
   { name: "Flow", live: false, summary: "Automations that move work along for you.", inside: ["Triggers and actions", "Between modules"], uses: "All modules" },
@@ -86,7 +86,7 @@ export default function ModulesPage() {
       <section className="bg-black text-white dark:bg-white dark:text-black">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <h2 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">How the modules pass work along</h2>
-          <p className="mt-3 max-w-2xl text-white/65 dark:text-black/60">The same record moves from one module to the next, so nothing is typed twice. CRM, Projects and Finance already connect: a won deal becomes a project, and invoices link to the client and the project. Time, still in development, completes the flow.</p>
+          <p className="mt-3 max-w-2xl text-white/65 dark:text-black/60">The same record moves from one module to the next, so nothing is typed twice. The whole flow is live: a won deal becomes a project, the team tracks time on it, and billable hours become an invoice in one click.</p>
           <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/15 sm:grid-cols-2 lg:grid-cols-6 dark:border-black/15 dark:bg-black/15">
             {FLOW.map((step, i) => (
               <li key={step} data-reveal="blur" className="reveal relative bg-black p-5 dark:bg-white" style={{ "--reveal-delay": `${i * 80}ms` } as React.CSSProperties}>

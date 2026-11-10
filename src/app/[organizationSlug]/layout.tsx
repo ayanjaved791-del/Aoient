@@ -16,6 +16,8 @@ import { TRIAL_DAYS, daysLeft } from "@/lib/billing/entitlements";
 import { cn } from "@/lib/utils";
 import { AssistantPanel } from "@/modules/assistant/assistant-panel";
 import { LiveSync } from "@/components/live/live-sync";
+import { getRunningTimer } from "@/server/time/entries";
+import { RunningPill } from "@/modules/time/time-ui";
 import { assistantScope, suggestionsFor } from "@/server/assistant/answer";
 
 /** Only pages the member can open are linked; each page still re-checks on the server. */
@@ -63,10 +65,16 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ...(seesExpenses || can(ctx, "finance.vendor.manage") ? [{ href: `${base}/finance/vendors`, label: "Vendors", icon: "vendors" as const }] : []),
     ...(can(ctx, "finance.invoice.read") && can(ctx, "finance.invoice.issue") ? [{ href: `${base}/finance/editor`, label: "Editor", icon: "editor" as const }] : []),
   ];
+  const time: SidebarGroup["links"] = [
+    ...(can(ctx, "time.entry.own") ? [{ href: `${base}/time`, label: "My time", icon: "time" as const, exact: true }] : []),
+    ...(can(ctx, "time.timesheet.approve") ? [{ href: `${base}/time/approvals`, label: "Approvals", icon: "approvals" as const }] : []),
+    ...(can(ctx, "time.entry.read_all") ? [{ href: `${base}/time/reports`, label: "Time reports", icon: "timereports" as const }] : []),
+  ];
   return [
     { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
     ...(people.length ? [{ label: "People", links: people }] : []),
     ...(projects.length ? [{ label: "Projects", links: projects }] : []),
+    ...(time.length ? [{ label: "Time", links: time }] : []),
     ...(crm.length ? [{ label: "CRM", links: crm }] : []),
     ...(finance.length ? [{ label: "Finance", links: finance }] : []),
     ...(team.length ? [{ label: "Team", links: team }] : []),
@@ -116,7 +124,7 @@ function PlanCard({ license, href }: { license: License | null; href: string | n
 async function WorkspaceFrame({ params, children }: { params: Promise<{ organizationSlug: string }>; children: React.ReactNode }) {
   const { organizationSlug } = await params;
   const { user, ctx } = await getPageOrgContext(organizationSlug);
-  const [orgs, { license }] = await Promise.all([listUserOrganizations(user.id), getLicenseOverview(ctx.organizationId)]);
+  const [orgs, { license }, running] = await Promise.all([listUserOrganizations(user.id), getLicenseOverview(ctx.organizationId), getRunningTimer(ctx)]);
   const base = `/${ctx.organization.slug}`;
   const groups = sidebarGroups(ctx, base);
   const switcher = <OrgSwitcher current={{ slug: ctx.organization.slug, name: ctx.organization.name, roleName: ctx.roleName, logoUrl: orgLogoUrl(ctx.organizationId, ctx.organization.logoUpdatedAt) }} organizations={orgs} />;
@@ -151,7 +159,8 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
                 Read-only
               </span>
             )}
-            <div className="ml-auto"><UserMenu name={user.name} email={user.email} avatarUrl={avatarUrl(user.id, user.avatarUpdatedAt)} /></div>
+            {running?.startedAt && <div className="ml-auto"><RunningPill href={`${base}/time`} startedAt={running.startedAt.toISOString()} label={running.description ?? running.project?.name ?? "Working"} /></div>}
+            <div className={running ? "" : "ml-auto"}><UserMenu name={user.name} email={user.email} avatarUrl={avatarUrl(user.id, user.avatarUpdatedAt)} /></div>
           </div>
         </header>
         {(seesPlan || readOnly) && <div className="print:hidden"><LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} /></div>}

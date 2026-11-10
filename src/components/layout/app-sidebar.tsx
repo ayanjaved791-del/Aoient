@@ -4,19 +4,15 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  BarChart3, Building2, CalendarDays, Contact, Network, CircleDashed, Clock3, CreditCard, FolderKanban, Handshake, Gauge, LayoutDashboard, ListTodo, Landmark, FileText, FileSignature, Receipt, Store, Palette, Magnet, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, SlidersHorizontal, Users, UsersRound, X,
+  BarChart3, Building2, CalendarDays, Contact, Network, Timer, ClipboardCheck, ChartColumn, CreditCard, FolderKanban, Handshake, Gauge, LayoutDashboard, ListTodo, Landmark, FileText, FileSignature, Receipt, Store, Palette, Magnet, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, SlidersHorizontal, Users, UsersRound, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays, pipeline: Handshake, leads: Magnet, contacts: UsersRound, companies: Building2, reports: BarChart3, crmsettings: SlidersHorizontal, projects: FolderKanban, mytasks: ListTodo, workload: Gauge, finance: Landmark, invoices: FileText, estimates: FileSignature, expenses: Receipt, vendors: Store, editor: Palette } as const;
+const ICONS = { overview: LayoutDashboard, members: Users, roles: ShieldCheck, general: Building2, billing: CreditCard, people: Contact, departments: Network, leave: CalendarDays, pipeline: Handshake, leads: Magnet, contacts: UsersRound, companies: Building2, reports: BarChart3, crmsettings: SlidersHorizontal, projects: FolderKanban, mytasks: ListTodo, workload: Gauge, finance: Landmark, invoices: FileText, estimates: FileSignature, expenses: Receipt, vendors: Store, editor: Palette, time: Timer, approvals: ClipboardCheck, timereports: ChartColumn } as const;
 
 export interface SidebarLink { href: string; label: string; icon: keyof typeof ICONS; exact?: boolean }
 export interface SidebarGroup { label?: string; links: SidebarLink[] }
 
-/** Modules that are planned but not built. Shown as plain text, never as links. */
-const SOON = [
-  { label: "Time", icon: Clock3 },
-];
 
 function isActive(pathname: string, link: SidebarLink) {
   return link.exact ? pathname === link.href : pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -57,20 +53,6 @@ function SidebarBody({ groups, top, bottom }: { groups: SidebarGroup[]; top: Rea
           </div>
         ))}
 
-        <div className="mt-6">
-          <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Coming next</p>
-          <ul className="grid gap-0.5" aria-label="Modules not available yet">
-            {SOON.map(({ label, icon: Icon }) => (
-              <li key={label} className="flex cursor-default items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground/80">
-                <Icon className="size-4 shrink-0 opacity-60" aria-hidden />
-                {label}
-                <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-dashed border-border px-1.5 py-px text-[10px] font-medium">
-                  <CircleDashed className="size-2.5" aria-hidden />Soon
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
       </nav>
       {bottom && <div className="shrink-0 border-t border-border p-3">{bottom}</div>}
     </div>

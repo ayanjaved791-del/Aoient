@@ -14,7 +14,7 @@ export interface ActivityRow {
   createdAt: Date;
 }
 
-export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm" | "projects" | "finance";
+export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm" | "projects" | "finance" | "time";
 
 export interface ActivityItem {
   id: string;
@@ -39,6 +39,8 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     ? "projects"
     : row.action.startsWith("finance.")
     ? "finance"
+    : row.action.startsWith("time.")
+    ? "time"
     : row.action.startsWith("role.")
     ? "role"
     : row.action.startsWith("billing.")
@@ -198,6 +200,11 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     case "finance.expense_approved": text = `approved the expense ${str(m.description) ?? ""}`.trim(); break;
     case "finance.expense_rejected": text = `rejected the expense ${str(m.description) ?? ""}`.trim(); break;
     case "finance.expense_paid": text = `paid out the expense ${str(m.description) ?? ""}`.trim(); break;
+    case "time.timesheet_submitted": text = `submitted a timesheet for the week of ${str(m.week) ?? "a week"}`; break;
+    case "time.timesheet_withdrawn": text = `took back a timesheet for the week of ${str(m.week) ?? "a week"}`; break;
+    case "time.timesheet_approved": text = `approved ${str(m.name) ?? "a"}'s timesheet for the week of ${str(m.week) ?? "a week"}`; break;
+    case "time.timesheet_rejected": text = `sent back ${str(m.name) ?? "a"}'s timesheet for the week of ${str(m.week) ?? "a week"}`; break;
+    case "time.hours_billed": text = `put ${str(m.hours) ?? "some"} hours of ${str(m.project) ?? "a project"} on invoice ${str(m.number) ?? ""}`.trim(); break;
     case "finance.template_updated": text = "changed how invoices and receipts look"; break;
     case "finance.expense_deleted": text = `deleted the expense ${str(m.description) ?? ""}`.trim(); break;
     case "projects.comment_added": text = `commented on ${str(m.title) ?? "a task"}`; break;
