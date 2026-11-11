@@ -12,7 +12,7 @@ export const FAQ: { q: string; a: string; topic: FaqTopic }[] = [
   {
     topic: "product",
     q: "What can I use today?",
-    a: "Organizations, members, invitations, built-in and custom roles, the audit log and the /api/v1 organization API. People is live too: employee directory, departments, managers, private HR details and leave with approvals. Each role gets its own live dashboard, and the Ask Aoient assistant answers questions from your records. CRM is live as well: leads, contacts, companies, a drag-and-drop deal pipeline, notes and sales reports. Projects is live too: projects with teams, drag-and-drop task boards, milestones, comments, My tasks and team workload, and a won deal becomes a project in one click. Finance is live: invoices and estimates with line items and tax, payments received, expenses with approvals, vendors and a finance overview. Time is live: timers, weekly timesheets with approval, team reports, and billable hours turned into an invoice. The other modules are in development and are released one at a time.",
+    a: "Organizations, members, invitations, built-in and custom roles, the audit log and the /api/v1 organization API. People is live too: employee directory, departments, managers, private HR details and leave with approvals. Each role gets its own live dashboard, and Ant, the Ask Ant assistant, answers questions from your records, summarises every module and creates or deletes things only after you confirm. CRM is live as well: leads, contacts, companies, a drag-and-drop deal pipeline, notes and sales reports. Projects is live too: projects with teams, drag-and-drop task boards, milestones, comments, My tasks and team workload, and a won deal becomes a project in one click. Finance is live: invoices and estimates with line items and tax, payments received, expenses with approvals, vendors and a finance overview. Time is live: timers, weekly timesheets with approval, team reports, and billable hours turned into an invoice. The other modules are in development and are released one at a time.",
   },
   {
     topic: "product",
@@ -67,7 +67,7 @@ export const FAQ: { q: string; a: string; topic: FaqTopic }[] = [
   {
     topic: "product",
     q: "Does Aoient use AI?",
-    a: "No outside AI service is used. The Ask Aoient assistant works with our own rules: it recognises common questions in English and Roman Urdu and answers from your workspace's records, limited to what your role can see.",
+    a: "No outside AI service is used. Ask Ant, the assistant, works with our own rules: it recognises common questions and commands in English and Roman Urdu, answers from your workspace's records, and is limited to what your role can do. When you ask it to create or delete something, it shows you the exact change first and only acts after you press Confirm.",
   },
   {
     topic: "product",

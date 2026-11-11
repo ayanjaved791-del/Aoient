@@ -14,6 +14,9 @@ import { parseQuestion, type Intent } from "@/lib/assistant/intents";
 import { getPeopleStats } from "@/server/people/employees";
 import { listLeave, whoIsOut } from "@/server/people/leave";
 import { listDepartments } from "@/server/people/departments";
+import { parseCommand, parseConfirmation } from "@/lib/assistant/commands";
+import { cancelCommand, confirmCommand, latestPendingCommand, proposeCommand, type Proposal } from "./commands";
+import { buildSummary, moduleFromQuestion, type SummarySection } from "./analytics";
 
 export interface AssistantAnswer {
   intent: Intent;
@@ -24,6 +27,12 @@ export interface AssistantAnswer {
   suggestions?: string[];
   /** True when the answer was limited by the person's role. */
   restricted?: boolean;
+  /** Analytics, one block per module the person can see. */
+  sections?: SummarySection[];
+  /** A change waiting for the person's OK. Nothing has happened yet. */
+  proposal?: Proposal;
+  /** Set after a confirmed change ran. */
+  done?: boolean;
 }
 
 /**
@@ -50,8 +59,12 @@ const toRange = (days: number | null): DashboardRange => (days === null || days 
 
 export function suggestionsFor(ctx: OrgContext): string[] {
   const s = assistantScope(ctx);
-  const out = ["What is my role?", "What can I do here?", "What did I do this week?"];
-  if (s.team) out.unshift("Give me a summary", "How many members do we have?", "Who joined recently?", "List all admins");
+  const out = ["Give me an analytics summary", "What can you do?", "What is my role?", "What did I do this week?"];
+  if (can(ctx, "crm.report.read")) out.push("How are sales doing?");
+  if (can(ctx, "finance.report.read")) out.push("Finance summary");
+  if (can(ctx, "projects.task.create")) out.push("Create task Homepage design in <project>");
+  if (can(ctx, "time.entry.own")) out.push("Log 2h on <project>");
+  if (s.team) out.push("How many members do we have?", "Who joined recently?", "List all admins");
   if (s.invites) out.push("Which invitations are pending?");
   if (s.billing) out.push("How many days are left on our plan?", "Are we close to our limits?");
   if (s.audit) out.push("What happened today?", "Who is most active this month?");
@@ -90,6 +103,19 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
   const now = new Date();
   // Role names help match "list admins" / "what can HR Manager do"; system role names are not secret.
   const roleNames = s.roles ? (await listRoles(ctx)).map((r) => r.name) : ["Owner", "Admin", "HR Manager", "Sales Manager", "Project Manager", "Finance Manager", "Employee", "Client / Guest"];
+  // "yes" / "haan" answers the latest proposal; "no" / "nahi" drops it.
+  const yes = parseConfirmation(question);
+  if (yes !== null) {
+    const pending = await latestPendingCommand(ctx);
+    if (pending) return yes ? runConfirmed(ctx, pending) : cancelProposal(ctx, pending);
+  }
+  const cmd = parseCommand(question);
+  if (cmd) {
+    const r = await proposeCommand(ctx, cmd);
+    return r.kind === "proposal"
+      ? { intent: "command", text: r.text, proposal: r.proposal }
+      : { intent: "command", text: r.text, restricted: r.restricted, items: r.items };
+  }
   const p = parseQuestion(question, roleNames);
   const period = p.days ?? 30;
   const periodLabel = p.periodLabel ?? "the last 30 days";
@@ -100,8 +126,8 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
       return {
         intent: p.intent,
         text: s.team
-          ? `Hi! I can answer questions about ${ctx.organization.name}: your team, roles, invitations, plan, usage and recent activity. Everything comes straight from your workspace's records.`
-          : `Hi! I can tell you about your own account in ${ctx.organization.name}: your role, what you're allowed to do and what you've changed. Your role (${ctx.roleName}) doesn't include details about other people.`,
+          ? `Hi, I'm Ant! I answer questions about ${ctx.organization.name} (team, plan, activity, and summaries of sales, projects, time, finance and people) straight from your records.\n\nI can also create and delete things for you, like “create task Homepage in Hunza booking site”, “log 2h on Hunza booking site” or “archive lead Ali Khan”. I always show you exactly what I'll do first, and nothing changes until you press Confirm.`
+          : `Hi, I'm Ant! I can tell you about your own work in ${ctx.organization.name}: your role, your tasks and time, and summaries of what your role can see.\n\nI can also do things your role allows, like “log 2h on <project>” or “start timer”. I always ask first, and nothing changes until you press Confirm.`,
         suggestions: suggestionsFor(ctx),
       };
 
@@ -157,23 +183,19 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
     }
 
     case "summary": {
-      if (!s.team) return denied(p.intent, ctx, "a summary of the whole workspace");
-      const d = await getDashboard(ctx, toRange(p.days));
-      const { license } = await getLicenseOverview(ctx.organizationId);
-      const t = d.team!;
-      const left = license?.state === "trial" ? daysLeft(license.trialEndsAt) : null;
+      const only = moduleFromQuestion(question);
+      const sections = await buildSummary(ctx, only);
+      if (sections.length === 0) {
+        return only ? denied(p.intent, ctx, `the ${only} numbers`) : {
+          intent: p.intent, restricted: true,
+          text: `Your role (${ctx.roleName}) doesn't include any module reports, so there's nothing to summarise yet. Ask me about your own role or activity instead.`,
+          suggestions: suggestionsFor(ctx).slice(0, 4),
+        };
+      }
       return {
         intent: p.intent,
-        text: `${ctx.organization.name} has ${plural(t.activeMembers, "active member")}; ${t.joinedInRange} joined in the last ${d.range} days.${d.activity ? ` ${plural(d.activity.total, "change")} were recorded in that time.` : ""}`,
-        stats: [
-          { label: "Active members", value: license ? `${t.activeMembers} / ${license.entitlements.maxMembers}` : String(t.activeMembers) },
-          { label: "Pending invitations", value: String(t.invitations.pending) },
-          { label: `Joined (${d.range} d)`, value: String(t.joinedInRange) },
-          ...(d.activity ? [{ label: `Changes (${d.range} d)`, value: String(d.activity.total) }] : []),
-          ...(s.billing && license ? [{ label: "Plan", value: left !== null ? `${license.planName} · ${left} d left` : `${license.planName} · ${license.state}` }] : []),
-          ...(t.suspendedMembers ? [{ label: "Suspended", value: String(t.suspendedMembers) }] : []),
-        ],
-        links: [{ href: base, label: "Open dashboard" }],
+        text: only ? sections[0].line : `Here's how ${ctx.organization.name} is doing, from your records${sections.length < 5 ? ` (the parts your role can see)` : ""}:\n${sections.map((x) => `• ${x.line}`).join("\n")}`,
+        sections,
       };
     }
 
@@ -414,4 +436,19 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
         suggestions: suggestionsFor(ctx).slice(0, 6),
       };
   }
+}
+
+async function runConfirmed(ctx: OrgContext, id: string): Promise<AssistantAnswer> {
+  const r = await confirmCommand(ctx, id);
+  return { intent: "command", done: true, text: r.text, ...(r.href ? { links: [{ href: r.href, label: "Open it" }] } : {}) };
+}
+
+async function cancelProposal(ctx: OrgContext, id: string): Promise<AssistantAnswer> {
+  await cancelCommand(ctx, id);
+  return { intent: "command", text: "Okay, I didn't change anything." };
+}
+
+/** The Confirm / Cancel buttons on a proposal. */
+export async function resolveProposal(ctx: OrgContext, id: string, confirm: boolean): Promise<AssistantAnswer> {
+  return confirm ? runConfirmed(ctx, String(id)) : cancelProposal(ctx, String(id));
 }

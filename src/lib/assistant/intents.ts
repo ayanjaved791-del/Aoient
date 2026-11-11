@@ -33,6 +33,7 @@ export type Intent =
   | "howto_role"
   | "howto_install"
   | "howto_billing"
+  | "command"
   | "unknown";
 
 export interface ParsedQuestion {
@@ -93,7 +94,7 @@ const RULES: Rule[] = [
   { intent: "my_permissions", weight: 3, any: [/\b(my|meri|mere|mera)\b.*\b(permission|permissions|access|rights|ijazat)\b/, /\bwhat can i\b/, /\bmain kya kar sakta\b/, /\bcan i\b/] },
   { intent: "my_activity", weight: 3, any: [/\bwhat (did|have) i\b/, /\b(my|meri|mere|i)\b.*\b(activity|changes|actions|did|history)\b/, /\bmaine\b.*\b(kya|kiya)\b/] },
   { intent: "me", weight: 2, any: [/\b(who am i|my role|my profile|about me|mera role|main kaun|my account|my membership|when did i join)\b/, /\b(mera|meri)\b.*\b(role|profile|account)\b/] },
-  { intent: "summary", weight: 2, any: [/\b(summary|overview|report|dashboard|status|how is|how are we|kaisa chal|haal|update|stats|statistics)\b/] },
+  { intent: "summary", weight: 2, any: [/\b(summary|summarise|summarize|overview|report|dashboard|status|how is|how are|kaisa chal|kaise chal|haal|update|stats|statistics|analytics|insights|kpis?|numbers|performance|business)\b/] },
   { intent: "member_count", weight: 3, any: [/\bhow many\b.*\b(member|members|people|users|team|employees|log)\b/, /\b(kitne|kitnay)\b.*\b(member|members|log|users|employee|employees|banday|bande)\b/, /\b(team size|headcount|member count|total members)\b/] },
   { intent: "recent_members", weight: 3, any: [/\b(new|recent|recently|latest|naye|naya)\b.*\b(member|members|joined|people|join)\b/, /\bwho\b.*\bjoined\b/, /\bkaun\b.*\bjoin\b/] },
   { intent: "suspended_members", weight: 3, any: [/\b(suspended|blocked|disabled|inactive|band)\b/] },

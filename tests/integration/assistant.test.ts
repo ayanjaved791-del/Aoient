@@ -37,9 +37,17 @@ describe("assistant", () => {
     expect(plan.text).toMatch(/Pacfic-DeepDive/);
   });
 
+  it("employee summary covers only their own modules and names nobody", async () => {
+    const s = await setup();
+    const a = await answerQuestion(s.employee.ctx, "give me a summary");
+    expect(a.sections?.map((x) => x.module)).toEqual(["projects", "time", "people"]);
+    expect(flat(a)).not.toMatch(/Bilal|Amina|Omar|pending\.person|Pacfic/);
+    expect((await answerQuestion(s.guest.ctx, "give me a summary")).restricted).toBe(true);
+  });
+
   it("employee only gets their own information", async () => {
     const s = await setup();
-    for (const q of ["How many members do we have?", "list all admins", "Who is Bilal?", "Which invitations are pending?", "How many days are left on our plan?", "give me a summary", "Who is most active this month?"]) {
+    for (const q of ["How many members do we have?", "list all admins", "Who is Bilal?", "Which invitations are pending?", "How many days are left on our plan?", "Who is most active this month?"]) {
       const a = await answerQuestion(s.employee.ctx, q);
       expect(a.restricted, q).toBe(true);
       expect(flat(a), q).not.toMatch(/Bilal|Amina|Omar|pending\.person|Pacfic/);

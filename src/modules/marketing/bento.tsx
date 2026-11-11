@@ -227,7 +227,7 @@ export function FeatureBento() {
       <Tile className="lg:col-span-2" status="live" delay={80} title="Roles & permissions" body="Built-in roles plus custom ones. Nobody can grant more than they hold.">
         <Permissions />
       </Tile>
-      <Tile className="sm:col-span-2 lg:col-span-2" status="live" delay={160} title="Ask Aoient" body="Plain questions, answered from your own records and limited to your role.">
+      <Tile className="sm:col-span-2 lg:col-span-2" status="live" delay={160} title="Ask Ant" body="Summaries from your own records, and changes only after you confirm.">
         <Assistant />
       </Tile>
 

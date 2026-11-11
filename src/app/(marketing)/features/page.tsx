@@ -44,8 +44,8 @@ const FEATURES: Feature[] = [
     visual: <LiveSync />,
   },
   {
-    id: "assistant", title: "Ask Aoient", lead: "Ask plain questions about your workspace and get answers from your records.",
-    points: ["\"Who is on leave today?\", \"How many members do we have?\"", "Understands English and Roman Urdu", "Answers only with what your role may see", "Runs on our own rules, no outside AI service"],
+    id: "assistant", title: "Ask Ant", lead: "Ask for a summary or tell it what to do. It never changes anything without your OK.",
+    points: ["\"Give me an analytics summary\", \"Create task Homepage in Hunza site\"", "Shows every change first; nothing happens until you confirm", "Understands English and Roman Urdu, limited to your role", "Runs on our own rules, no outside AI service"],
     visual: <Assistant />,
   },
   {
