@@ -104,6 +104,37 @@ describe("Ant: actions need the person's OK", () => {
   });
 });
 
+describe("Ant: employees and loosely typed requests", () => {
+  beforeEach(resetDatabase);
+
+  it("understands a polite, misspelt request and asks for what's missing", async () => {
+    const { org, ctx } = await createOrgWithOwner("ant-emp");
+    const a = await answerQuestion(ctx, "can u create employe");
+    expect(a.proposal).toBeUndefined();
+    expect(a.text).toContain("What's their name?");
+    await answerQuestion(ctx, "create department Design");
+    await answerQuestion(ctx, "yes");
+    const b = await answerQuestion(ctx, "Can you please add an employee Hina Khan hina@example.com as Designer in Design?");
+    expect(b.proposal?.fields).toEqual(expect.arrayContaining([{ label: "Job title", value: "Designer" }, { label: "Department", value: "Design" }]));
+    expect(await count("employee", org.id)).toBe(0);
+    await resolveProposal(ctx, b.proposal!.id, true);
+    const [e] = await db()`select e.full_name, e.work_email, e.job_title, d.name as dept from employee e left join department d on d.id = e.department_id where e.organization_id = ${org.id}`;
+    expect(e).toMatchObject({ full_name: "Hina Khan", work_email: "hina@example.com", job_title: "Designer", dept: "Design" });
+    const arch = await answerQuestion(ctx, "archive employee Hina Khan");
+    await resolveProposal(ctx, arch.proposal!.id, true);
+    expect((await db()`select status from employee where organization_id = ${org.id}`)[0].status).toBe("archived");
+    expect((await answerQuestion(ctx, "create a spaceship")).text).toContain("Create: employee");
+  });
+
+  it("doesn't let an employee add employees", async () => {
+    const { org } = await createOrgWithOwner("ant-emp-role");
+    const emp = await addMember(org.id, "employee");
+    const a = await answerQuestion(emp.ctx, "create employee Sneaky Person");
+    expect(a).toMatchObject({ restricted: true });
+    expect(a.proposal).toBeUndefined();
+  });
+});
+
 describe("Ant: analytics summaries", () => {
   beforeEach(resetDatabase);
 

@@ -29,6 +29,13 @@ describe("assistant commands", () => {
     ["delete draft estimate est 12", { op: "delete", entity: "estimate", name: "EST-0012" }],
     ["cancel invite ali@example.com", { op: "delete", entity: "invitation", email: "ali@example.com" }],
     ["project Old site hatao", { op: "delete", entity: "project", name: "Old site" }],
+    ["can u create employe", { op: "create", entity: "employee", name: null }],
+    ["Can you please add an employee Hina Khan hina@example.com as Designer in Design?", { op: "create", entity: "employee", name: "Hina Khan", email: "hina@example.com", role: "Designer", parent: "Design" }],
+    ["kya aap employee banao Bilal Raza", { op: "create", entity: "employee", name: "Bilal Raza" }],
+    ["Bilal Raza naam ka mulazim banao", { op: "create", entity: "employee", name: "Bilal Raza" }],
+    ["archive employee Bilal Raza", { op: "delete", entity: "employee", name: "Bilal Raza" }],
+    ["plz create taks Fix login in Internal tools", { op: "create", entity: "task", name: "Fix login", parent: "Internal tools" }],
+    ["I want to add a vender CloudNest", { op: "create", entity: "vendor", name: "CloudNest" }],
   ])("%s", (q, expected) => {
     expect(parseCommand(q)).toMatchObject(expected);
   });

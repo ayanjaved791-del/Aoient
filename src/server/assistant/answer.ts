@@ -14,7 +14,7 @@ import { parseQuestion, type Intent } from "@/lib/assistant/intents";
 import { getPeopleStats } from "@/server/people/employees";
 import { listLeave, whoIsOut } from "@/server/people/leave";
 import { listDepartments } from "@/server/people/departments";
-import { parseCommand, parseConfirmation } from "@/lib/assistant/commands";
+import { looksLikeCommand, parseCommand, parseConfirmation } from "@/lib/assistant/commands";
 import { cancelCommand, confirmCommand, latestPendingCommand, proposeCommand, type Proposal } from "./commands";
 import { buildSummary, moduleFromQuestion, type SummarySection } from "./analytics";
 
@@ -115,6 +115,12 @@ export async function answerQuestion(ctx: OrgContext, question: string): Promise
     return r.kind === "proposal"
       ? { intent: "command", text: r.text, proposal: r.proposal }
       : { intent: "command", text: r.text, restricted: r.restricted, items: r.items };
+  }
+  if (looksLikeCommand(question)) {
+    return {
+      intent: "command",
+      text: "I can do that for these, always after you confirm:\n• Create: employee, lead, company, project, task, vendor, department, expense, invitation, time (“log 2h on <project>”), timer\n• Delete or archive: employee, lead, company, project, task, vendor, department, expense, invitation, draft invoice or estimate\nTry: “create employee Ali Khan as Designer” or “delete task Homepage”.",
+    };
   }
   const p = parseQuestion(question, roleNames);
   const period = p.days ?? 30;

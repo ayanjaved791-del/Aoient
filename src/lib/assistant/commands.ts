@@ -6,7 +6,7 @@
 import { parseDuration } from "@/lib/validation/time";
 
 export type CommandEntity =
-  | "lead" | "company" | "project" | "task" | "vendor" | "department" | "expense" | "invitation" | "time" | "timer"
+  | "lead" | "company" | "project" | "task" | "vendor" | "department" | "expense" | "invitation" | "time" | "timer" | "employee"
   | "invoice" | "estimate";
 export type CommandOp = "create" | "delete" | "start" | "stop";
 
@@ -32,7 +32,53 @@ const ENTITY: Record<string, CommandEntity> = {
   lead: "lead", leads: "lead", company: "company", client: "company", customer: "company", project: "project", task: "task", todo: "task", kaam: "task",
   vendor: "vendor", supplier: "vendor", department: "department", dept: "department", expense: "expense", kharcha: "expense", kharch: "expense",
   invitation: "invitation", invite: "invitation", invoice: "invoice", bill: "invoice", estimate: "estimate", quote: "estimate", quotation: "estimate",
+  employee: "employee", employees: "employee", staff: "employee", mulazim: "employee", worker: "employee", "team member": "employee", "staff member": "employee",
 };
+
+/** Words that must never be "corrected" into an entity. */
+const KEEP = new Set(["please", "create", "delete", "remove", "archive", "invoice", "project", "projects"]);
+
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+
+/** Fixes a typo in the entity word near the start ("employe", "taks", "projct", "vender"). */
+function fixEntityTypo(text: string): string {
+  const words = text.split(" ");
+  for (let i = 0; i < Math.min(words.length, 4); i++) {
+    const w = words[i].toLowerCase().replace(/[^a-z]/g, "");
+    if (w.length < 4 || ENTITY[w] || KEEP.has(w)) continue;
+    const best = Object.keys(ENTITY).filter((k) => !k.includes(" ") && Math.abs(k.length - w.length) <= 2)
+      .map((k) => ({ k, d: editDistance(w, k) })).sort((a, b) => a.d - b.d)[0];
+    if (best && best.d <= (w.length >= 7 ? 2 : 1)) { words[i] = best.k; return words.join(" "); }
+  }
+  return text;
+}
+
+/** "can u please create…", "kya aap … bana do", "I want to add…" → the request itself. */
+export function stripPolite(text: string): string {
+  let t = text.trim().replace(/[?!.]+$/, "").trim();
+  for (let i = 0; i < 3; i++) {
+    const before = t;
+    t = t
+      .replace(/^(?:hey|hi|hello|ok|okay|so)?\s*,?\s*(?:ant|aoient)\s*[,:]?\s+/i, "")
+      .replace(/^(?:can|could|would|will)\s+(?:you|u|ya)\s+(?:please\s+|pls\s+|plz\s+|kindly\s+)?/i, "")
+      .replace(/^(?:please|pls|plz|kindly|just)\s+/i, "")
+      .replace(/^i\s+(?:want|need|would\s+like|wanna)\s+(?:you\s+)?(?:to\s+)?/i, "")
+      .replace(/^(?:kya\s+)?(?:aap|ap|tum|tu)\s+/i, "")
+      .replace(/^(?:mujhe|mere\s+liye|hamare\s+liye)\s+/i, "")
+      .replace(/\s+(?:for\s+me|please|pls|plz|sakte\s+ho|sakte\s+hain|sakti\s+ho|de\s+sakte\s+ho)$/i, "")
+      .trim();
+    if (t === before) break;
+  }
+  return t;
+}
 const ENTITY_WORDS = Object.keys(ENTITY).sort((a, b) => b.length - a.length).join("|");
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 const DOC = /\b(inv|est)-?\s*0*(\d{1,6})\b/i;
@@ -57,7 +103,12 @@ function splitParent(text: string): { name: string | null; parent: string | null
 }
 
 export function parseCommand(raw: string): ParsedCommand | null {
-  const text = raw.trim().replace(/\s+/g, " ");
+  const plain = stripPolite(raw.trim().replace(/\s+/g, " "));
+  // Only when the words as typed don't work, try fixing a misspelt entity ("employe", "taks").
+  return parseExact(plain) ?? (fixEntityTypo(plain) !== plain ? parseExact(fixEntityTypo(plain)) : null);
+}
+
+function parseExact(text: string): ParsedCommand | null {
   if (text.length < 4) return null;
   const lower = text.toLowerCase();
 
@@ -87,7 +138,8 @@ export function parseCommand(raw: string): ParsedCommand | null {
 
   // Invitations: "invite a@b.com as admin", "a@b.com ko invite karo"
   const email = text.match(EMAIL)?.[0] ?? null;
-  if (email && /\b(invite|invitation|bulao|add)\b/i.test(text) && !new RegExp(String.raw`\b${DELETE}\b`, "i").test(text)) {
+  const namesOther = new RegExp(String.raw`\b(?:${ENTITY_WORDS})\b`, "i").test(text.replace(/\bas\s+.+$/i, "").replace(/\binvit\w*/gi, ""));
+  if (email && !namesOther && /\b(invite|invitation|bulao|add)\b/i.test(text) && !new RegExp(String.raw`\b${DELETE}\b`, "i").test(text)) {
     const c = blank("create", "invitation");
     c.email = email.toLowerCase();
     c.role = clean(text.match(/\bas\s+(?:an?\s+)?(.+?)$/i)?.[1] ?? text.match(/\b(?:role|ka role)\s+(.+?)(?:\s+(?:ke saath|with))?$/i)?.[1]);
@@ -125,6 +177,15 @@ export function parseCommand(raw: string): ParsedCommand | null {
       return c;
     }
     if (entity === "invitation") { c.email = email?.toLowerCase() ?? null; c.name = c.email ?? clean(rest); return c; }
+    if (entity === "employee") {
+      let body = email ? rest.replace(email, " ").replace(/\s+/g, " ") : rest;
+      const dept = body.match(/\s+(?:in|into|to)\s+(?:the\s+)?(.+?)(?:\s+(?:department|dept|team))?$/i);
+      if (dept && op === "create") { c.parent = clean(dept[1]); body = body.slice(0, dept.index); }
+      const job = body.match(/\s+(?:as|role)\s+(?:an?\s+)?(.+)$/i);
+      if (job && op === "create") { c.role = clean(job[1]); body = body.slice(0, job.index); }
+      c.name = clean(body.replace(/\s+(?:with|email)\s*$/i, ""));
+      return c;
+    }
     if (entity === "task" || (entity === "lead" && op === "create")) {
       const body = email ? rest.replace(email, "").replace(/\s+(?:with|email|,)\s*$/i, "") : rest;
       const sp = entity === "task" ? splitParent(body) : { name: clean(body.replace(/\s+(?:from|at|of)\s+.+$/i, "")), parent: clean(body.match(/\s+(?:from|at|of)\s+(.+)$/i)?.[1]) };
@@ -144,4 +205,9 @@ export function parseConfirmation(raw: string): boolean | null {
   if (/^(yes|y|yeah|yep|sure|ok|okay|confirm|confirmed|do it|go ahead|proceed|haan|han|ha|ji|ji haan|jee|theek hai|thik hai|kar do|kardo)$/.test(q)) return true;
   if (/^(no|n|nope|cancel|stop|don't|dont|nahi|nahin|na|mat karo|rehne do|chhoro|chhodo)$/.test(q)) return false;
   return null;
+}
+
+/** "create a spaceship" / "delete everything": a do-something request Ant can't map to a record type. */
+export function looksLikeCommand(raw: string): boolean {
+  return new RegExp(String.raw`^(?:${CREATE}|${DELETE})\b`, "i").test(stripPolite(raw)) || new RegExp(String.raw`\b(?:${CREATE}|${DELETE})$`, "i").test(stripPolite(raw));
 }

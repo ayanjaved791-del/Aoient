@@ -15,6 +15,7 @@ import { createVendor, listVendors, setVendorArchived } from "@/server/finance/v
 import { createExpense, deleteExpense, listExpenses } from "@/server/finance/expenses";
 import { deleteDocument, listDocuments } from "@/server/finance/documents";
 import { createDepartment, deleteDepartment, listDepartments } from "@/server/people/departments";
+import { createEmployee, listEmployees, setEmployeeArchived } from "@/server/people/employees";
 import { createInvitation, listPendingInvitations, revokeInvitation } from "@/server/organizations/invitations";
 import { listRoles } from "@/server/organizations/roles";
 import { createEntry, startTimer, stopTimer, todayIn } from "@/server/time/entries";
@@ -49,11 +50,12 @@ const NEEDS: Record<string, PermissionKey[]> = {
   "create:expense": ["finance.expense.manage"], "delete:expense": ["finance.expense.manage"],
   "create:invitation": ["organization.members.invite"], "delete:invitation": ["organization.members.invite"],
   "create:time": ["time.entry.own"], "start:timer": ["time.entry.own"], "stop:timer": ["time.entry.own"],
+  "create:employee": ["people.employee.create"], "delete:employee": ["people.employee.archive"],
   "delete:invoice": ["finance.invoice.create"], "delete:estimate": ["finance.invoice.create"],
 };
 const NOUN: Record<string, string> = {
   lead: "lead", company: "company", project: "project", task: "task", vendor: "vendor", department: "department", expense: "expense",
-  invitation: "invitation", time: "time", timer: "timer", invoice: "invoice", estimate: "estimate",
+  invitation: "invitation", employee: "employee", time: "time", timer: "timer", invoice: "invoice", estimate: "estimate",
 };
 
 const reply = (text: string, extra: Partial<Extract<ProposeResult, { kind: "reply" }>> = {}): ProposeResult => ({ kind: "reply", text, ...extra });
@@ -93,6 +95,19 @@ async function plan(ctx: OrgContext, c: ParsedCommand): Promise<Plan | ProposeRe
       if (!c.name) return ask("create lead Ali Khan ali@example.com");
       return { kind: "create_lead", payload: { fullName: c.name, email: c.email, companyName: c.parent }, title: `Create the lead ${c.name}`, summary: `create lead ${c.name}`,
         fields: [{ label: "Name", value: c.name }, ...(c.email ? [{ label: "Email", value: c.email }] : []), ...(c.parent ? [{ label: "Company", value: c.parent }] : []), { label: "Status", value: "New" }] };
+    }
+    case "create:employee": {
+      if (!c.name) return reply("Sure, I can add an employee. What's their name? Say it like:\n“create employee Ali Khan ali@example.com as Designer in Design”\n(email, job title and department are optional).");
+      let deptId: string | null = null, deptName: string | null = null;
+      if (c.parent) {
+        const d = pick((await listDepartments(ctx)).filter((x) => lc(x.name).includes(lc(c.parent!))), (x) => x.name, c.parent);
+        if ("none" in d) return reply(`There's no department called “${c.parent}”. Create it first (“create department ${c.parent}”), or leave the department out.`);
+        if ("many" in d) return which("department", d.many.map((x) => ({ title: x.name })));
+        deptId = d.one.id; deptName = d.one.name;
+      }
+      return { kind: "create_employee", payload: { fullName: c.name, workEmail: c.email, jobTitle: c.role, departmentId: deptId }, title: `Add the employee ${c.name}`, summary: `add employee ${c.name}`,
+        fields: [{ label: "Name", value: c.name }, ...(c.email ? [{ label: "Work email", value: c.email }] : []), ...(c.role ? [{ label: "Job title", value: c.role }] : []),
+          ...(deptName ? [{ label: "Department", value: deptName }] : []), { label: "Type", value: "Full-time" }, { label: "Login", value: "None (invite or create one later)" }] };
     }
     case "create:company":
       if (!c.name) return ask("add company Margalla Clinics");
@@ -169,6 +184,14 @@ async function plan(ctx: OrgContext, c: ParsedCommand): Promise<Plan | ProposeRe
       if ("many" in r) return which("lead", r.many.map((x) => ({ title: x.fullName, subtitle: x.email ?? x.companyName ?? undefined })));
       return { kind: "archive_lead", payload: { id: r.one.id }, title: `Archive the lead ${r.one.fullName}`, summary: `archive lead ${r.one.fullName}`,
         fields: [{ label: "Lead", value: r.one.fullName }, { label: "What happens", value: "Hidden from lists; can be restored" }] };
+    }
+    case "delete:employee": {
+      if (!c.name) return ask("archive employee Ali Khan");
+      const r = pick(await listEmployees(ctx, { query: c.name }), (x) => x.fullName, c.name);
+      if ("none" in r) return notFound("employee", c.name);
+      if ("many" in r) return which("employee", r.many.map((x) => ({ title: x.fullName, subtitle: x.jobTitle ?? x.workEmail ?? undefined })));
+      return { kind: "archive_employee", payload: { id: r.one.id }, title: `Archive ${r.one.fullName}`, summary: `archive employee ${r.one.fullName}`,
+        fields: [{ label: "Employee", value: r.one.fullName }, ...(r.one.jobTitle ? [{ label: "Job title", value: r.one.jobTitle }] : []), { label: "What happens", value: "Moved to past employees; can be restored. Their login isn't touched." }] };
     }
     case "delete:company": {
       if (!c.name) return ask("archive company Margalla Clinics");
@@ -296,6 +319,8 @@ export async function confirmCommand(ctx: OrgContext, id: string): Promise<{ tex
   try {
     switch (kind) {
       case "create_lead": { await createLead(ctx, { fullName: s("fullName"), email: s("email"), companyName: s("companyName") }); return { text: `Done: the lead ${s("fullName")} is in the CRM.`, href: `${base}/crm/leads?q=${encodeURIComponent(s("fullName") ?? "")}`}; }
+      case "create_employee": { const r = await createEmployee(ctx, { fullName: s("fullName"), workEmail: s("workEmail"), jobTitle: s("jobTitle"), departmentId: s("departmentId") }); return { text: `Done: ${s("fullName")} was added to People.`, href: `${base}/people/${r.id}` }; }
+      case "archive_employee": await setEmployeeArchived(ctx, s("id")!, true); return { text: "Done: the employee was archived.", href: `${base}/people` };
       case "create_company": { const r = await createCompany(ctx, { name: s("name") }); return { text: `Done: ${s("name")} was added to companies.`, href: `${base}/crm/companies/${r.id}` }; }
       case "create_project": { const r = await createProject(ctx, { name: s("name") }); return { text: `Done: the project ${s("name")} has started.`, href: `${base}/projects/${r.id}` }; }
       case "create_task": { const r = await createTask(ctx, s("projectId")!, { title: s("title") }); return { text: `Done: “${s("title")}” is in To do.`, href: `${base}/projects/${s("projectId")}/tasks/${r.id}` }; }
