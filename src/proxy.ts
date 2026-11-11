@@ -10,7 +10,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/
  * This is NOT the security boundary — every page, action and route handler
  * re-validates the session and tenant membership on the server.
  */
-const PUBLIC_PREFIXES = ["/features", "/modules", "/security", "/pricing", "/faq", "/download", "/terms", "/privacy", "/manifest.webmanifest", "/sw.js", "/offline.html", "/icons", "/sign-in", "/sign-up", "/verify-email", "/forgot-password", "/reset-password", "/invite", "/auth", "/api", "/_next"];
+const PUBLIC_PREFIXES = ["/robots.txt", "/sitemap.xml", "/favicon.ico", "/icon.svg", "/apple-icon.png", "/opengraph-image.png", "/twitter-image.png", "/features", "/modules", "/security", "/pricing", "/faq", "/download", "/terms", "/privacy", "/manifest.webmanifest", "/sw.js", "/offline.html", "/icons", "/sign-in", "/sign-up", "/verify-email", "/forgot-password", "/reset-password", "/invite", "/auth", "/api", "/_next"];
 
 function isPublic(pathname: string) {
   return pathname === "/" || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));

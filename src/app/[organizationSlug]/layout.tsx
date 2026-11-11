@@ -18,6 +18,7 @@ import { AssistantPanel } from "@/modules/assistant/assistant-panel";
 import { LiveSync } from "@/components/live/live-sync";
 import { getRunningTimer } from "@/server/time/entries";
 import { RunningPill } from "@/modules/time/time-ui";
+import { CommandPalette } from "@/modules/search/command-palette";
 import { assistantScope, suggestionsFor } from "@/server/assistant/answer";
 
 /** Only pages the member can open are linked; each page still re-checks on the server. */
@@ -159,8 +160,9 @@ async function WorkspaceFrame({ params, children }: { params: Promise<{ organiza
                 Read-only
               </span>
             )}
-            {running?.startedAt && <div className="ml-auto"><RunningPill href={`${base}/time`} startedAt={running.startedAt.toISOString()} label={running.description ?? running.project?.name ?? "Working"} /></div>}
-            <div className={running ? "" : "ml-auto"}><UserMenu name={user.name} email={user.email} avatarUrl={avatarUrl(user.id, user.avatarUpdatedAt)} /></div>
+            <div className="ml-auto min-w-0 lg:ml-4"><CommandPalette slug={ctx.organization.slug} links={[...groups.flatMap((g) => g.links.map((l) => ({ label: l.label, href: l.href, group: g.label ?? "Workspace" }))), { label: "My account", href: "/account", group: "Account" }, { label: "Switch workspace", href: "/organizations", group: "Account" }]} /></div>
+            {running?.startedAt && <div><RunningPill href={`${base}/time`} startedAt={running.startedAt.toISOString()} label={running.description ?? running.project?.name ?? "Working"} /></div>}
+            <div className="lg:ml-auto"><UserMenu name={user.name} email={user.email} avatarUrl={avatarUrl(user.id, user.avatarUpdatedAt)} /></div>
           </div>
         </header>
         {(seesPlan || readOnly) && <div className="print:hidden"><LicenseBanner slug={ctx.organization.slug} license={license} canManage={can(ctx, "billing.manage")} /></div>}

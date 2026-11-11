@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PwaRegister } from "@/components/pwa/pwa-register";
 import { NetworkStatus } from "@/components/network/network-status";
+import { resolveAppUrl } from "@/lib/app-url";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"], display: "swap" });
@@ -14,7 +15,10 @@ export const metadata: Metadata = {
   description: "Aoient is the business operating system for service companies: people, CRM, projects, time, finance and operations in one connected workspace.",
   applicationName: "Aoient",
   appleWebApp: { capable: true, title: "Aoient", statusBarStyle: "black-translucent" },
-  icons: { apple: "/icons/apple-touch-icon.png" },
+  // Favicons come from app/favicon.ico, app/icon.svg and app/apple-icon.png on every page.
+  metadataBase: new URL(resolveAppUrl()),
+  openGraph: { type: "website", siteName: "Aoient", title: "Aoient — One Platform. Your Entire Business.", description: "People, projects, time, CRM and finance in one connected workspace." },
+  twitter: { card: "summary_large_image", title: "Aoient — One Platform. Your Entire Business.", description: "People, projects, time, CRM and finance in one connected workspace." },
   formatDetection: { telephone: false },
 };
 
