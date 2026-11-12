@@ -69,6 +69,9 @@ export async function searchWorkspace(ctx: OrgContext, raw: string): Promise<Sea
   if (can(ctx, "finance.vendor.manage") || can(ctx, "finance.expense.read") || can(ctx, "finance.expense.manage")) jobs.push(sql<{ id: string; name: string }[]>`
     select id, name from finance_vendor where organization_id = ${org} and archived_at is null and name ilike ${L} order by lower(name) limit ${n}`
     .then((r) => r.map((x) => ({ id: x.id, group: "Vendors", title: x.name, subtitle: null, href: `${base}/finance/vendors?q=${encodeURIComponent(x.name)}` }))));
+  if (can(ctx, "inventory.read")) jobs.push(sql<{ id: string; name: string; sku: string }[]>`
+    select id, name, sku from inventory_product where organization_id = ${org} and archived_at is null and (name ilike ${L} or sku ilike ${L}) order by lower(name) limit ${n}`
+    .then((r) => r.map((x) => ({ id: x.id, group: "Products", title: x.name, subtitle: x.sku, href: `${base}/inventory/products/${x.id}` }))));
 
   return (await Promise.all(jobs)).flat();
 }

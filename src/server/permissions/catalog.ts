@@ -37,7 +37,7 @@ export const MODULES: Record<ModuleKey, { label: string; released: boolean }> = 
   flow: { label: "Flow", released: false },
   analytics: { label: "Analytics", released: false },
   documents: { label: "Documents", released: false },
-  inventory: { label: "Inventory", released: false },
+  inventory: { label: "Inventory", released: true },
   workspace: { label: "Workspace", released: false },
   connect: { label: "Connect", released: false },
 };
@@ -64,6 +64,7 @@ export const PERMISSIONS = [
   def("people.employee.archive", "people", "Archive employees"),
   def("people.employee.sensitive.read", "people", "View salary and emergency contact data"),
   def("people.department.manage", "people", "Manage departments and designations"),
+  def("people.attendance.own", "people", "Check in and out for yourself"),
   def("people.attendance.manage", "people", "Manage attendance and corrections"),
   def("people.leave.request", "people", "Request leave for yourself"),
   def("people.leave.approve", "people", "Approve or reject leave requests"),
@@ -133,7 +134,6 @@ export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
  * they do anything today.
  */
 export const NOT_YET_AVAILABLE: ReadonlySet<string> = new Set([
-  "people.attendance.manage",
   "people.onboarding.manage",
   "people.payroll.read",
   "people.payroll.manage",
@@ -176,6 +176,7 @@ const EMPLOYEE_BASE: PermissionKey[] = [
   "organization.read",
   "people.employee.read",
   "people.leave.request",
+  "people.attendance.own",
   "projects.project.read",
   "projects.task.read",
   "projects.task.create",
@@ -223,11 +224,12 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; description: st
   },
   finance_manager: {
     name: "Finance Manager",
-    description: "Manages invoices, expenses, payments, vendors and finance reports.",
+    description: "Manages invoices, expenses, payments, vendors, inventory and finance reports.",
     permissions: [
       ...new Set<PermissionKey>([
         ...EMPLOYEE_BASE,
         ...byModule("finance"),
+        ...byModule("inventory"),
         "time.entry.read_all",
         "crm.contact.read",
         "crm.deal.read",

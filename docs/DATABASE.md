@@ -42,6 +42,12 @@ Supabase (managed PostgreSQL). Schema changes are plain SQL files in `supabase/m
 | `finance_template` | One row per organization: layout, colour, logo, business details, titles, footer and defaults (due days, tax rate, notes) used on invoices, estimates and receipts. Edited in Finance → Editor (`finance.invoice.issue`). |
 | `assistant_action` | A change Ant (the assistant) proposed and is waiting for the person to confirm: kind, exact payload and summary. Only the same member in the same organization can confirm it, once, within 10 minutes; the normal service then runs and re-checks permissions. |
 | `time_entry` | Time a member worked: day, minutes (null while a timer runs; at most one running timer per person), optional project and task (composite keys), billable flag, and the invoice it was billed on (`on delete set null`, so deleting a draft frees the hours). |
+| `inventory_location` | Where stock is kept (warehouse, shop, shelf). Unique name per organization; can only be archived when empty. |
+| `inventory_product` | Something stocked: SKU (unique per organization, case-insensitive), unit, cost and sale price, reorder level. |
+| `inventory_stock` | Quantity on hand per product and location. A check constraint keeps it at zero or above; composite keys refuse another organization's product or location. |
+| `inventory_movement` | Append-only history of every stock change (receive, issue, count adjustment, transfer in/out) with the balance after it. Never edited. |
+| `attendance_setting` | Per-organization start of the working day and grace minutes used to mark late check-ins. |
+| `attendance_record` | One row per employee per day: present / half day / absent, check-in and check-out times, note, and whether HR corrected it. Links to `employee` by `(organization_id, id)`. |
 | `time_timesheet` | A member's week (Monday start): submitted → approved / rejected. Submitted or approved weeks lock their entries. |
 | `finance_expense` | Spending with a pending → approved/rejected → paid flow, optional vendor and project. Nobody but the owner approves their own expense. |
 | `profile.email_unproven` | Set when the server created a login because Supabase couldn't send the confirmation email. Such a login can sign in and create its own workspace, but `email_verified` stays false. |

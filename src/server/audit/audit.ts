@@ -96,7 +96,24 @@ export type AuditAction =
   | "time.timesheet_withdrawn"
   | "time.timesheet_approved"
   | "time.timesheet_rejected"
-  | "time.hours_billed";
+  | "time.hours_billed"
+  | "inventory.product_created"
+  | "inventory.product_updated"
+  | "inventory.product_archived"
+  | "inventory.product_restored"
+  | "inventory.location_created"
+  | "inventory.location_updated"
+  | "inventory.location_archived"
+  | "inventory.location_restored"
+  | "inventory.stock_received"
+  | "inventory.stock_issued"
+  | "inventory.stock_counted"
+  | "inventory.stock_transferred"
+  | "people.checked_in"
+  | "people.checked_out"
+  | "people.attendance_corrected"
+  | "people.attendance_cleared"
+  | "people.attendance_settings_updated";
 
 export interface AuditEvent {
   organizationId: string | null;

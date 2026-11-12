@@ -14,7 +14,7 @@ export interface ActivityRow {
   createdAt: Date;
 }
 
-export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm" | "projects" | "finance" | "time";
+export type ActivityKind = "organization" | "member" | "role" | "billing" | "people" | "crm" | "projects" | "finance" | "time" | "inventory";
 
 export interface ActivityItem {
   id: string;
@@ -41,6 +41,8 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     ? "finance"
     : row.action.startsWith("time.")
     ? "time"
+    : row.action.startsWith("inventory.")
+    ? "inventory"
     : row.action.startsWith("role.")
     ? "role"
     : row.action.startsWith("billing.")
@@ -209,6 +211,23 @@ export function describeActivity(row: ActivityRow): ActivityItem {
     case "finance.expense_deleted": text = `deleted the expense ${str(m.description) ?? ""}`.trim(); break;
     case "projects.comment_added": text = `commented on ${str(m.title) ?? "a task"}`; break;
     case "crm.note_added": text = `added a note to a ${str(m.subject) ?? "record"}`; break;
+    case "inventory.product_created": text = `added the product ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.product_updated": text = `updated the product ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.product_archived": text = `archived the product ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.product_restored": text = `restored the product ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.location_created": text = `added the stock location ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.location_updated": text = `updated the stock location ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.location_archived": text = `archived the stock location ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.location_restored": text = `restored the stock location ${str(m.name) ?? ""}`.trim(); break;
+    case "inventory.stock_received": text = `received ${str(m.name) ?? "stock"} at ${str(m.location) ?? "a location"}`; break;
+    case "inventory.stock_issued": text = `issued ${str(m.name) ?? "stock"} from ${str(m.location) ?? "a location"}`; break;
+    case "inventory.stock_counted": text = `counted ${str(m.name) ?? "stock"} at ${str(m.location) ?? "a location"}`; break;
+    case "inventory.stock_transferred": text = `moved ${str(m.name) ?? "stock"} from ${str(m.from) ?? "one location"} to ${str(m.to) ?? "another"}`; break;
+    case "people.checked_in": text = "checked in"; break;
+    case "people.checked_out": text = "checked out"; break;
+    case "people.attendance_corrected": text = `corrected ${str(m.name) ?? "someone"}'s attendance for ${str(m.date) ?? "a day"}`; break;
+    case "people.attendance_cleared": text = `cleared ${str(m.name) ?? "someone"}'s attendance for ${str(m.date) ?? "a day"}`; break;
+    case "people.attendance_settings_updated": text = "changed the working hours"; break;
     default:
       text = row.action.replace(/[._]/g, " ");
   }

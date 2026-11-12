@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import {
   Activity, ArrowRight, FolderKanban, Handshake, Briefcase, CalendarCheck, Contact, MapPin, UserRound, Building2, CalendarDays, Check, Hourglass, Minus, Timer, TrendingDown, TrendingUp, CircleAlert, CircleCheck, CircleX, Clock3, CreditCard, History, MailPlus, ShieldCheck, Sparkles, UserPlus, Users, Wallet,
+  Boxes,
 } from "lucide-react";
 import { getOverviewCounts } from "@/server/organizations/views";
 import { DASHBOARD_RANGES, getDashboard, parseRange, type DashboardRange, type TeamStats } from "@/server/dashboard/dashboard";
@@ -28,7 +29,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact, crm: Handshake, projects: FolderKanban, finance: Wallet, time: Clock3 };
+const KIND_ICON: Record<ActivityKind, typeof Users> = { organization: Building2, member: Users, role: ShieldCheck, billing: CreditCard, people: Contact, crm: Handshake, projects: FolderKanban, finance: Wallet, time: Clock3, inventory: Boxes };
 
 interface HeroFact { label: string; value: number }
 

@@ -40,6 +40,7 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
       { href: `${base}/people/departments`, label: "Departments", icon: "departments" as const },
     ] : []),
     ...(can(ctx, "people.leave.request") || can(ctx, "people.leave.approve") ? [{ href: `${base}/people/leave`, label: "Leave", icon: "leave" as const }] : []),
+    ...(can(ctx, "people.attendance.own") || can(ctx, "people.attendance.manage") ? [{ href: `${base}/people/attendance`, label: "Attendance", icon: "attendance" as const }] : []),
   ];
   const crm: SidebarGroup["links"] = [
     ...(can(ctx, "crm.deal.read") ? [{ href: `${base}/crm`, label: "Pipeline", icon: "pipeline" as const, exact: true }] : []),
@@ -71,6 +72,12 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ...(can(ctx, "time.timesheet.approve") ? [{ href: `${base}/time/approvals`, label: "Approvals", icon: "approvals" as const }] : []),
     ...(can(ctx, "time.entry.read_all") ? [{ href: `${base}/time/reports`, label: "Time reports", icon: "timereports" as const }] : []),
   ];
+  const inventory: SidebarGroup["links"] = can(ctx, "inventory.read") ? [
+    { href: `${base}/inventory`, label: "Overview", icon: "inventory" as const, exact: true },
+    { href: `${base}/inventory/products`, label: "Products", icon: "products" as const },
+    { href: `${base}/inventory/movements`, label: "Movements", icon: "movements" as const },
+    { href: `${base}/inventory/locations`, label: "Locations", icon: "locations" as const },
+  ] : [];
   return [
     { links: [{ href: base, label: "Dashboard", icon: "overview", exact: true }] },
     ...(people.length ? [{ label: "People", links: people }] : []),
@@ -78,6 +85,7 @@ function sidebarGroups(ctx: OrgContext, base: string): SidebarGroup[] {
     ...(time.length ? [{ label: "Time", links: time }] : []),
     ...(crm.length ? [{ label: "CRM", links: crm }] : []),
     ...(finance.length ? [{ label: "Finance", links: finance }] : []),
+    ...(inventory.length ? [{ label: "Inventory", links: inventory }] : []),
     ...(team.length ? [{ label: "Team", links: team }] : []),
     ...(org.length ? [{ label: "Organization", links: org }] : []),
   ];

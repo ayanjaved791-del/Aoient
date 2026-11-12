@@ -15,6 +15,7 @@ async function Nav({ params }: { params: Promise<{ organizationSlug: string }> }
   const items = [
     ...(can(ctx, "people.employee.read") ? [{ href: base, label: "Directory", exact: true }, { href: `${base}/departments`, label: "Departments" }] : []),
     ...(can(ctx, "people.leave.request") || approver ? [{ href: `${base}/leave`, label: "Leave", badge: pending }] : []),
+    ...(can(ctx, "people.attendance.own") || can(ctx, "people.attendance.manage") ? [{ href: `${base}/attendance`, label: "Attendance" }] : []),
   ];
   return items.length > 1 ? <PeopleNav items={items} /> : null;
 }

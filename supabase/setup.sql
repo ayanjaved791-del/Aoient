@@ -1025,6 +1025,130 @@ $aoient_migration$;
 end
 $aoient_setup$;
 
+-- ─── Migration 20261120000000_inventory_attendance.sql ───
+do $aoient_setup$
+begin
+  if not exists (select 1 from public.schema_migration where name = '20261120000000_inventory_attendance.sql') then
+    execute $aoient_migration$
+-- ───────────── Inventory: locations, products, stock and movements ─────────────
+-- ───────────── Attendance: daily check-in / check-out per employee ─────────────
+-- Every row belongs to one organization; links use (organization_id, id) pairs
+-- so the database refuses a link to another organization's record. RLS is on
+-- with no browser policies; the server scopes each query by the verified org.
+
+create table public.inventory_location (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organization (id) on delete cascade,
+  name text not null,
+  address text,
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organization_id, id)
+);
+create unique index inventory_location_org_name_key on public.inventory_location (organization_id, lower(name));
+
+create table public.inventory_product (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organization (id) on delete cascade,
+  sku text not null,
+  name text not null,
+  description text,
+  unit text not null default 'pcs',
+  cost_price numeric(14, 2) not null default 0 check (cost_price >= 0),
+  sale_price numeric(14, 2) not null default 0 check (sale_price >= 0),
+  reorder_level numeric(12, 2) not null default 0 check (reorder_level >= 0),
+  archived_at timestamptz,
+  created_by_id uuid references public.profile (id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organization_id, id)
+);
+create unique index inventory_product_org_sku_key on public.inventory_product (organization_id, lower(sku));
+create index inventory_product_org_name_idx on public.inventory_product (organization_id, lower(name));
+
+-- Quantity on hand per product and location. The check keeps stock from ever
+-- going below zero, whatever the application does.
+create table public.inventory_stock (
+  organization_id uuid not null references public.organization (id) on delete cascade,
+  product_id uuid not null,
+  location_id uuid not null,
+  quantity numeric(12, 2) not null default 0 check (quantity >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (product_id, location_id),
+  foreign key (organization_id, product_id) references public.inventory_product (organization_id, id) on delete cascade,
+  foreign key (organization_id, location_id) references public.inventory_location (organization_id, id) on delete cascade
+);
+create index inventory_stock_org_idx on public.inventory_stock (organization_id);
+
+-- Every change to stock, in order. Movements are never edited: a mistake is
+-- fixed with a new adjustment, so the history always adds up.
+create table public.inventory_movement (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organization (id) on delete cascade,
+  product_id uuid not null,
+  location_id uuid not null,
+  kind text not null check (kind in ('receive', 'issue', 'adjust', 'transfer_in', 'transfer_out')),
+  quantity numeric(12, 2) not null check (quantity <> 0),
+  balance_after numeric(12, 2) not null check (balance_after >= 0),
+  unit_cost numeric(14, 2) check (unit_cost is null or unit_cost >= 0),
+  reference text,
+  note text,
+  transfer_id uuid,
+  created_by_id uuid references public.profile (id) on delete set null,
+  created_at timestamptz not null default now(),
+  check ((kind in ('receive', 'transfer_in') and quantity > 0) or (kind in ('issue', 'transfer_out') and quantity < 0) or kind = 'adjust'),
+  foreign key (organization_id, product_id) references public.inventory_product (organization_id, id) on delete cascade,
+  foreign key (organization_id, location_id) references public.inventory_location (organization_id, id) on delete cascade
+);
+create index inventory_movement_org_idx on public.inventory_movement (organization_id, created_at desc);
+create index inventory_movement_product_idx on public.inventory_movement (product_id, created_at desc);
+
+-- Attendance links to employee records by (organization_id, id).
+alter table public.employee add constraint employee_org_id_key unique (organization_id, id);
+
+-- When the working day starts, so check-ins after start + grace count as late.
+create table public.attendance_setting (
+  organization_id uuid primary key references public.organization (id) on delete cascade,
+  work_starts time not null default '09:00',
+  grace_minutes int not null default 15 check (grace_minutes between 0 and 240),
+  updated_at timestamptz not null default now()
+);
+
+create table public.attendance_record (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organization (id) on delete cascade,
+  employee_id uuid not null,
+  work_date date not null,
+  status text not null default 'present' check (status in ('present', 'half_day', 'absent')),
+  check_in_at timestamptz,
+  check_out_at timestamptz,
+  note text,
+  -- 'self' when the person checked in; 'manager' once someone corrected it.
+  source text not null default 'self' check (source in ('self', 'manager')),
+  corrected_by_id uuid references public.profile (id) on delete set null,
+  corrected_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organization_id, employee_id, work_date),
+  check (check_out_at is null or (check_in_at is not null and check_out_at > check_in_at)),
+  check (status <> 'absent' or (check_in_at is null and check_out_at is null)),
+  foreign key (organization_id, employee_id) references public.employee (organization_id, id) on delete cascade
+);
+create index attendance_record_org_date_idx on public.attendance_record (organization_id, work_date);
+
+alter table public.inventory_location enable row level security;
+alter table public.inventory_product enable row level security;
+alter table public.inventory_stock enable row level security;
+alter table public.inventory_movement enable row level security;
+alter table public.attendance_setting enable row level security;
+alter table public.attendance_record enable row level security;
+$aoient_migration$;
+    insert into public.schema_migration (name) values ('20261120000000_inventory_attendance.sql');
+  end if;
+end
+$aoient_setup$;
+
 -- ─── Permission catalogue ───
 insert into public.permission (key, description, module) values ('organization.read', 'View organization profile and settings', 'organization') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('organization.update', 'Edit organization profile and settings', 'organization') on conflict (key) do update set description = excluded.description, module = excluded.module;
@@ -1042,6 +1166,7 @@ insert into public.permission (key, description, module) values ('people.employe
 insert into public.permission (key, description, module) values ('people.employee.archive', 'Archive employees', 'people') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('people.employee.sensitive.read', 'View salary and emergency contact data', 'people') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('people.department.manage', 'Manage departments and designations', 'people') on conflict (key) do update set description = excluded.description, module = excluded.module;
+insert into public.permission (key, description, module) values ('people.attendance.own', 'Check in and out for yourself', 'people') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('people.attendance.manage', 'Manage attendance and corrections', 'people') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('people.leave.request', 'Request leave for yourself', 'people') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('people.leave.approve', 'Approve or reject leave requests', 'people') on conflict (key) do update set description = excluded.description, module = excluded.module;
@@ -1091,37 +1216,37 @@ insert into public.permission (key, description, module) values ('workspace.use'
 insert into public.permission (key, description, module) values ('workspace.announcement.manage', 'Publish announcements', 'workspace') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('connect.apikey.manage', 'Create and revoke API keys', 'connect') on conflict (key) do update set description = excluded.description, module = excluded.module;
 insert into public.permission (key, description, module) values ('connect.webhook.manage', 'Configure outgoing webhooks and integrations', 'connect') on conflict (key) do update set description = excluded.description, module = excluded.module;
-delete from public.permission where key <> all(array['organization.read', 'organization.update', 'organization.members.read', 'organization.members.invite', 'organization.members.manage', 'organization.members.remove', 'organization.roles.manage', 'organization.audit.read', 'billing.read', 'billing.manage', 'people.employee.read', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.manage', 'people.leave.request', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.read', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.read', 'projects.task.create', 'projects.task.update', 'projects.task.assign', 'time.entry.own', 'time.entry.read_all', 'time.timesheet.approve', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'flow.workflow.read', 'flow.workflow.manage', 'analytics.read', 'documents.read', 'documents.upload', 'documents.manage', 'inventory.read', 'inventory.manage', 'workspace.use', 'workspace.announcement.manage', 'connect.apikey.manage', 'connect.webhook.manage']::text[]);
+delete from public.permission where key <> all(array['organization.read', 'organization.update', 'organization.members.read', 'organization.members.invite', 'organization.members.manage', 'organization.members.remove', 'organization.roles.manage', 'organization.audit.read', 'billing.read', 'billing.manage', 'people.employee.read', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.own', 'people.attendance.manage', 'people.leave.request', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.read', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.read', 'projects.task.create', 'projects.task.update', 'projects.task.assign', 'time.entry.own', 'time.entry.read_all', 'time.timesheet.approve', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'flow.workflow.read', 'flow.workflow.manage', 'analytics.read', 'documents.read', 'documents.upload', 'documents.manage', 'inventory.read', 'inventory.manage', 'workspace.use', 'workspace.announcement.manage', 'connect.apikey.manage', 'connect.webhook.manage']::text[]);
 
 -- ─── System roles ───
 update public.role set name = 'Owner', description = 'Full access including billing, data export and ownership.', is_system = true, updated_at = now() where organization_id is null and key = 'owner';
 insert into public.role (key, name, description, is_system) select 'owner', 'Owner', 'Full access including billing, data export and ownership.', true where not exists (select 1 from public.role where organization_id is null and key = 'owner');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'owner');
-insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'owner' and p.key = any(array['organization.read', 'organization.update', 'organization.members.read', 'organization.members.invite', 'organization.members.manage', 'organization.members.remove', 'organization.roles.manage', 'organization.audit.read', 'billing.read', 'billing.manage', 'people.employee.read', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.manage', 'people.leave.request', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.read', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.read', 'projects.task.create', 'projects.task.update', 'projects.task.assign', 'time.entry.own', 'time.entry.read_all', 'time.timesheet.approve', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'flow.workflow.read', 'flow.workflow.manage', 'analytics.read', 'documents.read', 'documents.upload', 'documents.manage', 'inventory.read', 'inventory.manage', 'workspace.use', 'workspace.announcement.manage', 'connect.apikey.manage', 'connect.webhook.manage']::text[]);
+insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'owner' and p.key = any(array['organization.read', 'organization.update', 'organization.members.read', 'organization.members.invite', 'organization.members.manage', 'organization.members.remove', 'organization.roles.manage', 'organization.audit.read', 'billing.read', 'billing.manage', 'people.employee.read', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.own', 'people.attendance.manage', 'people.leave.request', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.read', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.read', 'projects.task.create', 'projects.task.update', 'projects.task.assign', 'time.entry.own', 'time.entry.read_all', 'time.timesheet.approve', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'flow.workflow.read', 'flow.workflow.manage', 'analytics.read', 'documents.read', 'documents.upload', 'documents.manage', 'inventory.read', 'inventory.manage', 'workspace.use', 'workspace.announcement.manage', 'connect.apikey.manage', 'connect.webhook.manage']::text[]);
 update public.role set name = 'Admin', description = 'Manages members, settings and all modules. Billing is view-only unless granted separately.', is_system = true, updated_at = now() where organization_id is null and key = 'admin';
 insert into public.role (key, name, description, is_system) select 'admin', 'Admin', 'Manages members, settings and all modules. Billing is view-only unless granted separately.', true where not exists (select 1 from public.role where organization_id is null and key = 'admin');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'admin');
-insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'admin' and p.key = any(array['organization.read', 'organization.update', 'organization.members.read', 'organization.members.invite', 'organization.members.manage', 'organization.members.remove', 'organization.roles.manage', 'organization.audit.read', 'billing.read', 'people.employee.read', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.manage', 'people.leave.request', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.read', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.read', 'projects.task.create', 'projects.task.update', 'projects.task.assign', 'time.entry.own', 'time.entry.read_all', 'time.timesheet.approve', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'flow.workflow.read', 'flow.workflow.manage', 'analytics.read', 'documents.read', 'documents.upload', 'documents.manage', 'inventory.read', 'inventory.manage', 'workspace.use', 'workspace.announcement.manage', 'connect.apikey.manage', 'connect.webhook.manage']::text[]);
+insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'admin' and p.key = any(array['organization.read', 'organization.update', 'organization.members.read', 'organization.members.invite', 'organization.members.manage', 'organization.members.remove', 'organization.roles.manage', 'organization.audit.read', 'billing.read', 'people.employee.read', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.own', 'people.attendance.manage', 'people.leave.request', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.read', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.read', 'projects.task.create', 'projects.task.update', 'projects.task.assign', 'time.entry.own', 'time.entry.read_all', 'time.timesheet.approve', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'flow.workflow.read', 'flow.workflow.manage', 'analytics.read', 'documents.read', 'documents.upload', 'documents.manage', 'inventory.read', 'inventory.manage', 'workspace.use', 'workspace.announcement.manage', 'connect.apikey.manage', 'connect.webhook.manage']::text[]);
 update public.role set name = 'HR Manager', description = 'Manages employee records, leave, attendance and onboarding.', is_system = true, updated_at = now() where organization_id is null and key = 'hr_manager';
 insert into public.role (key, name, description, is_system) select 'hr_manager', 'HR Manager', 'Manages employee records, leave, attendance and onboarding.', true where not exists (select 1 from public.role where organization_id is null and key = 'hr_manager');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'hr_manager');
-insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'hr_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.manage', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'organization.members.read']::text[]);
+insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'hr_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'people.attendance.own', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'people.employee.create', 'people.employee.update', 'people.employee.archive', 'people.employee.sensitive.read', 'people.department.manage', 'people.attendance.manage', 'people.leave.approve', 'people.onboarding.manage', 'people.payroll.read', 'people.payroll.manage', 'organization.members.read']::text[]);
 update public.role set name = 'Sales Manager', description = 'Manages the CRM pipeline, leads, contacts, deals and sales reports.', is_system = true, updated_at = now() where organization_id is null and key = 'sales_manager';
 insert into public.role (key, name, description, is_system) select 'sales_manager', 'Sales Manager', 'Manages the CRM pipeline, leads, contacts, deals and sales reports.', true where not exists (select 1 from public.role where organization_id is null and key = 'sales_manager');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'sales_manager');
-insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'sales_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.create']::text[]);
+insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'sales_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'people.attendance.own', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'crm.lead.read', 'crm.lead.create', 'crm.lead.update', 'crm.lead.archive', 'crm.contact.read', 'crm.contact.manage', 'crm.deal.read', 'crm.deal.create', 'crm.deal.update', 'crm.pipeline.manage', 'crm.report.read', 'projects.project.create']::text[]);
 update public.role set name = 'Project Manager', description = 'Manages projects, tasks, milestones, team workload and timesheet approval.', is_system = true, updated_at = now() where organization_id is null and key = 'project_manager';
 insert into public.role (key, name, description, is_system) select 'project_manager', 'Project Manager', 'Manages projects, tasks, milestones, team workload and timesheet approval.', true where not exists (select 1 from public.role where organization_id is null and key = 'project_manager');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'project_manager');
-insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'project_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.update', 'projects.task.assign', 'time.entry.read_all', 'time.timesheet.approve', 'crm.contact.read', 'crm.deal.read']::text[]);
-update public.role set name = 'Finance Manager', description = 'Manages invoices, expenses, payments, vendors and finance reports.', is_system = true, updated_at = now() where organization_id is null and key = 'finance_manager';
-insert into public.role (key, name, description, is_system) select 'finance_manager', 'Finance Manager', 'Manages invoices, expenses, payments, vendors and finance reports.', true where not exists (select 1 from public.role where organization_id is null and key = 'finance_manager');
+insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'project_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'people.attendance.own', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'projects.project.create', 'projects.project.update', 'projects.project.archive', 'projects.task.update', 'projects.task.assign', 'time.entry.read_all', 'time.timesheet.approve', 'crm.contact.read', 'crm.deal.read']::text[]);
+update public.role set name = 'Finance Manager', description = 'Manages invoices, expenses, payments, vendors, inventory and finance reports.', is_system = true, updated_at = now() where organization_id is null and key = 'finance_manager';
+insert into public.role (key, name, description, is_system) select 'finance_manager', 'Finance Manager', 'Manages invoices, expenses, payments, vendors, inventory and finance reports.', true where not exists (select 1 from public.role where organization_id is null and key = 'finance_manager');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'finance_manager');
-insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'finance_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'time.entry.read_all', 'crm.contact.read', 'crm.deal.read', 'billing.read', 'people.payroll.read']::text[]);
+insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'finance_manager' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'people.attendance.own', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use', 'finance.invoice.read', 'finance.invoice.create', 'finance.invoice.issue', 'finance.payment.record', 'finance.expense.read', 'finance.expense.manage', 'finance.expense.approve', 'finance.vendor.manage', 'finance.report.read', 'inventory.read', 'inventory.manage', 'time.entry.read_all', 'crm.contact.read', 'crm.deal.read', 'billing.read', 'people.payroll.read']::text[]);
 update public.role set name = 'Employee', description = 'Views own profile, requests leave, tracks own time and works on assigned tasks.', is_system = true, updated_at = now() where organization_id is null and key = 'employee';
 insert into public.role (key, name, description, is_system) select 'employee', 'Employee', 'Views own profile, requests leave, tracks own time and works on assigned tasks.', true where not exists (select 1 from public.role where organization_id is null and key = 'employee');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'employee');
-insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'employee' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use']::text[]);
+insert into public.role_permission (role_id, permission_id) select r.id, p.id from public.role r, public.permission p where r.organization_id is null and r.key = 'employee' and p.key = any(array['organization.read', 'people.employee.read', 'people.leave.request', 'people.attendance.own', 'projects.project.read', 'projects.task.read', 'projects.task.create', 'time.entry.own', 'documents.read', 'documents.upload', 'workspace.use']::text[]);
 update public.role set name = 'Client / Guest', description = 'Restricted external access. Sees only explicitly shared items (client portal arrives in a later release).', is_system = true, updated_at = now() where organization_id is null and key = 'guest';
 insert into public.role (key, name, description, is_system) select 'guest', 'Client / Guest', 'Restricted external access. Sees only explicitly shared items (client portal arrives in a later release).', true where not exists (select 1 from public.role where organization_id is null and key = 'guest');
 delete from public.role_permission where role_id = (select id from public.role where organization_id is null and key = 'guest');
